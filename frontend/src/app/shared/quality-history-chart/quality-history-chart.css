@@ -1,0 +1,78 @@
+.viz-root {
+  color-scheme: light;
+  --chart-surface: #fcfcfb;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme='light']) .viz-root {
+    color-scheme: dark;
+    --chart-surface: #1a1a19;
+  }
+}
+
+:root[data-theme='dark'] .viz-root {
+  color-scheme: dark;
+  --chart-surface: #1a1a19;
+}
+
+svg {
+  width: 100%;
+  height: auto;
+  background: var(--chart-surface);
+  border-radius: 8px;
+}
+
+.gridline {
+  stroke: var(--gridline);
+  stroke-width: 1;
+}
+
+.axis-label {
+  font-size: 10px;
+  fill: var(--text-muted);
+}
+
+.date-label {
+  font-size: 10px;
+  fill: var(--text-secondary);
+  text-anchor: middle;
+}
+
+.trend-line {
+  stroke: var(--text-muted);
+  stroke-width: 2;
+}
+
+.point-label {
+  font-size: 10px;
+  font-weight: 700;
+  fill: #fff;
+  text-anchor: middle;
+}
+
+.legend {
+  list-style: none;
+  display: flex;
+  gap: 0.75rem;
+  padding: 0;
+  margin: 0.5rem 0 0;
+  font-size: 0.8rem;
+  color: var(--text-secondary);
+}
+
+.legend li {
+  display: flex;
+  align-items: center;
+  gap: 0.3rem;
+}
+
+.dot {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  display: inline-block;
+}
+
+.muted {
+  color: var(--text-muted);
+}

@@ -1,0 +1,108 @@
+<main class="page">
+  <p class="breadcrumb"><a routerLink="/">Squads</a></p>
+
+  @if (loading()) {
+    <p>Carregando…</p>
+  } @else if (error() || !app()) {
+    <p class="error">App não encontrado.</p>
+  } @else {
+    <h1>{{ app()!.name }}</h1>
+    <p class="subtitle">
+      <a [routerLink]="['/squads', app()!.squadId]">Squad</a>
+      @if (app()!.criticality) { · criticidade {{ app()!.criticality }} }
+      @if (app()!.status) { · {{ app()!.status }} }
+    </p>
+
+    @if (app()!.description) {
+      <p>{{ app()!.description }}</p>
+    }
+
+    @if (app()!.tags.length > 0) {
+      <p class="tags">
+        @for (tag of app()!.tags; track tag) {
+          <span class="tag">{{ tag }}</span>
+        }
+      </p>
+    }
+
+    <section class="card">
+      <h2>Quality Level atual <app-quality-badge [level]="app()!.currentQualityLevel" /></h2>
+      @if (app()!.currentMetrics; as metrics) {
+        <div class="card-grid">
+          <div class="stat-tile"><div class="stat-value">{{ metrics.coverage }}%</div><div class="stat-label">Coverage</div></div>
+          <div class="stat-tile"><div class="stat-value">{{ metrics.bugs }}</div><div class="stat-label">Bugs</div></div>
+          <div class="stat-tile"><div class="stat-value">{{ metrics.vulnerabilities }}</div><div class="stat-label">Vulnerabilities</div></div>
+          <div class="stat-tile"><div class="stat-value">{{ metrics.codeSmells }}</div><div class="stat-label">Code Smells</div></div>
+          <div class="stat-tile"><div class="stat-value">{{ metrics.duplications }}%</div><div class="stat-label">Duplications</div></div>
+          <div class="stat-tile"><div class="stat-value">{{ metrics.reliability }}/{{ metrics.maintainability }}/{{ metrics.security }}</div><div class="stat-label">Reliability/Maintainability/Security</div></div>
+        </div>
+      }
+      <p class="subtitle">Último snapshot: {{ app()!.lastSnapshotAt ? (app()!.lastSnapshotAt | date: 'dd/MM/yyyy' : 'UTC') : '—' }}</p>
+    </section>
+
+    <section class="card">
+      <h2>Evolução do Quality Level</h2>
+      <app-quality-history-chart [snapshots]="history()" />
+    </section>
+
+    <section class="card">
+      <h2>Histórico de métricas</h2>
+      <table>
+        <thead>
+          <tr>
+            <th>Data</th>
+            <th>Level</th>
+            <th>Coverage</th>
+            <th>Bugs</th>
+            <th>Vulnerabilities</th>
+            <th>Code Smells</th>
+            <th>Duplications</th>
+          </tr>
+        </thead>
+        <tbody>
+          @for (snapshot of history(); track snapshot.id) {
+            <tr>
+              <td>{{ snapshot.collectedAt | date: 'MMM/yyyy' : 'UTC' }}</td>
+              <td><app-quality-badge [level]="snapshot.qualityLevel" /></td>
+              <td>{{ snapshot.metrics.coverage }}%</td>
+              <td>{{ snapshot.metrics.bugs }}</td>
+              <td>{{ snapshot.metrics.vulnerabilities }}</td>
+              <td>{{ snapshot.metrics.codeSmells }}</td>
+              <td>{{ snapshot.metrics.duplications }}%</td>
+            </tr>
+          }
+        </tbody>
+      </table>
+    </section>
+
+    <section class="card">
+      <h2>Repositórios</h2>
+      @if (repositories().length === 0) {
+        <p class="subtitle">Nenhum repositório cadastrado.</p>
+      } @else {
+        <ul>
+          @for (repo of repositories(); track repo.id) {
+            <li>
+              <strong>{{ repo.name }}</strong>
+              @if (repo.status) { ({{ repo.status }}) }
+              @if (repo.url) { — <a [href]="repo.url" target="_blank" rel="noopener">{{ repo.url }}</a> }
+            </li>
+          }
+        </ul>
+      }
+    </section>
+
+    <section class="card">
+      <h2>Projetos Sonar</h2>
+      @if (sonarProjects().length === 0) {
+        <p class="subtitle">Nenhum projeto Sonar associado.</p>
+      } @else {
+        <ul>
+          @for (project of sonarProjects(); track project.id) {
+            <li>{{ project.name ?? project.projectKey }} <span class="subtitle">({{ project.source }})</span></li>
+          }
+        </ul>
+      }
+    </section>
+  }
+</main>

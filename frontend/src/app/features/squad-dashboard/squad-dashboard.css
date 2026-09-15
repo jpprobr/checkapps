@@ -1,0 +1,17 @@
+.distribution-bar {
+  display: flex;
+  gap: 2px;
+  height: 2.5rem;
+  border-radius: 8px;
+  overflow: hidden;
+}
+
+.distribution-segment {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #fff;
+  font-weight: 600;
+  font-size: 0.85rem;
+  min-width: 2.5rem;
+}

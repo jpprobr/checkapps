@@ -1,0 +1,30 @@
+<div class="viz-root">
+  @if (points().length === 0) {
+    <p class="muted">Sem histórico ainda.</p>
+  } @else {
+    <svg [attr.viewBox]="'0 0 ' + width + ' ' + height" [attr.width]="width" [attr.height]="height" role="img"
+      aria-label="Evolução do Quality Level ao longo do tempo">
+      @for (level of levelOrder; track level) {
+        <line class="gridline" x1="32" [attr.x2]="width - 16" [attr.y1]="rowY(level)" [attr.y2]="rowY(level)" />
+        <text class="axis-label" x="4" [attr.y]="rowY(level) + 4">{{ level }}</text>
+      }
+
+      <path class="trend-line" [attr.d]="linePath()" fill="none" />
+
+      @for (point of points(); track point.collectedAt) {
+        <circle [attr.cx]="point.x" [attr.cy]="point.y" r="9" [attr.fill]="point.color" />
+        <text class="point-label" [attr.x]="point.x" [attr.y]="point.y + 4">{{ point.level }}</text>
+        <text class="date-label" [attr.x]="point.x" [attr.y]="height - 8">{{ point.collectedAt | date: 'MMM/yy' : 'UTC' }}</text>
+      }
+    </svg>
+
+    <ul class="legend">
+      @for (level of levelOrder; track level) {
+        <li>
+          <span class="dot" [style.background]="colorByLevel[level]"></span>
+          {{ level }}
+        </li>
+      }
+    </ul>
+  }
+</div>

@@ -1,0 +1,73 @@
+<main class="page">
+  <p class="breadcrumb"><a routerLink="/">Squads</a></p>
+
+  @if (loading()) {
+    <p>Carregando…</p>
+  } @else if (error()) {
+    <p class="error">Não foi possível carregar o dashboard da squad.</p>
+  } @else {
+    <h1>{{ squad()?.name }}</h1>
+    @if (squad()?.description) {
+      <p class="subtitle">{{ squad()?.description }}</p>
+    }
+
+    <div class="card-grid">
+      <div class="card stat-tile">
+        <div class="stat-value">{{ apps().length }}</div>
+        <div class="stat-label">Apps</div>
+      </div>
+      <div class="card stat-tile">
+        <div class="stat-value trend-up">{{ improved().length }}</div>
+        <div class="stat-label">Melhoraram</div>
+      </div>
+      <div class="card stat-tile">
+        <div class="stat-value trend-down">{{ worsened().length }}</div>
+        <div class="stat-label">Pioraram</div>
+      </div>
+      <div class="card stat-tile">
+        <div class="stat-value">{{ attentionApps().length }}</div>
+        <div class="stat-label">Merecem atenção (C/D/E)</div>
+      </div>
+    </div>
+
+    <section class="card">
+      <h2>Distribuição por Quality Level</h2>
+      <div class="distribution-bar" role="img" aria-label="Distribuição de apps por quality level">
+        @for (level of levels; track level) {
+          @if (distribution()[level] > 0) {
+            <div
+              class="distribution-segment"
+              [style.background]="'var(--quality-' + level.toLowerCase() + ')'"
+              [style.flex]="distribution()[level]"
+              [attr.title]="level + ': ' + distribution()[level] + ' apps'"
+            >
+              {{ level }} · {{ distribution()[level] }}
+            </div>
+          }
+        }
+      </div>
+    </section>
+
+    <section>
+      <h2>Apps <a [routerLink]="['/squads', squadId, 'apps']">(ver lista completa)</a></h2>
+      <table>
+        <thead>
+          <tr>
+            <th>App</th>
+            <th>Quality Level</th>
+            <th>Último snapshot</th>
+          </tr>
+        </thead>
+        <tbody>
+          @for (app of apps(); track app.id) {
+            <tr>
+              <td><a [routerLink]="['/apps', app.id]">{{ app.name }}</a></td>
+              <td><app-quality-badge [level]="app.currentQualityLevel" /></td>
+              <td>{{ app.lastSnapshotAt ? (app.lastSnapshotAt | date: 'MMM/yyyy' : 'UTC') : '—' }}</td>
+            </tr>
+          }
+        </tbody>
+      </table>
+    </section>
+  }
+</main>

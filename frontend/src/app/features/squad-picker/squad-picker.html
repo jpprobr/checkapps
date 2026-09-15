@@ -1,0 +1,25 @@
+<main class="page">
+  <h1>CheckApps</h1>
+  <p class="subtitle">Escolha uma squad para ver a saúde e evolução dos seus apps.</p>
+
+  @if (loading()) {
+    <p>Carregando squads…</p>
+  } @else if (error()) {
+    <p class="error">Não foi possível carregar as squads. Verifique se a API está no ar.</p>
+  } @else if (squads().length === 0) {
+    <p>Nenhuma squad cadastrada ainda.</p>
+  } @else {
+    <ul class="squad-list">
+      @for (squad of squads(); track squad.id) {
+        <li>
+          <a [routerLink]="['/squads', squad.id]" class="squad-card">
+            <span class="squad-name">{{ squad.name }}</span>
+            @if (squad.description) {
+              <span class="squad-description">{{ squad.description }}</span>
+            }
+          </a>
+        </li>
+      }
+    </ul>
+  }
+</main>

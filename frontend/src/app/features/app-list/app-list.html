@@ -1,0 +1,51 @@
+<main class="page">
+  <p class="breadcrumb"><a routerLink="/">Squads</a> / <a [routerLink]="['/squads', squadId]">Dashboard</a></p>
+  <h1>Apps</h1>
+
+  @if (loading()) {
+    <p>Carregando…</p>
+  } @else if (error()) {
+    <p class="error">Não foi possível carregar os apps.</p>
+  } @else {
+    <div class="filters">
+      <input type="search" placeholder="Buscar por nome…" [ngModel]="search()" (ngModelChange)="search.set($event)" />
+
+      <select [ngModel]="qualityLevelFilter()" (ngModelChange)="qualityLevelFilter.set($event)">
+        <option value="">Todos os Quality Levels</option>
+        @for (level of levels; track level) {
+          <option [value]="level">{{ level }}</option>
+        }
+      </select>
+
+      <select [ngModel]="sortKey()" (ngModelChange)="sortKey.set($event)">
+        <option value="name">Ordenar por nome</option>
+        <option value="qualityLevel">Ordenar por Quality Level</option>
+      </select>
+    </div>
+
+    <table>
+      <thead>
+        <tr>
+          <th>App</th>
+          <th>Criticidade</th>
+          <th>Quality Level</th>
+          <th>Último snapshot</th>
+        </tr>
+      </thead>
+      <tbody>
+        @for (app of filteredApps(); track app.id) {
+          <tr>
+            <td><a [routerLink]="['/apps', app.id]">{{ app.name }}</a></td>
+            <td>{{ app.criticality ?? '—' }}</td>
+            <td><app-quality-badge [level]="app.currentQualityLevel" /></td>
+            <td>{{ app.lastSnapshotAt ? (app.lastSnapshotAt | date: 'MMM/yyyy' : 'UTC') : '—' }}</td>
+          </tr>
+        } @empty {
+          <tr>
+            <td colspan="4">Nenhum app encontrado.</td>
+          </tr>
+        }
+      </tbody>
+    </table>
+  }
+</main>

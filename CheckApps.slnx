@@ -1,0 +1,15 @@
+<Solution>
+  <Folder Name="/src/">
+    <Project Path="src/CheckApps.Api/CheckApps.Api.csproj" />
+    <Project Path="src/CheckApps.Application/CheckApps.Application.csproj" />
+    <Project Path="src/CheckApps.Domain/CheckApps.Domain.csproj" />
+    <Project Path="src/CheckApps.Infrastructure/CheckApps.Infrastructure.csproj" />
+  </Folder>
+  <Folder Name="/tests/">
+    <Project Path="tests/CheckApps.IntegrationTests/CheckApps.IntegrationTests.csproj" />
+    <Project Path="tests/CheckApps.UnitTests/CheckApps.UnitTests.csproj" />
+  </Folder>
+  <Folder Name="/tools/">
+    <Project Path="tools/CheckApps.Seed/CheckApps.Seed.csproj" />
+  </Folder>
+</Solution>
