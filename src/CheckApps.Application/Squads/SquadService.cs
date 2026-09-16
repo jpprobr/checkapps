@@ -14,6 +14,51 @@ public class SquadService(ISquadRepository squads, IAppRepository apps, IQuality
     public Task<IReadOnlyList<App>> ListAppsAsync(string squadId, CancellationToken cancellationToken = default) =>
         apps.ListBySquadAsync(squadId, cancellationToken);
 
+    public async Task<Squad> CreateAsync(string name, string? description, CancellationToken cancellationToken = default)
+    {
+        Squad? created = null;
+
+        await SlugIdGenerator.GenerateUniqueAsync(name, async (candidateId, ct) =>
+        {
+            var squad = new Squad { Id = candidateId, Name = name, Description = description, Status = "active" };
+            if (!await squads.TryCreateAsync(squad, ct))
+            {
+                return false;
+            }
+
+            created = squad;
+            return true;
+        }, cancellationToken);
+
+        return created!;
+    }
+
+    public async Task<Squad> UpdateAsync(
+        string squadId, string name, string? description, string? status, CancellationToken cancellationToken = default)
+    {
+        var squad = await squads.GetAsync(squadId, cancellationToken)
+            ?? throw new KeyNotFoundException($"Squad '{squadId}' não encontrada.");
+
+        squad.Name = name;
+        squad.Description = description;
+        squad.Status = status;
+
+        await squads.SaveAsync(squad, cancellationToken);
+        return squad;
+    }
+
+    public async Task DeleteAsync(string squadId, CancellationToken cancellationToken = default)
+    {
+        var linkedApps = await apps.ListBySquadAsync(squadId, cancellationToken);
+        if (linkedApps.Count > 0)
+        {
+            throw new DomainConflictException(
+                $"Squad '{squadId}' possui {linkedApps.Count} app(s) vinculado(s) e não pode ser removida. Mova ou remova os apps primeiro.");
+        }
+
+        await squads.DeleteAsync(squadId, cancellationToken);
+    }
+
     /// <summary>
     /// Agrega, em memória, o histórico de todos os apps da squad num período: a
     /// distribuição de Quality Level por data de coleta e a tendência de cada app

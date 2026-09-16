@@ -3,7 +3,18 @@ import { Injectable, inject } from '@angular/core';
 import { Observable } from 'rxjs';
 
 import { API_BASE_URL } from './api-config';
-import { AppDetail, AppSummary, QualityLevel, QualitySnapshot, RepositoryInfo, SonarProjectInfo } from './models';
+import {
+  AppDetail,
+  AppLink,
+  AppSummary,
+  CreateAppRequest,
+  QualityLevel,
+  QualitySnapshot,
+  RepositoryInfo,
+  SonarProjectInfo,
+  UpdateAppRequest,
+  UpsertAppLinkRequest,
+} from './models';
 
 @Injectable({ providedIn: 'root' })
 export class AppsApiService {
@@ -27,5 +38,33 @@ export class AppsApiService {
 
   getQualityHistory(appId: string): Observable<QualitySnapshot[]> {
     return this.http.get<QualitySnapshot[]>(`${API_BASE_URL}/apps/${appId}/quality/history`);
+  }
+
+  create(request: CreateAppRequest): Observable<AppDetail> {
+    return this.http.post<AppDetail>(`${API_BASE_URL}/apps`, request);
+  }
+
+  update(appId: string, request: UpdateAppRequest): Observable<AppDetail> {
+    return this.http.put<AppDetail>(`${API_BASE_URL}/apps/${appId}`, request);
+  }
+
+  delete(appId: string): Observable<void> {
+    return this.http.delete<void>(`${API_BASE_URL}/apps/${appId}`);
+  }
+
+  listLinks(appId: string): Observable<AppLink[]> {
+    return this.http.get<AppLink[]>(`${API_BASE_URL}/apps/${appId}/links`);
+  }
+
+  addLink(appId: string, request: UpsertAppLinkRequest): Observable<AppLink> {
+    return this.http.post<AppLink>(`${API_BASE_URL}/apps/${appId}/links`, request);
+  }
+
+  updateLink(appId: string, linkId: string, request: UpsertAppLinkRequest): Observable<AppLink> {
+    return this.http.put<AppLink>(`${API_BASE_URL}/apps/${appId}/links/${linkId}`, request);
+  }
+
+  deleteLink(appId: string, linkId: string): Observable<void> {
+    return this.http.delete<void>(`${API_BASE_URL}/apps/${appId}/links/${linkId}`);
   }
 }

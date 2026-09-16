@@ -46,7 +46,6 @@ foreach (var app in demoData.Apps)
         Description = app.Description,
         Criticality = app.Criticality,
         Tags = app.Tags,
-        Links = app.Links,
         Status = app.Status,
         ExternalId = app.ExternalId
     });

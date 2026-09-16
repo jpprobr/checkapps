@@ -1,0 +1,104 @@
+<main class="page">
+  <p class="breadcrumb"><a routerLink="/">Squads</a></p>
+  <h1>{{ isEditMode ? 'Editar App' : 'Novo App' }}</h1>
+
+  @if (loading()) {
+    <p>Carregando…</p>
+  } @else {
+    <form class="card form" (ngSubmit)="submit()">
+      @if (error()) {
+        <p class="error">{{ error() }}</p>
+      }
+
+      <label>
+        Nome *
+        <input type="text" required [ngModel]="name()" (ngModelChange)="name.set($event)" name="name" />
+      </label>
+
+      <label>
+        Squad *
+        <select required [ngModel]="squadId()" (ngModelChange)="squadId.set($event)" name="squadId">
+          <option value="" disabled>Selecione…</option>
+          @for (squad of squads(); track squad.id) {
+            <option [value]="squad.id">{{ squad.name }}</option>
+          }
+        </select>
+      </label>
+
+      <label>
+        Descrição
+        <textarea [ngModel]="description()" (ngModelChange)="description.set($event)" name="description"></textarea>
+      </label>
+
+      <label>
+        Criticidade
+        <input type="text" placeholder="ex.: high, medium, low" [ngModel]="criticality()" (ngModelChange)="criticality.set($event)" name="criticality" />
+      </label>
+
+      <label>
+        Tags (separadas por vírgula)
+        <input type="text" [ngModel]="tagsInput()" (ngModelChange)="tagsInput.set($event)" name="tags" />
+      </label>
+
+      @if (isEditMode) {
+        <label>
+          Status
+          <select [ngModel]="status()" (ngModelChange)="status.set($event)" name="status">
+            <option value="active">Ativo</option>
+            <option value="inactive">Inativo</option>
+          </select>
+        </label>
+      }
+
+      <div class="form-actions">
+        <button type="submit" [disabled]="saving()">{{ saving() ? 'Salvando…' : 'Salvar' }}</button>
+        <a [routerLink]="isEditMode ? ['/apps', appId] : ['/squads', squadId()]" class="button-secondary">Cancelar</a>
+      </div>
+    </form>
+
+    @if (isEditMode) {
+      <section class="card links-section">
+        <h2>Links</h2>
+
+        @if (linkError()) {
+          <p class="error">{{ linkError() }}</p>
+        }
+
+        @if (links().length > 0) {
+          <table>
+            <thead>
+              <tr>
+                <th>Descrição</th>
+                <th>Endereço</th>
+                <th></th>
+              </tr>
+            </thead>
+            <tbody>
+              @for (link of links(); track link.id) {
+                <tr>
+                  <td>{{ link.description }}</td>
+                  <td><a [href]="link.uri" target="_blank" rel="noopener">{{ link.uri }}</a></td>
+                  <td class="row-actions">
+                    <button type="button" class="danger" (click)="removeLink(link.id)">Remover</button>
+                  </td>
+                </tr>
+              }
+            </tbody>
+          </table>
+        }
+
+        <div class="form add-link-form">
+          <label>
+            Descrição
+            <input type="text" [ngModel]="newLinkDescription()" (ngModelChange)="newLinkDescription.set($event)" name="newLinkDescription" />
+          </label>
+          <label>
+            Endereço (URL)
+            <input type="url" [ngModel]="newLinkUri()" (ngModelChange)="newLinkUri.set($event)" name="newLinkUri" />
+          </label>
+          <button type="button" (click)="addLink()">+ Adicionar link</button>
+        </div>
+      </section>
+    }
+  }
+</main>

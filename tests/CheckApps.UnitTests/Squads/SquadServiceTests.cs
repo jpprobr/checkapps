@@ -1,8 +1,7 @@
-using CheckApps.Application.Apps;
-using CheckApps.Application.Persistence;
+using CheckApps.Application;
 using CheckApps.Application.Squads;
 using CheckApps.Domain;
-using Repository = CheckApps.Domain.Repository;
+using CheckApps.UnitTests.TestDoubles;
 
 namespace CheckApps.UnitTests.Squads;
 
@@ -64,78 +63,68 @@ public class SquadServiceTests
         Assert.Equal(1, point.LevelCounts[QualityLevel.B]);
     }
 
+    [Fact]
+    public async Task CreateAsync_GeneratesSlugId_AndDefaultsStatusToActive()
+    {
+        var service = new SquadService(new FakeSquadRepository(), new FakeAppRepository(), new FakeQualitySnapshotRepository());
+
+        var squad = await service.CreateAsync("Squad Pagamentos", "descrição");
+
+        Assert.Equal("squad-pagamentos", squad.Id);
+        Assert.Equal("active", squad.Status);
+    }
+
+    [Fact]
+    public async Task CreateAsync_OnSlugCollision_AppendsNumericSuffix()
+    {
+        var squads = new FakeSquadRepository();
+        var service = new SquadService(squads, new FakeAppRepository(), new FakeQualitySnapshotRepository());
+        await squads.TryCreateAsync(new Squad { Id = "squad-pagamentos", Name = "Existente" });
+
+        var squad = await service.CreateAsync("Squad Pagamentos", null);
+
+        Assert.Equal("squad-pagamentos-2", squad.Id);
+    }
+
+    [Fact]
+    public async Task UpdateAsync_ChangesFields_WithoutLosingId()
+    {
+        var squads = new FakeSquadRepository();
+        await squads.SaveAsync(new Squad { Id = "sq-1", Name = "Antigo", Status = "active" });
+        var service = new SquadService(squads, new FakeAppRepository(), new FakeQualitySnapshotRepository());
+
+        var updated = await service.UpdateAsync("sq-1", "Novo Nome", "nova descrição", "inactive");
+
+        Assert.Equal("sq-1", updated.Id);
+        Assert.Equal("Novo Nome", updated.Name);
+        Assert.Equal("inactive", updated.Status);
+    }
+
+    [Fact]
+    public async Task DeleteAsync_Blocked_WhenSquadHasApps()
+    {
+        var squads = new FakeSquadRepository();
+        await squads.SaveAsync(new Squad { Id = "sq-1", Name = "Squad" });
+        var apps = new FakeAppRepository();
+        apps.Add(new App { Id = "app-1", SquadId = "sq-1", Name = "app" });
+        var service = new SquadService(squads, apps, new FakeQualitySnapshotRepository());
+
+        await Assert.ThrowsAsync<DomainConflictException>(() => service.DeleteAsync("sq-1"));
+        Assert.NotNull(await squads.GetAsync("sq-1"));
+    }
+
+    [Fact]
+    public async Task DeleteAsync_Succeeds_WhenSquadHasNoApps()
+    {
+        var squads = new FakeSquadRepository();
+        await squads.SaveAsync(new Squad { Id = "sq-1", Name = "Squad" });
+        var service = new SquadService(squads, new FakeAppRepository(), new FakeQualitySnapshotRepository());
+
+        await service.DeleteAsync("sq-1");
+
+        Assert.Null(await squads.GetAsync("sq-1"));
+    }
+
     private static QualityTrendDirection Trend(SquadQualityEvolution evolution, string appId) =>
         evolution.AppTrends.Single(t => t.AppId == appId).Direction;
-
-    private class FakeSquadRepository : ISquadRepository
-    {
-        public Task<IReadOnlyList<Squad>> ListAsync(CancellationToken ct = default) =>
-            Task.FromResult<IReadOnlyList<Squad>>([]);
-        public Task<Squad?> GetAsync(string squadId, CancellationToken ct = default) =>
-            Task.FromResult<Squad?>(null);
-        public Task SaveAsync(Squad squad, CancellationToken ct = default) => Task.CompletedTask;
-    }
-
-    private class FakeAppRepository : IAppRepository
-    {
-        private readonly List<App> _apps = [];
-
-        public void Add(App app) => _apps.Add(app);
-
-        public Task<App?> GetAsync(string appId, CancellationToken ct = default) =>
-            Task.FromResult(_apps.FirstOrDefault(a => a.Id == appId));
-
-        public Task<IReadOnlyList<App>> ListBySquadAsync(string squadId, CancellationToken ct = default) =>
-            Task.FromResult<IReadOnlyList<App>>(_apps.Where(a => a.SquadId == squadId).ToList());
-
-        public Task<IReadOnlyList<App>> ListByQualityLevelAsync(QualityLevel level, CancellationToken ct = default) =>
-            Task.FromResult<IReadOnlyList<App>>(_apps.Where(a => a.CurrentQualityLevel == level).ToList());
-
-        public Task<IReadOnlyList<Repository>> GetRepositoriesAsync(string appId, CancellationToken ct = default) =>
-            Task.FromResult<IReadOnlyList<Repository>>([]);
-
-        public Task<IReadOnlyList<SonarProject>> GetSonarProjectsAsync(string appId, CancellationToken ct = default) =>
-            Task.FromResult<IReadOnlyList<SonarProject>>([]);
-
-        public Task SaveAsync(App app, CancellationToken ct = default) => Task.CompletedTask;
-        public Task AddRepositoryAsync(Repository repository, CancellationToken ct = default) => Task.CompletedTask;
-        public Task AddSonarProjectAsync(SonarProject sonarProject, CancellationToken ct = default) => Task.CompletedTask;
-    }
-
-    private class FakeQualitySnapshotRepository : IQualitySnapshotRepository
-    {
-        private readonly List<QualitySnapshot> _snapshots = [];
-
-        public void Add(string appId, DateTimeOffset collectedAt, QualityLevel level) => _snapshots.Add(new QualitySnapshot
-        {
-            Id = $"{appId}-{collectedAt:yyyyMM}",
-            AppId = appId,
-            SonarProjectId = "sonar-1",
-            CollectedAt = collectedAt,
-            Source = "TEST",
-            Metrics = new QualityMetrics
-            {
-                Coverage = 0,
-                Bugs = 0,
-                Vulnerabilities = 0,
-                CodeSmells = 0,
-                Duplications = 0,
-                Reliability = level.ToString(),
-                Maintainability = level.ToString(),
-                Security = level.ToString()
-            },
-            QualityLevel = level,
-            AssessmentRulesVersion = "v1"
-        });
-
-        public Task AddAsync(QualitySnapshot snapshot, CancellationToken ct = default) => Task.CompletedTask;
-
-        public Task<IReadOnlyList<QualitySnapshot>> GetHistoryAsync(
-            string appId, DateTimeOffset? from = null, DateTimeOffset? to = null, CancellationToken ct = default) =>
-            Task.FromResult<IReadOnlyList<QualitySnapshot>>(
-                _snapshots.Where(s => s.AppId == appId).OrderBy(s => s.CollectedAt).ToList());
-
-        public Task<QualitySnapshot?> GetLatestAsync(string appId, CancellationToken ct = default) =>
-            Task.FromResult(_snapshots.Where(s => s.AppId == appId).OrderByDescending(s => s.CollectedAt).FirstOrDefault());
-    }
 }

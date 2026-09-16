@@ -1,4 +1,5 @@
 using CheckApps.Api.Contracts;
+using CheckApps.Application;
 using CheckApps.Application.Squads;
 using Microsoft.AspNetCore.Mvc;
 
@@ -13,6 +14,42 @@ public class SquadsController(SquadService squadService) : ControllerBase
     {
         var squads = await squadService.ListSquadsAsync(cancellationToken);
         return Ok(squads.Select(s => s.ToDto()).ToList());
+    }
+
+    [HttpPost]
+    public async Task<ActionResult<SquadDto>> Create([FromBody] CreateSquadRequest request, CancellationToken cancellationToken)
+    {
+        var squad = await squadService.CreateAsync(request.Name, request.Description, cancellationToken);
+        return CreatedAtAction(nameof(Get), new { squadId = squad.Id }, squad.ToDto());
+    }
+
+    [HttpPut("{squadId}")]
+    public async Task<ActionResult<SquadDto>> Update(
+        string squadId, [FromBody] UpdateSquadRequest request, CancellationToken cancellationToken)
+    {
+        try
+        {
+            var squad = await squadService.UpdateAsync(squadId, request.Name, request.Description, request.Status, cancellationToken);
+            return Ok(squad.ToDto());
+        }
+        catch (KeyNotFoundException ex)
+        {
+            return NotFound(ex.Message);
+        }
+    }
+
+    [HttpDelete("{squadId}")]
+    public async Task<IActionResult> Delete(string squadId, CancellationToken cancellationToken)
+    {
+        try
+        {
+            await squadService.DeleteAsync(squadId, cancellationToken);
+            return NoContent();
+        }
+        catch (DomainConflictException ex)
+        {
+            return Conflict(ex.Message);
+        }
     }
 
     [HttpGet("{squadId}")]

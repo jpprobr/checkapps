@@ -4,7 +4,8 @@ using CheckApps.Infrastructure.DynamoDb;
 
 namespace CheckApps.IntegrationTests.DynamoDb;
 
-public class RepositoriesTests(DynamoDbLocalFixture fixture) : IClassFixture<DynamoDbLocalFixture>
+[Collection(DynamoDbCollection.Name)]
+public class RepositoriesTests(DynamoDbLocalFixture fixture)
 {
     private readonly SquadRepository _squads = new(fixture.Client, fixture.Options);
     private readonly AppRepository _apps = new(fixture.Client, fixture.Options);

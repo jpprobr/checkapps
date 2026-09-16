@@ -81,6 +81,57 @@ public class AppRepository(IAmazonDynamoDB client, IOptions<DynamoDbOptions> opt
         }, cancellationToken);
     }
 
+    public async Task<bool> TryCreateAsync(App app, CancellationToken cancellationToken = default)
+    {
+        try
+        {
+            await client.PutItemAsync(new PutItemRequest
+            {
+                TableName = _tableName,
+                Item = ToItem(app),
+                ConditionExpression = $"attribute_not_exists({TableSchema.Pk})"
+            }, cancellationToken);
+            return true;
+        }
+        catch (ConditionalCheckFailedException)
+        {
+            return false;
+        }
+    }
+
+    public async Task DeleteAllAsync(string appId, CancellationToken cancellationToken = default)
+    {
+        var response = await client.QueryAsync(new QueryRequest
+        {
+            TableName = _tableName,
+            KeyConditionExpression = $"{TableSchema.Pk} = :pk",
+            ExpressionAttributeValues = new Dictionary<string, AttributeValue> { [":pk"] = S(Keys.AppPk(appId)) }
+        }, cancellationToken);
+
+        foreach (var batch in response.Items.Chunk(25))
+        {
+            if (batch.Length == 0) continue;
+
+            await client.BatchWriteItemAsync(new BatchWriteItemRequest
+            {
+                RequestItems = new Dictionary<string, List<WriteRequest>>
+                {
+                    [_tableName] = [.. batch.Select(item => new WriteRequest
+                    {
+                        DeleteRequest = new DeleteRequest
+                        {
+                            Key = new Dictionary<string, AttributeValue>
+                            {
+                                [TableSchema.Pk] = item[TableSchema.Pk],
+                                [TableSchema.Sk] = item[TableSchema.Sk]
+                            }
+                        }
+                    })]
+                }
+            }, cancellationToken);
+        }
+    }
+
     public async Task AddRepositoryAsync(Repository repository, CancellationToken cancellationToken = default)
     {
         await client.PutItemAsync(new PutItemRequest
@@ -96,6 +147,34 @@ public class AppRepository(IAmazonDynamoDB client, IOptions<DynamoDbOptions> opt
         {
             TableName = _tableName,
             Item = ToItem(sonarProject)
+        }, cancellationToken);
+    }
+
+    public async Task<IReadOnlyList<AppLink>> GetLinksAsync(string appId, CancellationToken cancellationToken = default)
+    {
+        var items = await QueryAppChildrenAsync(appId, Keys.AppLinkSkPrefix, cancellationToken);
+        return items.Select(ToAppLink).ToList();
+    }
+
+    public async Task SaveLinkAsync(AppLink link, CancellationToken cancellationToken = default)
+    {
+        await client.PutItemAsync(new PutItemRequest
+        {
+            TableName = _tableName,
+            Item = ToItem(link)
+        }, cancellationToken);
+    }
+
+    public async Task DeleteLinkAsync(string appId, string linkId, CancellationToken cancellationToken = default)
+    {
+        await client.DeleteItemAsync(new DeleteItemRequest
+        {
+            TableName = _tableName,
+            Key = new Dictionary<string, AttributeValue>
+            {
+                [TableSchema.Pk] = S(Keys.AppPk(appId)),
+                [TableSchema.Sk] = S(Keys.AppLinkSk(linkId))
+            }
         }, cancellationToken);
     }
 
@@ -127,8 +206,7 @@ public class AppRepository(IAmazonDynamoDB client, IOptions<DynamoDbOptions> opt
             ["id"] = S(app.Id),
             ["squadId"] = S(app.SquadId),
             ["name"] = S(app.Name),
-            ["tags"] = Strings(app.Tags),
-            ["links"] = Strings(app.Links)
+            ["tags"] = Strings(app.Tags)
         };
 
         if (app.Description is not null) item["description"] = S(app.Description);
@@ -186,7 +264,6 @@ public class AppRepository(IAmazonDynamoDB client, IOptions<DynamoDbOptions> opt
         Description = item.GetOptionalString("description"),
         Criticality = item.GetOptionalString("criticality"),
         Tags = item.GetStringSet("tags"),
-        Links = item.GetStringSet("links"),
         Status = item.GetOptionalString("status"),
         ExternalId = item.GetOptionalString("externalId"),
         CurrentQualityLevel = item.TryGetValue("currentQualityLevel", out var level)
@@ -219,5 +296,23 @@ public class AppRepository(IAmazonDynamoDB client, IOptions<DynamoDbOptions> opt
         ExternalId = item.GetOptionalString("externalId"),
         Status = item.GetOptionalString("status"),
         Source = item.GetString("source")
+    };
+
+    private static Dictionary<string, AttributeValue> ToItem(AppLink link) => new()
+    {
+        [TableSchema.Pk] = S(Keys.AppPk(link.AppId)),
+        [TableSchema.Sk] = S(Keys.AppLinkSk(link.Id)),
+        ["id"] = S(link.Id),
+        ["appId"] = S(link.AppId),
+        ["description"] = S(link.Description),
+        ["uri"] = S(link.Uri)
+    };
+
+    private static AppLink ToAppLink(Dictionary<string, AttributeValue> item) => new()
+    {
+        Id = item.GetString("id"),
+        AppId = item.GetString("appId"),
+        Description = item.GetString("description"),
+        Uri = item.GetString("uri")
     };
 }

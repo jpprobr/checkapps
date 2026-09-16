@@ -25,6 +25,9 @@ public static class Keys
     public static string SonarProjectSk(string sonarProjectId) => $"SONARPROJECT#{sonarProjectId}";
     public const string SonarProjectSkPrefix = "SONARPROJECT#";
 
+    public static string AppLinkSk(string linkId) => $"APPLINK#{linkId}";
+    public const string AppLinkSkPrefix = "APPLINK#";
+
     public const string SnapshotSkPrefix = "SNAPSHOT#";
 
     public static string SnapshotSk(DateTimeOffset collectedAt, string sonarProjectId) =>

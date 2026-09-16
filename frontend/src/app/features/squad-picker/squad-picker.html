@@ -6,20 +6,44 @@
     <p>Carregando squads…</p>
   } @else if (error()) {
     <p class="error">Não foi possível carregar as squads. Verifique se a API está no ar.</p>
-  } @else if (squads().length === 0) {
-    <p>Nenhuma squad cadastrada ainda.</p>
   } @else {
-    <ul class="squad-list">
-      @for (squad of squads(); track squad.id) {
-        <li>
-          <a [routerLink]="['/squads', squad.id]" class="squad-card">
-            <span class="squad-name">{{ squad.name }}</span>
-            @if (squad.description) {
-              <span class="squad-description">{{ squad.description }}</span>
-            }
-          </a>
-        </li>
-      }
-    </ul>
+    @if (actionError()) {
+      <p class="error">{{ actionError() }}</p>
+    }
+
+    <div class="toolbar">
+      <label class="inline-checkbox">
+        <input type="checkbox" [checked]="showInactive()" (change)="showInactive.set(!showInactive())" />
+        Mostrar inativas
+      </label>
+      <a routerLink="/squads/new" class="button-secondary">+ Nova Squad</a>
+    </div>
+
+    @if (visibleSquads().length === 0) {
+      <p>Nenhuma squad encontrada.</p>
+    } @else {
+      <ul class="squad-list">
+        @for (squad of visibleSquads(); track squad.id) {
+          <li class="squad-card" [class.inactive]="squad.status === 'inactive'">
+            <a [routerLink]="['/squads', squad.id]" class="squad-card-link">
+              <span class="squad-name">{{ squad.name }}</span>
+              @if (squad.status === 'inactive') {
+                <span class="tag">inativa</span>
+              }
+              @if (squad.description) {
+                <span class="squad-description">{{ squad.description }}</span>
+              }
+            </a>
+            <div class="row-actions">
+              <a [routerLink]="['/squads', squad.id, 'edit']" class="button-secondary">Editar</a>
+              <button type="button" class="secondary" (click)="toggleStatus(squad)">
+                {{ squad.status === 'inactive' ? 'Ativar' : 'Inativar' }}
+              </button>
+              <button type="button" class="danger" (click)="remove(squad)">Remover</button>
+            </div>
+          </li>
+        }
+      </ul>
+    }
   }
 </main>

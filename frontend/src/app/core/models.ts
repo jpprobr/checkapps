@@ -36,12 +36,17 @@ export interface AppDetail {
   description: string | null;
   criticality: string | null;
   tags: string[];
-  links: string[];
   status: string | null;
   externalId: string | null;
   currentQualityLevel: QualityLevel | null;
   currentMetrics: QualityMetrics | null;
   lastSnapshotAt: string | null;
+}
+
+export interface AppLink {
+  id: string;
+  description: string;
+  uri: string;
 }
 
 export interface RepositoryInfo {
@@ -89,4 +94,39 @@ export interface SquadQualityEvolutionPoint {
 export interface SquadQualityEvolution {
   points: SquadQualityEvolutionPoint[];
   appTrends: AppQualityTrend[];
+}
+
+export interface CreateSquadRequest {
+  name: string;
+  description: string | null;
+}
+
+export interface UpdateSquadRequest {
+  name: string;
+  description: string | null;
+  status: string | null;
+}
+
+export interface CreateAppRequest {
+  name: string;
+  squadId: string;
+  description: string | null;
+  criticality: string | null;
+  tags: string[] | null;
+  externalId: string | null;
+}
+
+export interface UpdateAppRequest {
+  name: string;
+  squadId: string;
+  description: string | null;
+  criticality: string | null;
+  tags: string[] | null;
+  status: string | null;
+  externalId: string | null;
+}
+
+export interface UpsertAppLinkRequest {
+  description: string;
+  uri: string;
 }

@@ -3,7 +3,7 @@ import { Injectable, inject } from '@angular/core';
 import { Observable } from 'rxjs';
 
 import { API_BASE_URL } from './api-config';
-import { AppSummary, Squad, SquadQualityEvolution } from './models';
+import { AppSummary, CreateSquadRequest, Squad, SquadQualityEvolution, UpdateSquadRequest } from './models';
 
 @Injectable({ providedIn: 'root' })
 export class SquadsApiService {
@@ -26,5 +26,17 @@ export class SquadsApiService {
     if (from) params = params.set('from', from);
     if (to) params = params.set('to', to);
     return this.http.get<SquadQualityEvolution>(`${API_BASE_URL}/squads/${squadId}/quality-evolution`, { params });
+  }
+
+  create(request: CreateSquadRequest): Observable<Squad> {
+    return this.http.post<Squad>(`${API_BASE_URL}/squads`, request);
+  }
+
+  update(squadId: string, request: UpdateSquadRequest): Observable<Squad> {
+    return this.http.put<Squad>(`${API_BASE_URL}/squads/${squadId}`, request);
+  }
+
+  delete(squadId: string): Observable<void> {
+    return this.http.delete<void>(`${API_BASE_URL}/squads/${squadId}`);
   }
 }

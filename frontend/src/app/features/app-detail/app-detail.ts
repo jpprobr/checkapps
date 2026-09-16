@@ -3,7 +3,7 @@ import { Component, inject, signal } from '@angular/core';
 import { ActivatedRoute, RouterLink } from '@angular/router';
 
 import { AppsApiService } from '../../core/apps-api.service';
-import { AppDetail as AppDetailModel, QualitySnapshot, RepositoryInfo, SonarProjectInfo } from '../../core/models';
+import { AppDetail as AppDetailModel, AppLink, QualitySnapshot, RepositoryInfo, SonarProjectInfo } from '../../core/models';
 import { QualityBadge } from '../../shared/quality-badge/quality-badge';
 import { QualityHistoryChart } from '../../shared/quality-history-chart/quality-history-chart';
 
@@ -22,6 +22,7 @@ export class AppDetail {
   protected readonly app = signal<AppDetailModel | null>(null);
   protected readonly repositories = signal<RepositoryInfo[]>([]);
   protected readonly sonarProjects = signal<SonarProjectInfo[]>([]);
+  protected readonly links = signal<AppLink[]>([]);
   protected readonly history = signal<QualitySnapshot[]>([]);
   protected readonly loading = signal(true);
   protected readonly error = signal(false);
@@ -40,6 +41,7 @@ export class AppDetail {
 
     this.appsApi.listRepositories(this.appId).subscribe((repos) => this.repositories.set(repos));
     this.appsApi.listSonarProjects(this.appId).subscribe((projects) => this.sonarProjects.set(projects));
+    this.appsApi.listLinks(this.appId).subscribe((links) => this.links.set(links));
     this.appsApi.getQualityHistory(this.appId).subscribe((history) => this.history.set(history));
   }
 }

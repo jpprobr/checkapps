@@ -17,7 +17,19 @@ public interface IAppRepository
 
     Task SaveAsync(App app, CancellationToken cancellationToken = default);
 
+    /// <summary>Put condicional (attribute_not_exists(PK)): false se já existir um App com esse id.</summary>
+    Task<bool> TryCreateAsync(App app, CancellationToken cancellationToken = default);
+
+    /// <summary>Apaga a partição inteira do App (METADATA, repositórios, projetos Sonar e links). Não usar se houver QualitySnapshots.</summary>
+    Task DeleteAllAsync(string appId, CancellationToken cancellationToken = default);
+
     Task AddRepositoryAsync(Repository repository, CancellationToken cancellationToken = default);
 
     Task AddSonarProjectAsync(SonarProject sonarProject, CancellationToken cancellationToken = default);
+
+    Task<IReadOnlyList<AppLink>> GetLinksAsync(string appId, CancellationToken cancellationToken = default);
+
+    Task SaveLinkAsync(AppLink link, CancellationToken cancellationToken = default);
+
+    Task DeleteLinkAsync(string appId, string linkId, CancellationToken cancellationToken = default);
 }

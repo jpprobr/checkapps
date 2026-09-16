@@ -6,7 +6,10 @@
   } @else if (error() || !app()) {
     <p class="error">App não encontrado.</p>
   } @else {
-    <h1>{{ app()!.name }}</h1>
+    <div class="toolbar">
+      <h1>{{ app()!.name }}</h1>
+      <a [routerLink]="['/apps', appId, 'edit']" class="button-secondary">Editar</a>
+    </div>
     <p class="subtitle">
       <a [routerLink]="['/squads', app()!.squadId]">Squad</a>
       @if (app()!.criticality) { · criticidade {{ app()!.criticality }} }
@@ -100,6 +103,19 @@
         <ul>
           @for (project of sonarProjects(); track project.id) {
             <li>{{ project.name ?? project.projectKey }} <span class="subtitle">({{ project.source }})</span></li>
+          }
+        </ul>
+      }
+    </section>
+
+    <section class="card">
+      <h2>Links</h2>
+      @if (links().length === 0) {
+        <p class="subtitle">Nenhum link cadastrado.</p>
+      } @else {
+        <ul>
+          @for (link of links(); track link.id) {
+            <li>{{ link.description }} — <a [href]="link.uri" target="_blank" rel="noopener">{{ link.uri }}</a></li>
           }
         </ul>
       }

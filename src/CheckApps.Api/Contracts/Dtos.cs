@@ -31,7 +31,6 @@ public record AppDetailDto(
     string? Description,
     string? Criticality,
     IReadOnlyCollection<string> Tags,
-    IReadOnlyCollection<string> Links,
     string? Status,
     string? ExternalId,
     QualityLevel? CurrentQualityLevel,
@@ -75,3 +74,28 @@ public record RegisterQualitySnapshotRequest(
     QualityMetricsDto Metrics,
     DateTimeOffset CollectedAt,
     string Source);
+
+public record CreateSquadRequest(string Name, string? Description);
+
+public record UpdateSquadRequest(string Name, string? Description, string? Status);
+
+public record CreateAppRequest(
+    string Name,
+    string SquadId,
+    string? Description,
+    string? Criticality,
+    IReadOnlyCollection<string>? Tags,
+    string? ExternalId);
+
+public record UpdateAppRequest(
+    string Name,
+    string SquadId,
+    string? Description,
+    string? Criticality,
+    IReadOnlyCollection<string>? Tags,
+    string? Status,
+    string? ExternalId);
+
+public record AppLinkDto(string Id, string Description, string Uri);
+
+public record UpsertAppLinkRequest(string Description, string Uri);

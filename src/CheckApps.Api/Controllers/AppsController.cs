@@ -1,4 +1,5 @@
 using CheckApps.Api.Contracts;
+using CheckApps.Application;
 using CheckApps.Application.Apps;
 using CheckApps.Application.QualitySnapshots;
 using CheckApps.Domain;
@@ -23,6 +24,83 @@ public class AppsController(AppService appService, QualitySnapshotService snapsh
     {
         var app = await appService.GetAppAsync(appId, cancellationToken);
         return app is null ? NotFound() : Ok(app.ToDetailDto());
+    }
+
+    [HttpPost]
+    public async Task<ActionResult<AppDetailDto>> Create([FromBody] CreateAppRequest request, CancellationToken cancellationToken)
+    {
+        try
+        {
+            var app = await appService.CreateAsync(
+                request.Name, request.SquadId, request.Description, request.Criticality,
+                request.Tags, request.ExternalId, cancellationToken);
+            return CreatedAtAction(nameof(Get), new { appId = app.Id }, app.ToDetailDto());
+        }
+        catch (KeyNotFoundException ex)
+        {
+            return BadRequest(ex.Message);
+        }
+    }
+
+    [HttpPut("{appId}")]
+    public async Task<ActionResult<AppDetailDto>> Update(
+        string appId, [FromBody] UpdateAppRequest request, CancellationToken cancellationToken)
+    {
+        try
+        {
+            var app = await appService.UpdateAsync(
+                appId, request.Name, request.SquadId, request.Description, request.Criticality,
+                request.Tags, request.Status, request.ExternalId, cancellationToken);
+            return Ok(app.ToDetailDto());
+        }
+        catch (KeyNotFoundException ex)
+        {
+            return NotFound(ex.Message);
+        }
+    }
+
+    [HttpDelete("{appId}")]
+    public async Task<IActionResult> Delete(string appId, CancellationToken cancellationToken)
+    {
+        try
+        {
+            await appService.DeleteAsync(appId, cancellationToken);
+            return NoContent();
+        }
+        catch (DomainConflictException ex)
+        {
+            return Conflict(ex.Message);
+        }
+    }
+
+    [HttpGet("{appId}/links")]
+    public async Task<ActionResult<IReadOnlyList<AppLinkDto>>> ListLinks(string appId, CancellationToken cancellationToken)
+    {
+        var links = await appService.ListLinksAsync(appId, cancellationToken);
+        return Ok(links.Select(l => l.ToDto()).ToList());
+    }
+
+    [HttpPost("{appId}/links")]
+    public async Task<ActionResult<AppLinkDto>> AddLink(
+        string appId, [FromBody] UpsertAppLinkRequest request, CancellationToken cancellationToken)
+    {
+        var link = await appService.AddLinkAsync(appId, request.Description, request.Uri, cancellationToken);
+        return CreatedAtAction(nameof(ListLinks), new { appId }, link.ToDto());
+    }
+
+    [HttpPut("{appId}/links/{linkId}")]
+    public async Task<ActionResult<AppLinkDto>> UpdateLink(
+        string appId, string linkId, [FromBody] UpsertAppLinkRequest request, CancellationToken cancellationToken)
+    {
+        var link = await appService.UpdateLinkAsync(appId, linkId, request.Description, request.Uri, cancellationToken);
+        return Ok(link.ToDto());
+    }
+
+    [HttpDelete("{appId}/links/{linkId}")]
+    public async Task<IActionResult> DeleteLink(string appId, string linkId, CancellationToken cancellationToken)
+    {
+        await appService.DeleteLinkAsync(appId, linkId, cancellationToken);
+        return NoContent();
     }
 
     [HttpGet("{appId}/repositories")]

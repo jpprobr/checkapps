@@ -1,10 +1,12 @@
 # CheckApps
 
-MVP para visualizar a composição de apps de uma squad e acompanhar a saúde e evolução
-histórica da qualidade dessas aplicações (dados de Sonar, mockados neste MVP).
+MVP para visualizar a composição de apps de uma squad, acompanhar a saúde e evolução
+histórica da qualidade dessas aplicações (dados de Sonar, mockados neste MVP) e
+gerenciar manualmente o cadastro de squads e apps (criar, editar, inativar, remover).
 
 Contexto completo, modelagem de domínio, access patterns e design do DynamoDB: ver
-`docs/plan.md` (cópia do plano de análise aprovado antes da implementação).
+`docs/plan.md` (plano de análise do MVP inicial) e `docs/squad-app-management.md`
+(spec do módulo de cadastro de squads/apps, incluindo links corporativos por app).
 
 ## Stack
 

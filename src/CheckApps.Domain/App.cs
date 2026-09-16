@@ -3,12 +3,11 @@ namespace CheckApps.Domain;
 public class App
 {
     public required string Id { get; init; }
-    public required string SquadId { get; init; }
+    public required string SquadId { get; set; }
     public required string Name { get; set; }
     public string? Description { get; set; }
     public string? Criticality { get; set; }
     public IReadOnlyCollection<string> Tags { get; set; } = [];
-    public IReadOnlyCollection<string> Links { get; set; } = [];
     public string? Status { get; set; }
     public string? ExternalId { get; set; }
 

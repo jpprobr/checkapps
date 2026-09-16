@@ -51,6 +51,37 @@ public class SquadRepository(IAmazonDynamoDB client, IOptions<DynamoDbOptions> o
         }, cancellationToken);
     }
 
+    public async Task<bool> TryCreateAsync(Squad squad, CancellationToken cancellationToken = default)
+    {
+        try
+        {
+            await client.PutItemAsync(new PutItemRequest
+            {
+                TableName = _tableName,
+                Item = ToItem(squad),
+                ConditionExpression = $"attribute_not_exists({TableSchema.Pk})"
+            }, cancellationToken);
+            return true;
+        }
+        catch (ConditionalCheckFailedException)
+        {
+            return false;
+        }
+    }
+
+    public async Task DeleteAsync(string squadId, CancellationToken cancellationToken = default)
+    {
+        await client.DeleteItemAsync(new DeleteItemRequest
+        {
+            TableName = _tableName,
+            Key = new Dictionary<string, AttributeValue>
+            {
+                [TableSchema.Pk] = S(Keys.SquadPk(squadId)),
+                [TableSchema.Sk] = S(Keys.Metadata)
+            }
+        }, cancellationToken);
+    }
+
     private static Dictionary<string, AttributeValue> ToItem(Squad squad)
     {
         var item = new Dictionary<string, AttributeValue>

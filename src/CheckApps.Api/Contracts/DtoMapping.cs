@@ -12,7 +12,7 @@ public static class DtoMapping
         app.Id, app.SquadId, app.Name, app.Criticality, app.Status, app.Tags, app.CurrentQualityLevel, app.LastSnapshotAt);
 
     public static AppDetailDto ToDetailDto(this App app) => new(
-        app.Id, app.SquadId, app.Name, app.Description, app.Criticality, app.Tags, app.Links, app.Status, app.ExternalId,
+        app.Id, app.SquadId, app.Name, app.Description, app.Criticality, app.Tags, app.Status, app.ExternalId,
         app.CurrentQualityLevel, app.CurrentMetrics?.ToDto(), app.LastSnapshotAt);
 
     public static CurrentQualityDto ToCurrentQualityDto(this App app) => new(
@@ -47,4 +47,6 @@ public static class DtoMapping
     public static SquadQualityEvolutionDto ToDto(this SquadQualityEvolution evolution) => new(
         [.. evolution.Points.Select(p => new SquadQualityEvolutionPointDto(p.Period, p.LevelCounts))],
         [.. evolution.AppTrends.Select(t => new AppQualityTrendDto(t.AppId, t.AppName, t.PreviousLevel, t.CurrentLevel, t.Direction.ToString()))]);
+
+    public static AppLinkDto ToDto(this AppLink link) => new(link.Id, link.Description, link.Uri);
 }

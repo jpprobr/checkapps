@@ -1,0 +1,39 @@
+<main class="page">
+  <p class="breadcrumb"><a routerLink="/">Squads</a></p>
+  <h1>{{ isEditMode ? 'Editar Squad' : 'Nova Squad' }}</h1>
+
+  @if (loading()) {
+    <p>Carregando…</p>
+  } @else {
+    <form class="card form" (ngSubmit)="submit()">
+      @if (error()) {
+        <p class="error">{{ error() }}</p>
+      }
+
+      <label>
+        Nome *
+        <input type="text" required [ngModel]="name()" (ngModelChange)="name.set($event)" name="name" />
+      </label>
+
+      <label>
+        Descrição
+        <textarea [ngModel]="description()" (ngModelChange)="description.set($event)" name="description"></textarea>
+      </label>
+
+      @if (isEditMode) {
+        <label>
+          Status
+          <select [ngModel]="status()" (ngModelChange)="status.set($event)" name="status">
+            <option value="active">Ativa</option>
+            <option value="inactive">Inativa</option>
+          </select>
+        </label>
+      }
+
+      <div class="form-actions">
+        <button type="submit" [disabled]="saving()">{{ saving() ? 'Salvando…' : 'Salvar' }}</button>
+        <a routerLink="/" class="button-secondary">Cancelar</a>
+      </div>
+    </form>
+  }
+</main>
