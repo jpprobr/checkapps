@@ -1,0 +1,56 @@
+# CheckApps — Roadmap por estágios
+
+A evolução do produto segue uma sequência deliberada. Cada estágio só faz sentido depois do anterior estar provado com usuários reais. **Não** construir infraestrutura de um estágio futuro para "preparar" — só evitar decisões que impeçam chegar lá (ver princípios em `vision.md`).
+
+```
+Inventário → Health → Evolution → Context → Intelligence → AI
+    ✅          ✅         ✅          ○            ○         ○
+```
+
+## ✅ Inventário
+
+Saber quais apps existem, de qual squad, com quais repositórios e projetos Sonar.
+
+- Entregue no MVP (`specs/001-mvp-core/`) via seed de dados de demonstração.
+- Cadastro manual (criar/editar/inativar/remover squads e apps, links corporativos por app) entregue em `specs/002-squad-app-management/`.
+- Ainda pendente: cadastro manual de Repository e SonarProject (adiado de propósito — hoje só via seed). Ver `backlog.md`.
+
+## ✅ Health
+
+Saber como está a qualidade atual de cada app: métricas (coverage, bugs, vulnerabilities, code smells, duplications, ratings) e um Quality Level derivado por regra.
+
+- Entregue no MVP. Dados vêm de um `MockSonarProvider`; a integração real com o SonarQube é o próximo passo natural deste estágio (ver `backlog.md`).
+- As regras de Quality Assessment (v1) são simples e versionadas — a expectativa é que evoluam (v2, v3…) sem invalidar snapshots antigos.
+
+## ✅ Evolution
+
+Saber se os apps estão melhorando ou piorando ao longo do tempo, e quais indicadores explicam a mudança.
+
+- Entregue no MVP: histórico de `QualitySnapshot` por app, gráfico de evolução do Quality Level, tabela de histórico de métricas, tendência por app (melhorou / piorou / estável) e distribuição por Quality Level no dashboard da squad.
+- Limitação conhecida: a evolução agregada da squad é calculada em memória a cada request, não pré-agregada. Adequado à escala atual; revisitar só se virar gargalo.
+
+**O MVP termina aqui.** Os estágios abaixo são direção, não compromisso.
+
+## ○ Context
+
+Relacionar um App a mais do que Squad/Repository/Sonar: Produto, Operação de negócio, Jornadas, Dependências, Integrações, Documentação, Arquitetura.
+
+- É o estágio em que o CheckApps deixa de ser "dashboard de qualidade" e vira "camada de contexto".
+- Provavelmente exige revisitar a persistência: o single-table DynamoDB atende bem os access patterns atuais, mas buscas mais livres (full-text, joins entre muitas entidades) podem pedir um banco complementar. Decisão adiada até haver requisito concreto.
+- Pré-requisito prático: integrações reais (Sonar, catálogo corporativo de apps) para que o contexto não dependa de cadastro manual.
+
+## ○ Intelligence
+
+Análises que cruzam contexto: quais jornadas são impactadas por um app com qualidade em queda, qual operação de negócio depende de uma aplicação crítica, onde a arquitetura está frágil.
+
+- Depende inteiramente do estágio Context existir com dados reais.
+
+## ○ AI
+
+Agentes e RAG operando sobre a camada de contexto: gerar SDD, interagir com Harness/CI/CD, responder perguntas em linguagem natural sobre o ecossistema.
+
+- É o motivo de o modelo de dados ter sido desenhado com identidade estável, relações explícitas, proveniência e temporalidade desde o MVP — mas nada disso é construído antes de Context e Intelligence estarem provados.
+
+## O que está explicitamente fora de qualquer estágio próximo
+
+Microservices, Kubernetes, event bus, vector database, knowledge graph, integração com Jira, automação de SDD, arquitetura distribuída complexa. Podem aparecer em estágios futuros se um requisito concreto pedir — não antes.
