@@ -1,0 +1,59 @@
+# AGENTS.md — CheckApps
+
+Instruções para agentes de IA (Claude Code, GitHub Copilot, Devin, etc.) trabalhando neste repositório. Leia este arquivo antes de qualquer coisa; ele aponta para o resto.
+
+## O que é
+
+CheckApps mostra a composição de apps de uma squad e acompanha a saúde e a evolução histórica da qualidade dessas aplicações (dados de Sonar — mockados neste estágio), com cadastro manual de squads e apps. Visão completa em `.agents/product/vision.md`; estágio atual em `.agents/product/roadmap.md`.
+
+Stack: .NET 10 (ASP.NET Core Web API, monólito modular) + Angular 20 (standalone) + AWS DynamoDB (single-table). Detalhes de execução no `README.md`.
+
+## Como rodar e testar
+
+```bash
+docker compose up -d                                   # DynamoDB Local em :8000 (-inMemory)
+dotnet run --project tools/CheckApps.Seed              # cria a tabela e popula dados de demo
+dotnet run --project src/CheckApps.Api --urls http://localhost:5232
+cd frontend && npm install && npm start                # Angular em :4200
+
+dotnet test tests/CheckApps.UnitTests                  # 37 testes, sem dependências externas
+dotnet test tests/CheckApps.IntegrationTests           # 11 testes, exige DynamoDB Local no ar
+```
+
+A skill `run-local` (`.agents/skills/run-local/`) encapsula essa sequência com as checagens necessárias.
+
+## Mapa: onde ler o quê
+
+| Antes de… | Leia |
+|---|---|
+| Começar qualquer sessão | `.agents/project/STATE.md` — estado atual, pendências, próximos passos |
+| Propor ou escopar algo novo | `.agents/product/vision.md`, `roadmap.md`, `backlog.md` |
+| Tocar código em `src/**` | `.agents/rules/backend.md`, depois `.agents/architecture/project-structure.md` |
+| Tocar código em `frontend/**` | `.agents/rules/frontend.md` |
+| Tocar persistência (`Infrastructure/DynamoDb/**`) | `.agents/architecture/data-model/dynamodb-single-table.md` |
+| Mudar algo estrutural (stack, modelo, padrões) | `.agents/architecture/decisions/` — ADRs numerados; se a decisão já existe, respeite-a ou proponha um novo ADR |
+| Implementar uma feature | A spec correspondente em `specs/NNN-*/spec.md` e seu `checklist.md` |
+| Criar uma feature nova | Copie `specs/_template/` para `specs/NNN-nome/` e preencha antes de codar |
+| Subir o ambiente local | Skill `run-local` em `.agents/skills/run-local/SKILL.md` |
+| Encerrar a sessão | Reescreva `.agents/project/STATE.md` (não anexe — substitua) |
+
+`.agents/skills/` segue o padrão aberto **Agent Skills** (`SKILL.md` com frontmatter de seis campos). Copilot e Devin leem essa pasta diretamente; o Claude Code lê os wrappers em `.claude/skills/` que apontam para ela.
+
+## Convenção de trabalho
+
+1. Analisar antes de implementar: para qualquer mudança não trivial, produzir um plano (ou uma spec) e obter aprovação antes de escrever código.
+2. Implementar em incrementos pequenos e verificáveis, cada um com sua própria verificação (build, testes, `curl`, navegação no browser).
+3. Registrar decisões estruturais como ADR; registrar regras "conquistadas" (aprendidas com bugs reais) em `.agents/rules/`.
+4. Commits pequenos, um por incremento. Só commitar quando pedido.
+5. Ao final da sessão, atualizar `STATE.md`.
+
+## Gotchas críticos (leia mesmo com pressa)
+
+- **Docker Desktop precisa estar rodando.** Se `docker ps` falhar com erro de pipe (`dockerDesktopLinuxEngine`), inicie o Docker Desktop manualmente e aguarde ~60s.
+- **DynamoDB Local roda em `-inMemory`.** Qualquer reinício do container (ou reboot da máquina) apaga tudo. Rode o seed de novo.
+- **`AppRepository.SaveAsync` é um `PutItem` completo.** Ao editar um App, carregue via `GetAsync`, mute só os campos do formulário e salve o mesmo objeto — construir um `App` novo só com os campos do formulário apaga silenciosamente o estado de qualidade desnormalizado (`currentQualityLevel`, `currentMetrics`, GSI2). Há teste cobrindo isso.
+- **App com histórico de qualidade não pode ser removido** (409). É por design: inative em vez de remover. Squad com apps vinculados idem.
+- **Testes de integração compartilham uma tabela.** Toda classe de teste de integração DynamoDB deve usar `[Collection(DynamoDbCollection.Name)]`, nunca `IClassFixture<DynamoDbLocalFixture>` — senão as classes rodam em paralelo e uma apaga a tabela da outra.
+- **Datas no Angular sempre com `'UTC'`** no `DatePipe` (`| date:'MMM/yyyy':'UTC'`). Sem isso, `2026-08-01T00:00:00Z` vira julho em UTC-3.
+- **Angular CLI 22 exige Node ≥ 22.22.** Este projeto está em Angular 20 por causa do Node 22.17 da máquina. Não faça `ng update` para 22 sem antes atualizar o Node.
+- **`.claude/` está no `.gitignore`, exceto `.claude/skills/`.** Configurações locais do Claude Code não vão para o repo; os wrappers de skill vão.
