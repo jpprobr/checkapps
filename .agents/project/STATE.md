@@ -1,6 +1,6 @@
 # STATE.md — estado atual do projeto
 
-> Reescrito (não anexado) ao fim de cada sessão de trabalho. Se este arquivo estiver desatualizado em relação ao `git log`, o git está certo. Última atualização: **2026-09-16**, após o commit que introduziu a estrutura `.agents/` + `specs/`.
+> Reescrito (não anexado) ao fim de cada sessão de trabalho. Se este arquivo estiver desatualizado em relação ao `git log`, o git está certo. Última atualização: **2026-09-16**, ao concluir a introdução da estrutura `.agents/` + `specs/` (8 commits, de `6029634` a este).
 
 ## Onde estamos
 
@@ -31,7 +31,7 @@ Os críticos estão em `AGENTS.md`. Os que mais mordem: Docker Desktop precisa e
 
 ## Próximos passos (em ordem de valor)
 
-1. **Retrofit das duas specs existentes** para `specs/001-…` e `specs/002-…` no formato do template (user stories, FR, SC, checklist) — passo 7 do plano em andamento.
-2. `.agents/product/backlog.md` — passo 8 do plano.
-3. Primeira feature nova pelo fluxo completo (spec → plano → implementação): candidatas mais prováveis são **CRUD de Repository/SonarProject** (mesma forma do que já existe) ou **integração real com Sonar** (destrava o estágio Health de verdade).
+1. **Teste de "sessão fria"**: abrir um Claude Code novo neste repo e pedir "suba o ambiente e me diga onde o projeto está" — deve funcionar só com `CLAUDE.md` → `AGENTS.md` → este arquivo → skill `run-local`. É a verificação final da estrutura `.agents/`.
+2. Primeira feature nova pelo fluxo completo (copiar `specs/_template/` → spec → aprovação → implementação): candidatas em `.agents/product/backlog.md`. As mais prováveis: **CRUD de Repository/SonarProject** (mesma forma da spec 002, barata) ou **integração real com Sonar** (destrava o estágio Health de verdade, mas exige acesso a um SonarQube).
+3. Na migração para a máquina corporativa: criar `.github/copilot-instructions.md`, confirmar se Devin/Copilot leem `.agents/skills/`.
 4. Antes de qualquer uso compartilhado: substituir ADR-007 por uma decisão de autenticação.
