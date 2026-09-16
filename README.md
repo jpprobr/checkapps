@@ -4,9 +4,12 @@ MVP para visualizar a composição de apps de uma squad, acompanhar a saúde e e
 histórica da qualidade dessas aplicações (dados de Sonar, mockados neste MVP) e
 gerenciar manualmente o cadastro de squads e apps (criar, editar, inativar, remover).
 
-Contexto completo, modelagem de domínio, access patterns e design do DynamoDB: ver
-`docs/plan.md` (plano de análise do MVP inicial) e `docs/squad-app-management.md`
-(spec do módulo de cadastro de squads/apps, incluindo links corporativos por app).
+- **Specs por feature**: `specs/` — `001-mvp-core` (inventário, health, evolution) e
+  `002-squad-app-management` (cadastro de squads/apps, links corporativos). Feature nova
+  começa copiando `specs/_template/`.
+- **Contexto para agentes de IA e pessoas chegando agora**: `AGENTS.md` (porta de entrada),
+  `.agents/product/` (visão, roadmap), `.agents/architecture/` (estrutura, modelo de dados,
+  ADRs), `.agents/rules/`, `.agents/project/STATE.md` (estado atual).
 
 ## Stack
 
