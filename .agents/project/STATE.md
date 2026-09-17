@@ -1,6 +1,6 @@
 # STATE.md — estado atual do projeto
 
-> Reescrito (não anexado) ao fim de cada sessão de trabalho. Se este arquivo estiver desatualizado em relação ao `git log`, o git está certo. Última atualização: **2026-09-16**, ao concluir a introdução da estrutura `.agents/` + `specs/` (8 commits, de `6029634` a este).
+> Reescrito (não anexado) ao fim de cada sessão de trabalho. Se este arquivo estiver desatualizado em relação ao `git log`, o git está certo. Última atualização: **2026-09-17**, ao criar a spec 003 (Checagens) em análise.
 
 ## Onde estamos
 
@@ -29,10 +29,15 @@ Estágio do roadmap: **Inventário + Health + Evolution concluídos** (ver `.age
 
 Os críticos estão em `AGENTS.md`. Os que mais mordem: Docker Desktop precisa estar rodando; DynamoDB Local perde dados ao reiniciar (rode o seed); API antiga presa em `:5232` trava o build; `DatePipe` sempre com `'UTC'`.
 
+## Em análise
+
+- **Spec 003 — Checagens** (`specs/003-checagens/`): revisões/demandas acompanhadas por app, substituindo a planilha do tech lead. Escrita com as respostas do usuário já incorporadas; **falta confirmar as Assumptions** (em especial: `implantado` não conta como concluído; sem `em-andamento`/`bloqueado`; remoção de app cascateia itens) para virar Aprovada. Não altera nenhuma entidade existente; reusa o GSI1 sem índice novo.
+
 ## Próximos passos (em ordem de valor)
 
-1. Primeira feature nova pelo fluxo completo (copiar `specs/_template/` → spec → aprovação → implementação): candidatas em `.agents/product/backlog.md`. As mais prováveis: **CRUD de Repository/SonarProject** (mesma forma da spec 002, barata) ou **integração real com Sonar** (destrava o estágio Health de verdade, mas exige acesso a um SonarQube).
-2. Na migração para a máquina corporativa: criar `.github/copilot-instructions.md`, confirmar se Devin/Copilot leem `.agents/skills/`.
-3. Antes de qualquer uso compartilhado: substituir ADR-007 por uma decisão de autenticação.
+1. **Confirmar as Assumptions da spec 003** → Aprovada → plano de implementação (5 incrementos já esboçados no `checklist.md`). É a primeira feature pelo fluxo completo `specs/_template/` → spec → aprovação → implementação.
+2. As ideias levantadas junto com a 003 (topologia, solução, dependências entre apps, detecção automática) foram para o backlog com recomendação de começar por convenção de tags — não bloqueiam nada.
+3. Na migração para a máquina corporativa: criar `.github/copilot-instructions.md`, confirmar se Devin/Copilot leem `.agents/skills/`.
+4. Antes de qualquer uso compartilhado: substituir ADR-007 por uma decisão de autenticação.
 
 Verificado em 2026-09-16: uma sessão nova do Claude Code, sem histórico, subiu o ambiente local só com `CLAUDE.md` → `AGENTS.md` → este arquivo → skill `run-local`.

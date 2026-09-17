@@ -2,6 +2,8 @@
 
 Demandas identificadas e conscientemente adiadas. Nenhuma tem spec ainda; quando uma for puxada, ela vira `specs/NNN-…/` copiando `specs/_template/`. Ordem aproximada de valor, não compromisso.
 
+Em análise (já tem spec, ainda não implementada): **Checagens** — `specs/003-checagens/`.
+
 ## Estágio Health (completa o que o MVP mockou)
 
 - **Integração real com SonarQube** — `SonarQubeProvider` implementando `ISonarProvider`. Decisões em aberto: autenticação (token), endpoint de métricas, mapeamento de campos (a POC original não está disponível para conferir nomes), cadência de coleta (job agendado? webhook? manual?), e como tratar projetos Sonar que não existem mais. É o item que tira o produto do modo demonstração. Pré-requisito: acesso a um SonarQube real (provavelmente só na máquina corporativa).
@@ -9,7 +11,7 @@ Demandas identificadas e conscientemente adiadas. Nenhuma tem spec ainda; quando
 
 ## Estágio Inventário (completa o cadastro)
 
-- **CRUD de Repository e SonarProject** — hoje só entram pelo seed. Mesma forma da spec 002: ações inline no detalhe do app, formulários simples, filhos de App na mesma partição. Sem guarda de remoção necessária (não têm histórico próprio). Provavelmente a spec mais barata da lista.
+- **CRUD de Repository e SonarProject** — hoje só entram pelo seed. Mesma forma da spec 002: ações inline no detalhe do app, formulários simples, filhos de App na mesma partição. Sem guarda de remoção necessária (não têm histórico próprio). Provavelmente a spec mais barata da lista. **Inclui "repositório ativo"**: `Repository.status` já existe (`active`/`legacy` no seed) mas não há invariante nem UI — a spec deve garantir no máximo um repositório ativo por app e uma ação "marcar como ativo". Com isso, "quais repositórios já podem ser arquivados" vira um filtro (`status != active`) ou uma checagem (spec 003) — não precisa de feature própria.
 - **Import em lote** — CSV ou JSON de squads/apps para carga inicial em ambiente novo, em vez de cadastrar um a um. Útil na migração para a máquina corporativa.
 
 ## Operação (necessário antes de qualquer uso compartilhado)
@@ -26,6 +28,17 @@ Demandas identificadas e conscientemente adiadas. Nenhuma tem spec ainda; quando
 - **Filtro de período no dashboard da squad** — a API já aceita `from`/`to` em `quality-evolution`; o frontend não expõe.
 - **Campos de auditoria** (`createdAt`, `updatedAt`, `createdBy`) — compatível com o modelo atual; faz sentido junto com autenticação.
 
+## Evoluções de Checagens (após a spec 003 estar implementada)
+
+- **Detecção automática de status** — um "coletor" que varre repositórios (GitHub) para responder "quais apps têm a dependência X / estão no .NET Y" e pré-preenche o status dos itens de uma checagem. É a metade "detectar" que a spec 003 deliberadamente deixou de fora ("rastrear ≠ detectar"). Exige integração com GitHub e leitura de manifestos (`.csproj`, `package.json`…). Provavelmente a evolução de maior valor da feature.
+- **Export de checagens** (Excel/CSV) — a POC exportava; reporte em reunião pode pedir. Só depois de validar que os indicadores de tela não bastam.
+- **Histórico de percentual no tempo** — "como estava semana passada". Exige snapshot periódico da contagem por status; mesmo padrão de `QualitySnapshot`.
+- **Alertas de prazo** — cor de "vencido", lembrete. Cuidado: é o primeiro passo em direção a governança; decidir explicitamente.
+
 ## Estágio Context (visão, não plano)
 
-Produto, Operação, Jornadas, Dependências, Integrações, Documentação, Arquitetura relacionados a um App. Nenhum item aqui tem forma ainda — depende de integrações reais existirem primeiro. Ver `roadmap.md`.
+Produto, Operação, Jornadas, Dependências, Integrações, Documentação, Arquitetura relacionados a um App. Depende de integrações reais existirem primeiro. Ver `roadmap.md`. Ideias já levantadas (2026-09-17), em ordem de custo:
+
+- **Topologia / arquitetura do app** ("modal" legado vs "carrinho" recente) — com dois valores conhecidos, é classificação, não entidade. **Começar por convenção de tag** (`topologia:carrinho`), que já filtra na UI e pode ser usada como filtro no seletor de apps das checagens, sem mudar modelo. Só vira entidade se precisar de atributos próprios (descrição, diagrama, dono). O termo "topologia" ainda está em aberto.
+- **Solução (`id-solution`)** — agrupar apps e repositórios que compõem uma mesma solução. É um segundo eixo de agrupamento ao lado de Squad (Squad = quem cuida; Solução = o que compõe) e por isso merece ADR. **Começar também por tag** (`solucao:pagamentos`); promover a entidade quando uma checagem precisar selecionar "por solução" com dados que a solução carrega, ou quando diagramas precisarem dela.
+- **Dependências entre apps** (A depende de B) para diagrama de dependência — o item de maior risco: grafo mantido à mão envelhece em semanas (o mesmo problema da planilha). Só vale com uma fonte de detecção (chamadas observadas, manifestos, API Gateway) ou uma necessidade de diagrama forte o bastante para pagar a manutenção manual.
