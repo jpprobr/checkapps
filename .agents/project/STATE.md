@@ -31,7 +31,8 @@ Os críticos estão em `AGENTS.md`. Os que mais mordem: Docker Desktop precisa e
 
 ## Próximos passos (em ordem de valor)
 
-1. **Teste de "sessão fria"**: abrir um Claude Code novo neste repo e pedir "suba o ambiente e me diga onde o projeto está" — deve funcionar só com `CLAUDE.md` → `AGENTS.md` → este arquivo → skill `run-local`. É a verificação final da estrutura `.agents/`.
-2. Primeira feature nova pelo fluxo completo (copiar `specs/_template/` → spec → aprovação → implementação): candidatas em `.agents/product/backlog.md`. As mais prováveis: **CRUD de Repository/SonarProject** (mesma forma da spec 002, barata) ou **integração real com Sonar** (destrava o estágio Health de verdade, mas exige acesso a um SonarQube).
-3. Na migração para a máquina corporativa: criar `.github/copilot-instructions.md`, confirmar se Devin/Copilot leem `.agents/skills/`.
-4. Antes de qualquer uso compartilhado: substituir ADR-007 por uma decisão de autenticação.
+1. Primeira feature nova pelo fluxo completo (copiar `specs/_template/` → spec → aprovação → implementação): candidatas em `.agents/product/backlog.md`. As mais prováveis: **CRUD de Repository/SonarProject** (mesma forma da spec 002, barata) ou **integração real com Sonar** (destrava o estágio Health de verdade, mas exige acesso a um SonarQube).
+2. Na migração para a máquina corporativa: criar `.github/copilot-instructions.md`, confirmar se Devin/Copilot leem `.agents/skills/`.
+3. Antes de qualquer uso compartilhado: substituir ADR-007 por uma decisão de autenticação.
+
+Verificado em 2026-09-16: uma sessão nova do Claude Code, sem histórico, subiu o ambiente local só com `CLAUDE.md` → `AGENTS.md` → este arquivo → skill `run-local`.
