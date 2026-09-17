@@ -16,6 +16,7 @@ Critério de "concluído". A spec só muda para `Implementada` quando tudo abaix
 - [ ] [Incremento 2 — …]
 - [ ] Regras "conquistadas" durante a implementação registradas em `.agents/rules/`
 - [ ] Modelo de dados atualizado em `.agents/architecture/data-model/` se houve mudança de chave/item
+- [ ] Access patterns novos ou alterados registrados em `.agents/architecture/data-model/access-patterns.md`, com o fit de cada um
 
 ## Verificação
 

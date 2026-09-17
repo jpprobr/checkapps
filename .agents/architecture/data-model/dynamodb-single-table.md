@@ -2,7 +2,7 @@
 
 > **Fonte da verdade**: `src/CheckApps.Infrastructure/DynamoDb/Keys.cs` e `TableSchema.cs`. Este documento espelha o código para leitura rápida; se divergir, o código está certo e este arquivo precisa ser corrigido.
 
-Tabela única `CheckApps` (nome configurável via `DynamoDb:TableName`). Chave composta `PK` (hash) + `SK` (range), ambos string. Dois GSIs, cada um justificado por um access pattern explícito — não há índice "por precaução".
+Tabela única `CheckApps` (nome configurável via `DynamoDb:TableName`). Chave composta `PK` (hash) + `SK` (range), ambos string. Dois GSIs, cada um justificado por um access pattern explícito — não há índice "por precaução". O índice de todos os padrões, com o fit de cada um, está em `access-patterns.md`; os gatilhos para revisitar o DynamoDB estão no ADR-002.
 
 ## Tabela base
 
