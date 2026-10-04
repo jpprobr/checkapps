@@ -2,7 +2,7 @@
 
 Demandas identificadas e conscientemente adiadas. Nenhuma tem spec ainda; quando uma for puxada, ela vira `specs/NNN-…/` copiando `specs/_template/`. Ordem aproximada de valor, não compromisso.
 
-Em análise (já tem spec, ainda não implementada): **Checagens** — `specs/003-checagens/`.
+Com spec, ainda não implementadas: **Migração para SQLite** — `specs/004-migracao-sqlite/` (vem primeiro) e **Checagens** — `specs/003-checagens/`.
 
 ## Estágio Health (completa o que o MVP mockou)
 
@@ -17,6 +17,8 @@ Em análise (já tem spec, ainda não implementada): **Checagens** — `specs/00
 ## Operação (necessário antes de qualquer uso compartilhado)
 
 - **Autenticação e autorização** — substitui ADR-007. Provavelmente integração com IdP corporativo. A modelagem de permissões (quem edita o quê, por squad? por papel?) é decisão de produto, não detalhe técnico.
+- **Migração SQLite → Postgres** — quando o modelo estabilizar (poucas mudanças por trimestre), submeter de uma vez ao processo corporativo de modelagem um schema já validado por uso real. Gatilhos e racional no ADR-009.
+- **Litestream e deploy no ECS** — replicação do WAL para S3, restore no boot, deploy stop-then-start com instância única. Documentado na spec 004; implementar quando houver deploy de verdade. **Testar o restore faz parte da entrega.**
 - **Deploy em AWS real** — nunca validado além do DynamoDB Local. Envolve: criar a tabela na conta, hospedar API e frontend (a decisão de onde é um ADR), configuração por ambiente, e o custo de DynamoDB on-demand na escala esperada.
 - **CI** — build + testes unitários em todo push; testes de integração exigem DynamoDB Local no pipeline (container de serviço).
 - **`.github/copilot-instructions.md`** — ponteiro fino para `AGENTS.md`, criar quando o Copilot passar a ser usado no repo.

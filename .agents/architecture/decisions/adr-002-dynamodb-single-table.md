@@ -1,6 +1,8 @@
 # ADR-002: DynamoDB em tabela única, desenhada a partir dos access patterns
 
-**Status**: Aceita · **Data**: 2026-09-13
+**Status**: Substituída pelo ADR-009 (2026-10-04) · **Data**: 2026-09-13
+
+> Mantida na íntegra de propósito: registra o raciocínio como ele era, e a avaliação de 2026-09-17 no fim deste documento foi o que levou à troca. A retrospectiva completa do experimento está em `../retrospectives/2026-10-dynamodb-single-table.md`.
 
 ## Contexto
 

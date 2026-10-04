@@ -1,6 +1,8 @@
 # ADR-004: QualitySnapshot imutável; Quality Level congelado na escrita; estado atual desnormalizado no App
 
-**Status**: Aceita · **Data**: 2026-09-13
+**Status**: Aceita, exceto a cláusula 3 (desnormalização), revogada pelo ADR-009 · **Data**: 2026-09-13
+
+> As cláusulas 1 e 2 — snapshot imutável e Quality Level congelado na escrita com a versão da regra — continuam valendo e são o coração do produto. A cláusula 3 existia para evitar uma consulta extra no DynamoDB; em SQL, "app com seu snapshot mais recente" é um join.
 
 ## Contexto
 

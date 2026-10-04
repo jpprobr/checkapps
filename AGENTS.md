@@ -33,6 +33,7 @@ A skill `run-local` (`.agents/skills/run-local/`) encapsula essa sequência com 
 | Tocar persistência (`Infrastructure/DynamoDb/**`) | `.agents/architecture/data-model/dynamodb-single-table.md` |
 | Propor um access pattern, GSI ou desnormalização nova | `.agents/architecture/data-model/access-patterns.md` (registro vivo com o fit de cada padrão) e os gatilhos do ADR-002 |
 | Mudar algo estrutural (stack, modelo, padrões) | `.agents/architecture/decisions/` — ADRs numerados; se a decisão já existe, respeite-a ou proponha um novo ADR |
+| Entender por que uma decisão passada foi revista | `.agents/architecture/retrospectives/` — avaliações de experimentos concluídos (histórico, não vivo) |
 | Implementar uma feature | A spec correspondente em `specs/NNN-*/spec.md` e seu `checklist.md` |
 | Criar uma feature nova | Copie `specs/_template/` para `specs/NNN-nome/` e preencha antes de codar |
 | Subir o ambiente local | Skill `run-local` em `.agents/skills/run-local/SKILL.md` |

@@ -1,5 +1,7 @@
 # Registro de access patterns
 
+> **Em transição (2026-10-04)**: o ADR-009 decidiu migrar para SQLite (spec 004). A coluna de fit abaixo descreve o DynamoDB e deve ser reescrita ao fim da migração — vários ❌ deixam de ser impossíveis. A análise que levou à troca está em `../retrospectives/2026-10-dynamodb-single-table.md`.
+
 Índice único de todo padrão de acesso que o sistema suporta, como é resolvido no DynamoDB e quão bem cabe. **Regra de manutenção**: toda spec que cria ou muda um padrão adiciona ou edita a linha aqui, no mesmo commit. Antes de propor um GSI novo, um `Scan` ou uma desnormalização, consulte esta tabela e o ADR-002.
 
 **Critério de fit em dez segundos**: uma entidade e seus filhos (partição, `begins_with`, série temporal) → ✅. Cruzar entidades (join, agregação transversal, filtro por atributo de outra entidade) → o DynamoDB empurra para memória ou para índice novo → ⚠️ ou ❌.

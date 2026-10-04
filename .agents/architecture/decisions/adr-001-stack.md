@@ -1,6 +1,6 @@
 # ADR-001: Stack — .NET 10, Angular 20, AWS DynamoDB
 
-**Status**: Aceita · **Data**: 2026-09-13
+**Status**: Aceita; a escolha de persistência foi revista pelo ADR-009 (2026-10-04) · **Data**: 2026-09-13
 
 ## Contexto
 
