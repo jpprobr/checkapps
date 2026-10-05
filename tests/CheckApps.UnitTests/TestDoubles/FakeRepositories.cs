@@ -144,4 +144,10 @@ public class FakeQualitySnapshotRepository : IQualitySnapshotRepository
 
     public Task<QualitySnapshot?> GetLatestAsync(string appId, CancellationToken ct = default) =>
         Task.FromResult(_snapshots.Where(s => s.AppId == appId).OrderByDescending(s => s.CollectedAt).FirstOrDefault());
+
+    /// <summary>O fake não conhece squads; devolve tudo, e os testes montam só os apps da squad sob teste.</summary>
+    public Task<IReadOnlyList<QualitySnapshot>> GetHistoryBySquadAsync(
+        string squadId, DateTimeOffset? from = null, DateTimeOffset? to = null, CancellationToken ct = default) =>
+        Task.FromResult<IReadOnlyList<QualitySnapshot>>(
+            _snapshots.OrderBy(s => s.AppId).ThenBy(s => s.CollectedAt).ToList());
 }

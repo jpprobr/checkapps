@@ -60,24 +60,26 @@ public class SquadService(ISquadRepository squads, IAppRepository apps, IQuality
     }
 
     /// <summary>
-    /// Agrega, em memória, o histórico de todos os apps da squad num período: a
-    /// distribuição de Quality Level por data de coleta e a tendência de cada app
-    /// (comparando os dois snapshots mais recentes no período). Ver seção 8 do plano:
-    /// não há pré-agregação no banco no MVP.
+    /// Distribuição de Quality Level por data de coleta e tendência de cada app (comparando
+    /// os dois snapshots mais recentes no período), para toda a squad.
+    /// <para>
+    /// São duas consultas — apps e histórico da squad — e a agregação acontece aqui, não no SQL.
+    /// É deliberado: a classificação de tendência (melhorou/piorou/estável/novo) é regra de
+    /// negócio e precisa das linhas de qualquer forma, então empurrá-la para o banco só moveria
+    /// lógica de lugar. Não há pré-agregação armazenada (ADR-002, mantido pelo ADR-009).
+    /// </para>
     /// </summary>
     public async Task<SquadQualityEvolution> GetQualityEvolutionAsync(
         string squadId, DateTimeOffset? from = null, DateTimeOffset? to = null, CancellationToken cancellationToken = default)
     {
         var squadApps = await apps.ListBySquadAsync(squadId, cancellationToken);
+        var squadHistory = await snapshots.GetHistoryBySquadAsync(squadId, from, to, cancellationToken);
 
-        var historiesByApp = new Dictionary<App, IReadOnlyList<QualitySnapshot>>();
-        foreach (var app in squadApps)
-        {
-            historiesByApp[app] = await snapshots.GetHistoryAsync(app.Id, from, to, cancellationToken);
-        }
+        var historyByAppId = squadHistory
+            .GroupBy(s => s.AppId)
+            .ToDictionary(g => g.Key, g => (IReadOnlyList<QualitySnapshot>)g.ToList());
 
-        var points = historiesByApp
-            .SelectMany(kv => kv.Value)
+        var points = squadHistory
             .GroupBy(s => s.CollectedAt)
             .OrderBy(g => g.Key)
             .Select(g => new SquadQualityEvolutionPoint(
@@ -85,8 +87,8 @@ public class SquadService(ISquadRepository squads, IAppRepository apps, IQuality
                 g.GroupBy(s => s.QualityLevel).ToDictionary(lg => lg.Key, lg => lg.Count())))
             .ToList();
 
-        var trends = historiesByApp
-            .Select(kv => BuildTrend(kv.Key, kv.Value))
+        var trends = squadApps
+            .Select(app => BuildTrend(app, historyByAppId.GetValueOrDefault(app.Id, [])))
             .Where(trend => trend is not null)
             .Select(trend => trend!)
             .ToList();

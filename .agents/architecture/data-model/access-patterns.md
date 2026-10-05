@@ -24,7 +24,7 @@ Schema vigente: `sqlite-schema.md`. Fonte da verdade: `schema.sql`.
 | 8 | Histórico completo de um app | Query `PK=APP#{id}`, `begins_with SNAPSHOT#` | ✅ | SK cronológico |
 | 9 | Histórico num período | Query `SK BETWEEN SNAPSHOT#{from} AND SNAPSHOT#{to}#￿` | ✅ | |
 | 10 | Situação atual de todos os apps da squad | = #3 | ✅ | |
-| 11 | Evolução agregada da squad | #3 + #9 por app, agregado em memória | ⚠️ | N+1 na Application layer; em SQL seria um `GROUP BY`. Pré-agregar só se virar gargalo |
+| 11 | Evolução agregada da squad | #3 + #30, agregado na Application | ✅ | Era N+1 no DynamoDB; hoje são duas consultas. A agregação fica na Application de propósito — a classificação de tendência é regra de negócio e precisa das linhas |
 | 12 | Apps por Quality Level | Query GSI2 `PK="QUALITYLEVEL#{level}"` | ⚠️ | Precisou de um GSI inteiro; em SQL seria um `WHERE` |
 | 13 | Registrar snapshot | `TransactWriteItems`: Put + Update condicional do App | ✅ | Atomicidade no banco; backfill fora de ordem seguro |
 | 14 | Snapshot mais recente | #8 com `ScanIndexForward=false, Limit=1` | ✅ | |
@@ -39,6 +39,12 @@ Schema vigente: `sqlite-schema.md`. Fonte da verdade: `schema.sql`.
 | 18 | Remover app (sem histórico) | Query da partição + `BatchWriteItem` | ✅ | Repositório não filtra `SNAPSHOT#`; guarda é do serviço (ADR-005) |
 | 19 | Remover squad (sem apps) | `DeleteItem` | ✅ | Guarda "sem apps" = #3 no serviço |
 | 20 | Links de um app (CRUD) | `PK=APP#{id}`, `begins_with APPLINK#` | ✅ | |
+
+## Spec 004 — Migração para SQLite (implementada)
+
+| # | Padrão | Resolução | Fit | Observação |
+|---|---|---|---|---|
+| 30 | Histórico de todos os apps de uma squad | `quality_snapshots` com `INNER JOIN apps` e filtro de período | ✅ | Criado para eliminar o N+1 do padrão #11; não existia equivalente no DynamoDB |
 
 ## Spec 003 — Checagens (em análise)
 

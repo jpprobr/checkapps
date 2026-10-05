@@ -1,6 +1,6 @@
 # Checklist — Spec 004: Migração DynamoDB → SQLite
 
-Status: **implementada** em 2026-10-04. Pendência conhecida: incremento 6 (otimização do N+1), deliberadamente separado.
+Status: **implementada** em 2026-10-04, incluindo o incremento 6 (remoção do N+1), feito em seguida e verificado separadamente.
 
 ## Qualidade da spec
 
@@ -17,6 +17,7 @@ Status: **implementada** em 2026-10-04. Pendência conhecida: incremento 6 (otim
 - [x] 2. **Repositórios**: `SquadRepository`, `AppRepository`, `QualitySnapshotRepository` em SQL — aproveitando as simplificações (join para estado atual, `GROUP BY` para evolução da squad), não traduzindo o DynamoDB literalmente. *Verificação: testes de integração reescritos passando.*
 - [x] 3. **Fiação e seed**: DI apontando para a nova infra, `appsettings` com `ConnectionStrings`, seed funcionando sem alteração de lógica. *Verificação: seed roda e o resumo bate com o de hoje.*
 - [x] 4. **Testes de integração**: banco temporário por classe, sem Docker, sem `[Collection]` compartilhada. *Verificação: `dotnet test` em máquina sem Docker; execução em paralelo sem interferência.*
+- [x] 6. **Remoção do N+1** em `SquadService.GetQualityEvolutionAsync` (feito após os demais, com verificação própria): nova porta `GetHistoryBySquadAsync`, duas consultas em vez de 1+N, agregação mantida na Application. Teste de integração próprio; saída do endpoint idêntica à baseline.
 - [x] 5. **Limpeza e documentação**: remover `docker-compose.yml`, pacote AWS SDK e arquivos de chave; atualizar skill `run-local`, `AGENTS.md` (gotchas que deixam de existir), `.agents/rules/backend.md`, `README.md` e o registro de access patterns para a era SQL. *Verificação: teste de sessão fria com a skill atualizada.*
 
 ## Verificação

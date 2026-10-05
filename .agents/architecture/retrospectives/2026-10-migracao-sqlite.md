@@ -45,5 +45,5 @@ Lição para a próxima estimativa: contar linhas é um proxy ruim para custo de
 
 ## Pendências desta migração
 
-- Incremento 6: `SquadService.GetQualityEvolutionAsync` ainda faz N+1 (agora em SQL barato). Vira uma consulta com `GROUP BY`, com testes próprios.
+- ~~Incremento 6~~ **concluído logo em seguida**: o N+1 virou duas consultas (`GetHistoryBySquadAsync`). Vale registrar um desvio consciente do plano, que dizia "uma consulta com `GROUP BY`": a classificação de tendência precisa das linhas individuais de qualquer forma, então um `GROUP BY` no banco significaria ou uma terceira consulta buscando dados já carregados, ou mover regra de negócio para o SQL. Duas consultas com agregação na Application é o desenho correto; a letra do plano estava errada.
 - Litestream e o deploy stop-then-start no ECS seguem documentados como alvo, não implementados — e **o restore precisa ser testado antes de confiar dado real a ele**.

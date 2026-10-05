@@ -111,6 +111,39 @@ public class RepositoriesTests(SqliteFixture fixture) : IClassFixture<SqliteFixt
         Assert.Equal(2, history.Count);
     }
 
+    [Fact]
+    public async Task GetHistoryBySquad_ReturnsSnapshotsOfAllAppsOfThatSquad_AndOnlyThem()
+    {
+        var squadId = $"sq-{Guid.NewGuid():N}";
+        var otherSquadId = $"sq-{Guid.NewGuid():N}";
+        await _squads.SaveAsync(new Squad { Id = squadId, Name = "Squad Teste" });
+        await _squads.SaveAsync(new Squad { Id = otherSquadId, Name = "Outra Squad" });
+
+        var appId = $"app-{Guid.NewGuid():N}";
+        var otherAppId = $"app-{Guid.NewGuid():N}";
+        var outsiderId = $"app-{Guid.NewGuid():N}";
+        await _apps.SaveAsync(new App { Id = appId, SquadId = squadId, Name = "a" });
+        await _apps.SaveAsync(new App { Id = otherAppId, SquadId = squadId, Name = "b" });
+        await _apps.SaveAsync(new App { Id = outsiderId, SquadId = otherSquadId, Name = "c" });
+
+        var jun = new DateTimeOffset(2026, 6, 1, 0, 0, 0, TimeSpan.Zero);
+        var jul = new DateTimeOffset(2026, 7, 1, 0, 0, 0, TimeSpan.Zero);
+
+        await AddSnapshotAsync(appId, jun, coverage: 70, reliability: "B", maintainability: "A", security: "A");
+        await AddSnapshotAsync(appId, jul, coverage: 90, reliability: "A", maintainability: "A", security: "A");
+        await AddSnapshotAsync(otherAppId, jul, coverage: 90, reliability: "A", maintainability: "A", security: "A");
+        await AddSnapshotAsync(outsiderId, jul, coverage: 90, reliability: "A", maintainability: "A", security: "A");
+
+        var all = await _snapshots.GetHistoryBySquadAsync(squadId);
+
+        Assert.Equal(3, all.Count);
+        Assert.DoesNotContain(all, s => s.AppId == outsiderId);
+
+        var onlyJuly = await _snapshots.GetHistoryBySquadAsync(squadId, from: jul, to: jul);
+        Assert.Equal(2, onlyJuly.Count);
+        Assert.All(onlyJuly, s => Assert.Equal(jul, s.CollectedAt));
+    }
+
     private async Task<string> SeedAppWithSnapshotAsync(
         string squadId, double coverage, string reliability, string maintainability, string security)
     {

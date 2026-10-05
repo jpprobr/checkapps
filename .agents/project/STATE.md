@@ -11,7 +11,7 @@ Estágio do roadmap: **Inventário + Health + Evolution concluídos** (ver `.age
 - **MVP core** (`specs/001-mvp-core/`): squads, apps, repositórios, projetos Sonar, histórico de `QualitySnapshot`, dashboard da squad, lista de apps com busca/filtro/ordenação, detalhe com gráfico de evolução e tabela de histórico.
 - **Cadastro de Squads e Apps** (`specs/002-squad-app-management/`): criar/editar/inativar/remover pela UI e pela API, ids por slug, guardas de remoção (409), links corporativos por app.
 - **Persistência em SQLite** (`specs/004-migracao-sqlite/`, ADR-009): Dapper com SQL explícito, schema em `schema.sql`. Nenhuma mudança de comportamento observável — verificado endpoint a endpoint contra baseline e com os roteiros Playwright originais, sem alterar os scripts.
-- **Testes**: 37 unitários + 11 de integração, verdes. **Nenhum exige Docker ou serviço externo.**
+- **Testes**: 37 unitários + 12 de integração, verdes. **Nenhum exige Docker ou serviço externo.**
 - **Ambiente local**: skill `run-local` (sem Docker); `README.md` com o passo a passo humano.
 
 ## O que está mockado / provisório
@@ -33,10 +33,9 @@ Os críticos estão em `AGENTS.md`. Os que mais mordem hoje: o caminho relativo 
 
 ## Próximos passos (em ordem)
 
-1. **Incremento 6 da spec 004** (pendência deliberada): `SquadService.GetQualityEvolutionAsync` ainda faz N+1, agora em SQL barato. Vira uma consulta com `GROUP BY`, com testes próprios. É o único incremento que toca `Application`.
-2. **Fechar as assumptions da spec 003** e implementá-la — já em SQL, que foi o motivo de a migração vir antes.
-3. Classificação de apps (tipo, solução) — decidir por tag ou campo; ver backlog.
-4. Na migração para a máquina corporativa: `.github/copilot-instructions.md` e verificação do `.agents/skills/`.
-5. Antes de qualquer uso compartilhado: substituir ADR-007 por uma decisão de autenticação.
+1. **Fechar as assumptions da spec 003** e implementá-la — já em SQL, que foi o motivo de a migração vir antes.
+2. Classificação de apps (tipo, solução) — decidir por tag ou campo; ver backlog.
+3. Na migração para a máquina corporativa: `.github/copilot-instructions.md` e verificação do `.agents/skills/`.
+4. Antes de qualquer uso compartilhado: substituir ADR-007 por uma decisão de autenticação.
 
 Verificado em 2026-09-16: uma sessão nova do Claude Code, sem histórico, subiu o ambiente local só com `CLAUDE.md` → `AGENTS.md` → este arquivo → skill `run-local`. A skill mudou com a migração (não há mais Docker) — vale repetir o teste.

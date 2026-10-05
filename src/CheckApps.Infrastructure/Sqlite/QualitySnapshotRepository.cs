@@ -8,13 +8,13 @@ public class QualitySnapshotRepository(SqliteConnectionFactory connectionFactory
 {
     private const string SelectColumns =
         """
-        SELECT id AS Id, app_id AS AppId, sonar_project_id AS SonarProjectId,
-               collected_at AS CollectedAt, source AS Source,
-               coverage AS Coverage, bugs AS Bugs, vulnerabilities AS Vulnerabilities,
-               code_smells AS CodeSmells, duplications AS Duplications,
-               reliability AS Reliability, maintainability AS Maintainability, security AS Security,
-               quality_level AS QualityLevel, assessment_rules_version AS AssessmentRulesVersion
-        FROM quality_snapshots
+        SELECT s.id AS Id, s.app_id AS AppId, s.sonar_project_id AS SonarProjectId,
+               s.collected_at AS CollectedAt, s.source AS Source,
+               s.coverage AS Coverage, s.bugs AS Bugs, s.vulnerabilities AS Vulnerabilities,
+               s.code_smells AS CodeSmells, s.duplications AS Duplications,
+               s.reliability AS Reliability, s.maintainability AS Maintainability, s.security AS Security,
+               s.quality_level AS QualityLevel, s.assessment_rules_version AS AssessmentRulesVersion
+        FROM quality_snapshots s
         """;
 
     /// <summary>
@@ -67,10 +67,10 @@ public class QualitySnapshotRepository(SqliteConnectionFactory connectionFactory
         // from e to são inclusivos, como eram os limites de SK no DynamoDB.
         var sql = $"""
             {SelectColumns}
-            WHERE app_id = @appId
-              AND (@from IS NULL OR collected_at >= @from)
-              AND (@to IS NULL OR collected_at <= @to)
-            ORDER BY collected_at, sonar_project_id
+            WHERE s.app_id = @appId
+              AND (@from IS NULL OR s.collected_at >= @from)
+              AND (@to IS NULL OR s.collected_at <= @to)
+            ORDER BY s.collected_at, s.sonar_project_id
             """;
 
         using var connection = connectionFactory.Create();
@@ -93,13 +93,42 @@ public class QualitySnapshotRepository(SqliteConnectionFactory connectionFactory
         var row = await connection.QuerySingleOrDefaultAsync<SnapshotRow>(new CommandDefinition(
             $"""
             {SelectColumns}
-            WHERE app_id = @appId
-            ORDER BY collected_at DESC, sonar_project_id DESC
+            WHERE s.app_id = @appId
+            ORDER BY s.collected_at DESC, s.sonar_project_id DESC
             LIMIT 1
             """,
             new { appId }, cancellationToken: cancellationToken));
 
         return row?.ToSnapshot();
+    }
+
+    public async Task<IReadOnlyList<QualitySnapshot>> GetHistoryBySquadAsync(
+        string squadId,
+        DateTimeOffset? from = null,
+        DateTimeOffset? to = null,
+        CancellationToken cancellationToken = default)
+    {
+        var sql = $"""
+            {SelectColumns}
+            INNER JOIN apps a ON a.id = s.app_id
+            WHERE a.squad_id = @squadId
+              AND (@from IS NULL OR s.collected_at >= @from)
+              AND (@to IS NULL OR s.collected_at <= @to)
+            ORDER BY s.app_id, s.collected_at, s.sonar_project_id
+            """;
+
+        using var connection = connectionFactory.Create();
+        var rows = await connection.QueryAsync<SnapshotRow>(new CommandDefinition(
+            sql,
+            new
+            {
+                squadId,
+                from = from is { } f ? IsoTimestamp.Format(f) : null,
+                to = to is { } t ? IsoTimestamp.Format(t) : null
+            },
+            cancellationToken: cancellationToken));
+
+        return rows.Select(r => r.ToSnapshot()).ToList();
     }
 
     private sealed record SnapshotRow(

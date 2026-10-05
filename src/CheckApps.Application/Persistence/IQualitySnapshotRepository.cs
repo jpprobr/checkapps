@@ -19,4 +19,14 @@ public interface IQualitySnapshotRepository
         CancellationToken cancellationToken = default);
 
     Task<QualitySnapshot?> GetLatestAsync(string appId, CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// Histórico de todos os apps de uma squad, numa consulta só. Existe para que a evolução
+    /// agregada não faça uma consulta por app (N+1).
+    /// </summary>
+    Task<IReadOnlyList<QualitySnapshot>> GetHistoryBySquadAsync(
+        string squadId,
+        DateTimeOffset? from = null,
+        DateTimeOffset? to = null,
+        CancellationToken cancellationToken = default);
 }
