@@ -2,7 +2,7 @@ using CheckApps.Application.Persistence;
 using CheckApps.Domain;
 using CheckApps.Domain.QualityAssessment;
 using CheckApps.Infrastructure.DependencyInjection;
-using CheckApps.Infrastructure.DynamoDb;
+using CheckApps.Infrastructure.Sqlite;
 using CheckApps.Infrastructure.Seeding;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
@@ -17,7 +17,7 @@ var services = new ServiceCollection();
 services.AddCheckAppsInfrastructure(configuration);
 await using var provider = services.BuildServiceProvider();
 
-await provider.GetRequiredService<DynamoDbTableBootstrapper>().EnsureTableExistsAsync();
+await provider.GetRequiredService<SqliteSchemaBootstrapper>().EnsureSchemaAsync();
 
 var engine = provider.GetRequiredService<IQualityAssessmentEngine>();
 var demoData = new DemoDataFactory(engine).Build();
@@ -35,9 +35,8 @@ foreach (var squad in demoData.Squads)
 
 foreach (var app in demoData.Apps)
 {
-    // Grava só os dados base do App: o estado atual (currentQualityLevel etc.) é
-    // reconstruído abaixo ao repetir o histórico de snapshots pelo mesmo caminho
-    // transacional usado em produção (QualitySnapshotRepository.AddAsync).
+    // Grava só os dados base do App: o estado de qualidade atual é derivado do
+    // snapshot mais recente na leitura (ADR-009), não armazenado.
     await appRepository.SaveAsync(new App
     {
         Id = app.Id,

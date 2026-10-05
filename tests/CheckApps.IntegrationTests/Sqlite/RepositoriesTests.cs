@@ -1,15 +1,14 @@
 using CheckApps.Domain;
 using CheckApps.Domain.QualityAssessment;
-using CheckApps.Infrastructure.DynamoDb;
+using CheckApps.Infrastructure.Sqlite;
 
-namespace CheckApps.IntegrationTests.DynamoDb;
+namespace CheckApps.IntegrationTests.Sqlite;
 
-[Collection(DynamoDbCollection.Name)]
-public class RepositoriesTests(DynamoDbLocalFixture fixture)
+public class RepositoriesTests(SqliteFixture fixture) : IClassFixture<SqliteFixture>
 {
-    private readonly SquadRepository _squads = new(fixture.Client, fixture.Options);
-    private readonly AppRepository _apps = new(fixture.Client, fixture.Options);
-    private readonly QualitySnapshotRepository _snapshots = new(fixture.Client, fixture.Options);
+    private readonly SquadRepository _squads = new(fixture.ConnectionFactory);
+    private readonly AppRepository _apps = new(fixture.ConnectionFactory);
+    private readonly QualitySnapshotRepository _snapshots = new(fixture.ConnectionFactory);
     private readonly IQualityAssessmentEngine _engine = new QualityAssessmentEngineV1();
 
     [Fact]

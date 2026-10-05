@@ -6,19 +6,19 @@ Instruções para agentes de IA (Claude Code, GitHub Copilot, Devin, etc.) traba
 
 CheckApps mostra a composição de apps de uma squad e acompanha a saúde e a evolução histórica da qualidade dessas aplicações (dados de Sonar — mockados neste estágio), com cadastro manual de squads e apps. Visão completa em `.agents/product/vision.md`; estágio atual em `.agents/product/roadmap.md`.
 
-Stack: .NET 10 (ASP.NET Core Web API, monólito modular) + Angular 20 (standalone) + AWS DynamoDB (single-table). Detalhes de execução no `README.md`.
+Stack: .NET 10 (ASP.NET Core Web API, monólito modular) + Angular 20 (standalone) + SQLite (Dapper, SQL explícito; ver ADR-009). Detalhes de execução no `README.md`.
 
 ## Como rodar e testar
 
 ```bash
-docker compose up -d                                   # DynamoDB Local em :8000 (-inMemory)
-dotnet run --project tools/CheckApps.Seed              # cria a tabela e popula dados de demo
+dotnet run --project tools/CheckApps.Seed             # cria o schema e popula dados de demo
 dotnet run --project src/CheckApps.Api --urls http://localhost:5232
-cd frontend && npm install && npm start                # Angular em :4200
+cd frontend && npm install && npm start               # Angular em :4200
 
-dotnet test tests/CheckApps.UnitTests                  # 37 testes, sem dependências externas
-dotnet test tests/CheckApps.IntegrationTests           # 11 testes, exige DynamoDB Local no ar
+dotnet test                                           # 48 testes; nenhum exige Docker ou serviço externo
 ```
+
+Persistência é SQLite em arquivo (`%LOCALAPPDATA%\CheckApps\checkapps.db`). Não há banco para subir.
 
 A skill `run-local` (`.agents/skills/run-local/`) encapsula essa sequência com as checagens necessárias.
 
@@ -30,7 +30,7 @@ A skill `run-local` (`.agents/skills/run-local/`) encapsula essa sequência com 
 | Propor ou escopar algo novo | `.agents/product/vision.md`, `roadmap.md`, `backlog.md` |
 | Tocar código em `src/**` | `.agents/rules/backend.md`, depois `.agents/architecture/project-structure.md` |
 | Tocar código em `frontend/**` | `.agents/rules/frontend.md` |
-| Tocar persistência (`Infrastructure/DynamoDb/**`) | `.agents/architecture/data-model/dynamodb-single-table.md` |
+| Tocar persistência (`Infrastructure/Sqlite/**`) | `.agents/architecture/data-model/sqlite-schema.md` e o próprio `schema.sql` |
 | Propor um access pattern, GSI ou desnormalização nova | `.agents/architecture/data-model/access-patterns.md` (registro vivo com o fit de cada padrão) e os gatilhos do ADR-002 |
 | Mudar algo estrutural (stack, modelo, padrões) | `.agents/architecture/decisions/` — ADRs numerados; se a decisão já existe, respeite-a ou proponha um novo ADR |
 | Entender por que uma decisão passada foi revista | `.agents/architecture/retrospectives/` — avaliações de experimentos concluídos (histórico, não vivo) |
@@ -51,11 +51,11 @@ A skill `run-local` (`.agents/skills/run-local/`) encapsula essa sequência com 
 
 ## Gotchas críticos (leia mesmo com pressa)
 
-- **Docker Desktop precisa estar rodando.** Se `docker ps` falhar com erro de pipe (`dockerDesktopLinuxEngine`), inicie o Docker Desktop manualmente e aguarde ~60s.
-- **DynamoDB Local roda em `-inMemory`.** Qualquer reinício do container (ou reboot da máquina) apaga tudo. Rode o seed de novo.
-- **`AppRepository.SaveAsync` é um `PutItem` completo.** Ao editar um App, carregue via `GetAsync`, mute só os campos do formulário e salve o mesmo objeto — construir um `App` novo só com os campos do formulário apaga silenciosamente o estado de qualidade desnormalizado (`currentQualityLevel`, `currentMetrics`, GSI2). Há teste cobrindo isso.
+- **O banco é um arquivo e os dados persistem** entre reinícios. Para resetar: apague `%LOCALAPPDATA%\CheckApps\checkapps.db*` e rode o seed.
+- **Caminho relativo do banco resolve contra `%LOCALAPPDATA%\CheckApps`, não contra o diretório atual.** É deliberado: o ASP.NET Core troca o diretório de trabalho no startup e o console do seed não — depender do CWD faria API e seed abrirem bancos diferentes.
+- **O estado de qualidade atual do App é derivado por consulta**, não armazenado. `SaveAsync` grava só os dados próprios do App; não existe mais o risco de apagar `currentQualityLevel` ao salvar.
 - **App com histórico de qualidade não pode ser removido** (409). É por design: inative em vez de remover. Squad com apps vinculados idem.
-- **Testes de integração compartilham uma tabela.** Toda classe de teste de integração DynamoDB deve usar `[Collection(DynamoDbCollection.Name)]`, nunca `IClassFixture<DynamoDbLocalFixture>` — senão as classes rodam em paralelo e uma apaga a tabela da outra.
+- **Cada classe de teste de integração usa seu próprio banco temporário** (`SqliteFixture` via `IClassFixture`). Não há estado compartilhado nem necessidade de collection fixture.
 - **Datas no Angular sempre com `'UTC'`** no `DatePipe` (`| date:'MMM/yyyy':'UTC'`). Sem isso, `2026-08-01T00:00:00Z` vira julho em UTC-3.
 - **Angular CLI 22 exige Node ≥ 22.22.** Este projeto está em Angular 20 por causa do Node 22.17 da máquina. Não faça `ng update` para 22 sem antes atualizar o Node.
 - **`.claude/` está no `.gitignore`, exceto `.claude/skills/`.** Configurações locais do Claude Code não vão para o repo; os wrappers de skill vão.

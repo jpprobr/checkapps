@@ -4,12 +4,13 @@ Leia antes de editar código .NET. Só regras não-óbvias e específicas deste 
 
 ## Persistência
 
-- **Editar = carregar → mutar → salvar o mesmo objeto.** `AppRepository.SaveAsync` e `SquadRepository.SaveAsync` são `PutItem` completos. Construir um `App` novo só com os campos do formulário apaga `currentQualityLevel`, `currentMetrics`, `lastSnapshotAt` e o GSI2. Há teste que falha se você fizer isso.
-- **Todo `QualitySnapshot` passa por `QualitySnapshotService.RegisterAsync`.** É o único caminho que calcula o Quality Level e atualiza o estado desnormalizado do App na mesma transação. Nunca chame `IQualitySnapshotRepository.AddAsync` direto de código de produto (o seed é a exceção deliberada).
-- **Repositórios são primitivos "burros".** Regra de negócio (guardas de remoção, validação de squad existente, geração de id único) fica nos serviços de aplicação. `DeleteAllAsync` apaga a partição inteira, inclusive snapshots, se chamado direto — a proteção é de `AppService.DeleteAsync`.
-- **Chaves só via `Keys.cs`.** Nunca monte `"APP#" + id` inline. Novo tipo de item = método novo em `Keys` + atualizar `.agents/architecture/data-model/dynamodb-single-table.md`.
-- **Criar entidade com id gerado = `TryCreateAsync` (Put condicional) + `SlugIdGenerator`.** Não faça "checar se existe, depois gravar".
-- **Sem `DynamoDBContext`.** Só o client de baixo nível com `Dictionary<string, AttributeValue>`. `AttributeValue.NULL` é `bool?` — compare com `!= true`, não com `!`.
+- **SQL explícito com Dapper, sem ORM.** Mudança de schema é no `schema.sql` (idempotente, aplicado no bootstrap) + atualizar `.agents/architecture/data-model/sqlite-schema.md`.
+- **SQL portável para Postgres** (FR-006 da spec 004): tipos declarados, datas em TEXT ISO-8601 UTC via `IsoTimestamp`, nada específico do SQLite. Em especial, **não use `GROUP_CONCAT`** — a função de agregação de strings difere no Postgres; prefira consulta separada e costura em C#.
+- **O estado de qualidade atual do App é derivado do snapshot mais recente por consulta**, nunca armazenado (ADR-009 revogou a desnormalização). `SaveAsync` grava só os dados próprios do App.
+- **Todo `QualitySnapshot` passa por `QualitySnapshotService.RegisterAsync`**, que é quem calcula o Quality Level pela regra vigente. Nunca chame `IQualitySnapshotRepository.AddAsync` direto de código de produto (o seed é a exceção deliberada).
+- **Repositórios são primitivos "burros".** Regra de negócio (guardas de remoção, validação de squad existente, geração de id único) fica nos serviços de aplicação. `DeleteAllAsync` apaga o App e tudo que cascateia, inclusive snapshots — a proteção é de `AppService.DeleteAsync`.
+- **Criar entidade com id gerado = `TryCreateAsync` + `SlugIdGenerator`.** O `TryCreateAsync` só devolve `false` para violação de PK/UNIQUE (códigos estendidos do SQLite); violação de FK propaga como exceção, porque é erro de verdade e não "id já existe".
+- **`PRAGMA foreign_keys` é por conexão e vem desligado no SQLite.** Toda conexão sai de `SqliteConnectionFactory`, que já o liga — sem isso as cascatas do schema não acontecem.
 
 ## Domínio e aplicação
 
@@ -21,9 +22,8 @@ Leia antes de editar código .NET. Só regras não-óbvias e específicas deste 
 ## Testes
 
 - **Unitários usam fakes escritos à mão** (`tests/CheckApps.UnitTests/TestDoubles/FakeRepositories.cs`), não Moq/NSubstitute. Se precisar de comportamento novo no fake, adicione lá — os fakes têm armazenamento real em dicionário para que regras de colisão/remoção sejam testáveis.
-- **Toda classe de teste de integração DynamoDB usa `[Collection(DynamoDbCollection.Name)]`**, nunca `IClassFixture<DynamoDbLocalFixture>`. Com `IClassFixture`, cada classe recria a mesma tabela em paralelo e derruba as outras. Já aconteceu.
-- Testes de integração usam ids com `Guid.NewGuid()` para não colidir entre testes — a tabela é recriada só uma vez por execução da suíte.
-- Testes de integração exigem DynamoDB Local no ar (`docker compose up -d`). Se falharem com `ResourceNotFoundException` ou erro de conexão, é isso.
+- **Testes de integração usam `IClassFixture<SqliteFixture>`**: cada classe ganha um arquivo de banco temporário próprio. Sem Docker, sem estado compartilhado, sem collection fixture.
+- Testes de integração continuam usando ids com `Guid.NewGuid()`, por hábito e isolamento — embora com banco por classe não seja mais estritamente necessário.
 
 ## Ferramentas
 

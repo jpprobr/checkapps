@@ -36,7 +36,7 @@ Saber se os apps estão melhorando ou piorando ao longo do tempo, e quais indica
 Relacionar um App a mais do que Squad/Repository/Sonar: Produto, Operação de negócio, Jornadas, Dependências, Integrações, Documentação, Arquitetura.
 
 - É o estágio em que o CheckApps deixa de ser "dashboard de qualidade" e vira "camada de contexto".
-- Provavelmente exige revisitar a persistência: o single-table DynamoDB atende bem os access patterns atuais, mas buscas mais livres (full-text, joins entre muitas entidades) podem pedir um banco complementar. Decisão adiada até haver requisito concreto.
+- A persistência já foi revisitada por conta disso: o single-table DynamoDB não atendia bem consultas que cruzam entidades, e o projeto migrou para SQLite (ADR-009), com Postgres previsto quando o modelo estabilizar. Joins e agregações deixaram de ser restrição.
 - Pré-requisito prático: integrações reais (Sonar, catálogo corporativo de apps) para que o contexto não dependa de cadastro manual.
 
 ## ○ Intelligence

@@ -1,6 +1,6 @@
 # Spec 004: Migração de persistência — DynamoDB → SQLite
 
-**Status**: Aprovada (pronta para plano de implementação)
+**Status**: Implementada (2026-10-04)
 **Criada em**: 2026-10-04
 **Origem**: ADR-009. Avaliação de fit do DynamoDB (`.agents/architecture/retrospectives/2026-10-dynamodb-single-table.md`) + destino de deploy conhecido (ECS instância única) + incompatibilidade do processo corporativo de RDS com o método incremental do projeto.
 

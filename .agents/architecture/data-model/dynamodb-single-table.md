@@ -1,4 +1,9 @@
-# Modelo de dados — DynamoDB single-table
+# Modelo de dados — DynamoDB single-table (HISTÓRICO)
+
+> **Este desenho não está mais em uso.** O projeto migrou para SQLite em 2026-10 (ADR-009, spec 004).
+> O modelo vigente está em `sqlite-schema.md`; a avaliação que levou à troca está em
+> `../retrospectives/2026-10-dynamodb-single-table.md`. Mantido porque documenta um desenho
+> completo e funcional, e porque a retrospectiva se apoia nele.
 
 > **Fonte da verdade**: `src/CheckApps.Infrastructure/DynamoDb/Keys.cs` e `TableSchema.cs`. Este documento espelha o código para leitura rápida; se divergir, o código está certo e este arquivo precisa ser corrigido.
 

@@ -489,3 +489,9 @@ dist/
 # Claude Code local config (settings, cache) — mas os wrappers de skill vão para o repo
 .claude/*
 !.claude/skills/
+
+# Banco SQLite local
+data/
+*.db
+*.db-wal
+*.db-shm

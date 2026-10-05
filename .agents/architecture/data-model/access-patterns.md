@@ -1,12 +1,14 @@
 # Registro de access patterns
 
-> **Em transição (2026-10-04)**: o ADR-009 decidiu migrar para SQLite (spec 004). A coluna de fit abaixo descreve o DynamoDB e deve ser reescrita ao fim da migração — vários ❌ deixam de ser impossíveis. A análise que levou à troca está em `../retrospectives/2026-10-dynamodb-single-table.md`.
+> **Pós-migração para SQLite (2026-10-04)**: com banco relacional, *todo* padrão desta tabela é atendido por uma consulta comum — join, agregação e filtro por qualquer coluna deixaram de ser restrição de banco. A coluna "Fit" abaixo é mantida como **registro histórico** de como cada padrão era resolvido no DynamoDB; ela não descreve mais uma limitação do sistema.
+>
+> O que este registro continua servindo: listar os padrões que o produto precisa atender (a disciplina access-pattern-first segue valendo, com outro custo de erro) e lembrar quais consultas foram escopadas para fora por decisão de **produto** — não mais por limitação técnica.
 
 Índice único de todo padrão de acesso que o sistema suporta, como é resolvido no DynamoDB e quão bem cabe. **Regra de manutenção**: toda spec que cria ou muda um padrão adiciona ou edita a linha aqui, no mesmo commit. Antes de propor um GSI novo, um `Scan` ou uma desnormalização, consulte esta tabela e o ADR-002.
 
-**Critério de fit em dez segundos**: uma entidade e seus filhos (partição, `begins_with`, série temporal) → ✅. Cruzar entidades (join, agregação transversal, filtro por atributo de outra entidade) → o DynamoDB empurra para memória ou para índice novo → ⚠️ ou ❌.
+**Critério de fit (era DynamoDB, histórico)**: uma entidade e seus filhos → ✅; cruzar entidades → ⚠️ ou ❌. Em SQL, essa distinção deixou de existir.
 
-Chaves e índices: `dynamodb-single-table.md`. Fonte da verdade: `Keys.cs` / `TableSchema.cs`.
+Schema vigente: `sqlite-schema.md`. Fonte da verdade: `schema.sql`.
 
 ## Spec 001 — MVP core (implementada)
 
@@ -52,7 +54,9 @@ Chaves e índices: `dynamodb-single-table.md`. Fonte da verdade: `Keys.cs` / `Ta
 | 28 | Apps ainda não incluídos numa checagem | #3 (ou todos) menos #22, no cliente | ⚠️ | Ok com dezenas de apps |
 | 29 | Remover app → apagar seus itens de checagem | #23 + `BatchWriteItem` | ✅ | Cascata no serviço (spec 003, FR-014) |
 
-## Fora de escopo hoje — e por quê (registro para não redescobrir)
+## Fora de escopo hoje — agora por decisão de produto, não de banco
+
+Com SQLite, todos os itens abaixo são tecnicamente triviais. Seguem fora de escopo porque ninguém pediu ainda — o que muda é que incluí-los passou a ser decisão de produto, e não mais "o banco não deixa". O ❌ registra como era no DynamoDB.
 
 | Padrão | Fit | Por quê não |
 |---|---|---|

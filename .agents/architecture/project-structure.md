@@ -7,13 +7,13 @@ CheckApps.slnx
 ├── src/
 │   ├── CheckApps.Domain            entidades e regras de negócio puras
 │   ├── CheckApps.Application       casos de uso e portas (interfaces)
-│   ├── CheckApps.Infrastructure    DynamoDB, mock do Sonar, seed
+│   ├── CheckApps.Infrastructure    SQLite (Dapper), mock do Sonar, seed
 │   └── CheckApps.Api               ASP.NET Core Web API (controllers, DTOs)
 ├── tests/
 │   ├── CheckApps.UnitTests         Domain + Application, com fakes à mão
-│   └── CheckApps.IntegrationTests  repositórios contra DynamoDB Local
+│   └── CheckApps.IntegrationTests  repositórios contra SQLite temporário
 ├── tools/
-│   └── CheckApps.Seed              popula o DynamoDB com dados de demonstração
+│   └── CheckApps.Seed              popula o banco com dados de demonstração
 ├── frontend/                       Angular 20, standalone components
 ├── specs/                          especificações por feature (ver AGENTS.md)
 └── .agents/                        contexto para agentes (este diretório)
@@ -30,7 +30,7 @@ Sem dependências de framework. Contém:
 
 ## `src/CheckApps.Application`
 
-Orquestra o domínio e define as **portas** que a infraestrutura implementa. Não sabe que o banco é DynamoDB.
+Orquestra o domínio e define as **portas** que a infraestrutura implementa. Não sabe qual é o banco — foi isso que tornou a migração do DynamoDB para SQLite barata.
 
 - **Portas de persistência** (`Persistence/`): `ISquadRepository`, `IAppRepository`, `IQualitySnapshotRepository`.
 - **Porta do Sonar** (`Sonar/ISonarProvider`): hoje só o mock implementa; um `SonarQubeProvider` real implementaria a mesma interface.
@@ -39,10 +39,10 @@ Orquestra o domínio e define as **portas** que a infraestrutura implementa. Nã
 
 ## `src/CheckApps.Infrastructure`
 
-- **`DynamoDb/`**: implementação das portas de persistência sobre o AWS SDK de baixo nível (dicionários de `AttributeValue`, sem `DynamoDBContext`). `Keys.cs` e `TableSchema.cs` são a **fonte da verdade** das chaves; ver `data-model/dynamodb-single-table.md`. `DynamoDbTableBootstrapper` cria a tabela se não existir.
+- **`Sqlite/`**: implementação das portas de persistência com Dapper e SQL explícito. `schema.sql` (recurso embutido) é a **fonte da verdade** do modelo; ver `data-model/sqlite-schema.md`. `SqliteConnectionFactory` aplica os PRAGMAs por conexão e `SqliteSchemaBootstrapper` cria o schema se não existir.
 - **`Sonar/MockSonarProvider`**: métricas determinísticas por `projectKey`.
 - **`Seeding/`**: `DemoDataFactory` monta a massa de demonstração (2 squads, 5 apps, 3 meses de histórico com cenários de melhora / piora / estabilidade).
-- **`DependencyInjection/`**: `AddCheckAppsInfrastructure` registra tudo, inclusive o client DynamoDB (local via `ServiceUrl` ou AWS real via cadeia padrão de credenciais).
+- **`DependencyInjection/`**: `AddCheckAppsInfrastructure` registra tudo, inclusive a fábrica de conexão SQLite (caminho do arquivo via `Sqlite:DatabasePath`).
 
 ## `src/CheckApps.Api`
 
@@ -59,8 +59,8 @@ Orquestra o domínio e define as **portas** que a infraestrutura implementa. Nã
 
 ## Fluxos que atravessam camadas (os que mais confundem)
 
-**Registrar um snapshot de qualidade** — `POST /api/apps/{id}/quality-snapshots` → `AppsController` → `QualitySnapshotService.RegisterAsync` (calcula o Quality Level via engine) → `QualitySnapshotRepository.AddAsync` (transação: grava o snapshot **e** atualiza o estado desnormalizado no item do App, condicionado a ser mais recente). É o **único** caminho de escrita de snapshot; nunca gravar snapshot por fora dele.
+**Registrar um snapshot de qualidade** — `POST /api/apps/{id}/quality-snapshots` → `AppsController` → `QualitySnapshotService.RegisterAsync` (calcula o Quality Level pela regra vigente e congela a versão dela) → `QualitySnapshotRepository.AddAsync` (insert). É o **único** caminho de escrita de snapshot; nunca gravar por fora dele, senão o nível não passa pela engine.
 
-**Editar um app** — `PUT /api/apps/{id}` → `AppService.UpdateAsync` → `GetAsync` → muta os campos → `SaveAsync` do **mesmo objeto**. `SaveAsync` é um `PutItem` completo; construir um `App` novo aqui apaga o estado de qualidade.
+**Editar um app** — `PUT /api/apps/{id}` → `AppService.UpdateAsync` → `GetAsync` → muta os campos → `SaveAsync`. `SaveAsync` grava só os dados próprios do App; o estado de qualidade é derivado na leitura e não corre risco (no DynamoDB corria — ver ADR-009).
 
-**Remover um app** — `DELETE /api/apps/{id}` → `AppService.DeleteAsync` → verifica `GetLatestAsync` (se houver snapshot, lança `DomainConflictException`) → `DeleteAllAsync` (apaga a partição inteira). O repositório não protege nada; a guarda é do serviço.
+**Remover um app** — `DELETE /api/apps/{id}` → `AppService.DeleteAsync` → verifica `GetLatestAsync` (se houver snapshot, lança `DomainConflictException`) → `DeleteAllAsync` (apaga o App; repositórios, projetos Sonar, links e snapshots saem por cascata). O repositório não protege nada; a guarda é do serviço.

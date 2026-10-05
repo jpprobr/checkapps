@@ -1,7 +1,7 @@
 using System.Text.Json.Serialization;
 using CheckApps.Application.DependencyInjection;
 using CheckApps.Infrastructure.DependencyInjection;
-using CheckApps.Infrastructure.DynamoDb;
+using CheckApps.Infrastructure.Sqlite;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -27,7 +27,7 @@ if (app.Environment.IsDevelopment())
     app.MapOpenApi();
 
     using var scope = app.Services.CreateScope();
-    await scope.ServiceProvider.GetRequiredService<DynamoDbTableBootstrapper>().EnsureTableExistsAsync();
+    await scope.ServiceProvider.GetRequiredService<SqliteSchemaBootstrapper>().EnsureSchemaAsync();
 }
 
 app.UseHttpsRedirection();
