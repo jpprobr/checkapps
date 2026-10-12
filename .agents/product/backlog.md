@@ -2,7 +2,7 @@
 
 Demandas identificadas e conscientemente adiadas. Nenhuma tem spec ainda; quando uma for puxada, ela vira `specs/NNN-…/` copiando `specs/_template/`. Ordem aproximada de valor, não compromisso.
 
-Com spec, ainda não implementadas: **Migração para SQLite** — `specs/004-migracao-sqlite/` (vem primeiro) e **Checagens** — `specs/003-checagens/`.
+Com spec, ainda não implementada: **Checagens** — `specs/003-checagens/` (aprovada em 2026-10-12).
 
 ## Estágio Health (completa o que o MVP mockou)
 
@@ -36,7 +36,7 @@ Com spec, ainda não implementadas: **Migração para SQLite** — `specs/004-mi
 
 - **Detecção automática de status** — pré-preencher uma checagem com os apps afetados e marcar como `conforme` os que já atendem (ex.: "Atualizar para .NET 10"). É a metade "detectar" que a spec 003 deixou de fora ("rastrear ≠ detectar"). **Depende da fase 2 do "Leitor de repositórios GitHub"** (abaixo), que é quem extrai as dependências — este item é só a ponte entre os dois. Provavelmente a evolução de maior valor das Checagens.
 - **Export de checagens** (Excel/CSV) — a POC exportava; reporte em reunião pode pedir. Só depois de validar que os indicadores de tela não bastam.
-- **Histórico de percentual no tempo** — "como estava semana passada". Exige snapshot periódico da contagem por status; mesmo padrão de `QualitySnapshot`.
+- **Histórico de percentual no tempo** — "como estava semana passada". O histórico de eventos da spec 003 (mudanças de status com data e hora) permite reconstruí-lo sem snapshot periódico; falta só a consulta e a visualização.
 - **Filtro por sigla no seletor de apps** — demandas que seguem a conta AWS ("tudo na sigla X precisa de Y") chegam por sigla. Depende de a sigla estar registrada nos repositórios (fase 1 do leitor de GitHub).
 - **Alertas de prazo** — cor de "vencido", lembrete. Cuidado: é o primeiro passo em direção a governança; decidir explicitamente.
 

@@ -46,19 +46,22 @@ Schema vigente: `sqlite-schema.md`. Fonte da verdade: `schema.sql`.
 |---|---|---|---|---|
 | 30 | Histórico de todos os apps de uma squad | `quality_snapshots` com `INNER JOIN apps` e filtro de período | ✅ | Criado para eliminar o N+1 do padrão #11; não existia equivalente no DynamoDB |
 
-## Spec 003 — Checagens (em análise)
+## Spec 003 — Checagens (aprovada, a implementar)
+
+Revistos para SQL em 2026-10-12. Os ⚠️ da versão DynamoDB (partição única, desnormalização de nome do app, diferença calculada no cliente) deixaram de existir. Detalhes na spec.
 
 | # | Padrão | Resolução prevista | Fit | Observação |
 |---|---|---|---|---|
-| 21 | Listar checagens (abertas/todas) | Query GSI1 `PK="CHECK"` | ⚠️ | Segunda partição única; mesma limitação de #1 |
-| 22 | Checagem com todos os itens | Query `PK=CHECK#{id}` | ✅ | METADATA + `ITEM#…` numa partição |
-| 23 | Checagens de um app | Query GSI1 `PK="APP#{id}"`, `begins_with CHECK#` | ✅ | Reaproveita GSI1 com espaço de valor novo; sem índice novo |
-| 24 | Adicionar/remover app numa checagem | `PutItem`/`DeleteItem` em `ITEM#{appId}` | ✅ | Idempotente por construção |
-| 25 | Status/observação de um item | `UpdateItem` | ✅ | |
-| 26 | Percentual e contagem por status | Em memória a partir de #22 | ✅ | Itens já carregados |
-| 27 | Nome/squad do app na linha da checagem | Desnormalizar no item **ou** `BatchGetItem` | ⚠️ | Segunda desnormalização candidata — gatilho 2 do ADR-002 se desatualizar na prática |
-| 28 | Apps ainda não incluídos numa checagem | #3 (ou todos) menos #22, no cliente | ⚠️ | Ok com dezenas de apps |
-| 29 | Remover app → apagar seus itens de checagem | #23 + `BatchWriteItem` | ✅ | Cascata no serviço (spec 003, FR-014) |
+| 21 | Listar checagens (abertas/todas) com contagens | `checks` + `LEFT JOIN check_items` + `GROUP BY` | ✅ | |
+| 22 | Checagem com todos os itens | `check_items` + `JOIN apps` por `check_id` | ✅ | |
+| 23 | Checagens de um app | `check_items` + `JOIN checks` por `app_id` | ✅ | Índice em `check_items(app_id)` |
+| 24 | Adicionar/retirar app numa checagem | `INSERT … ON CONFLICT DO NOTHING` / `DELETE`, com evento | ✅ | Idempotente; portável para Postgres |
+| 25 | Status/observação de um item | `UPDATE`, com evento se o status mudou | ✅ | |
+| 26 | Percentual e contagem por status | Domínio, a partir de #21 ou #22 | ✅ | Regra de percentual é função pura |
+| 27 | Nome/squad do app na linha da checagem | Join em #22 | ✅ | Sem desnormalização |
+| 28 | Apps ainda não incluídos numa checagem | `apps` + `NOT EXISTS` em `check_items` | ✅ | No servidor |
+| 29 | Guarda: app em checagem não é removido | `EXISTS` em `check_items` por `app_id` + FK sem cascata | ✅ | Substitui a cascata prevista antes (decisão de 2026-10-12) |
+| 31 | Histórico de uma checagem | `check_events` por `check_id`, mais recente primeiro | ✅ | Índice em `check_events(check_id, occurred_at)` |
 
 ## Fora de escopo hoje — agora por decisão de produto, não de banco
 

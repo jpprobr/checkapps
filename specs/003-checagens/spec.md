@@ -1,6 +1,6 @@
 # Spec 003: Checagens — revisões e demandas acompanhadas por app
 
-**Status**: Em análise (vira Aprovada quando as Assumptions forem confirmadas)
+**Status**: Aprovada (assumptions confirmadas em 2026-10-12)
 **Criada em**: 2026-09-17
 **Origem**: dor recorrente do tech lead — com 50+ repositórios (ECS, API Gateway, Lambda, infra), qualquer revisão ou demanda transversal vira uma planilha montada à mão: copiar nomes de apps/repos, criar colunas de controle, marcar quem já está conforme. Rascunho original discutido em 2026-09-16/17; as decisões abaixo já refletem as respostas do usuário.
 
@@ -42,6 +42,7 @@ Conforme o trabalho avança, alguém do time marca cada app: em andamento (algu�
 1. **Dado** um app "pendente" numa checagem, **Quando** mudo o status para "conforme" direto na linha, **Então** a mudança é salva sem sair da tela e o percentual sobe.
 2. **Dado** um app numa checagem, **Quando** escrevo uma observação na linha, **Então** ela fica visível para quem abrir a checagem depois.
 3. **Dado** uma checagem com 4 apps: 1 conforme, 1 não se aplica, 1 em andamento, 1 pendente, **Quando** olho o resumo, **Então** vejo 50% concluído (conforme e não-se-aplica contam; em andamento e pendente não) e a contagem por status.
+4. **Dado** um item que passou de "pendente" para "em andamento" e depois para "concluído", **Quando** abro o histórico da checagem, **Então** vejo as duas mudanças, com data e hora, da mais recente para a mais antiga.
 
 ### User Story 3 — Ver, a partir de um app, o que está pendente para ele (Prioridade: P1)
 
@@ -71,6 +72,7 @@ Quando a demanda está atendida, o tech lead fecha a checagem manualmente. Se o 
 2. **Dado** uma checagem aberta a 30%, **Quando** clico "Fechar", **Então** o sistema permite (com confirmação) — fechamento não exige 100%.
 3. **Dado** uma checagem fechada, **Quando** clico "Reabrir", **Então** volta a aberta.
 4. **Dado** uma checagem sem nenhum app (criada por engano), **Quando** clico "Remover", **Então** é apagada. Com apps, não há remoção — só fechamento.
+5. **Dado** uma checagem que foi fechada e depois reaberta, **Quando** abro o histórico, **Então** vejo quando foi fechada e quando foi reaberta.
 
 ### User Story 5 — Ter uma visão geral para levar a uma reunião (Prioridade: P2)
 
@@ -87,7 +89,9 @@ Antes de uma reunião com o coordenador, o tech lead abre a lista de checagens e
 
 ### Edge Cases
 
-- App removido do sistema (hard delete, permitido só sem histórico — ADR-005): seus itens em checagens são removidos junto. Não sobra linha órfã.
+- Tentativa de remover do sistema um app que está em qualquer checagem (aberta ou fechada): recusada com conflito; a saída é inativar. É a guarda do ADR-005 com uma condição a mais — a participação em checagens é histórico.
+- App retirado de uma checagem (FR-004): a linha sai, e o histórico registra a saída com o último status que ele tinha.
+- Checagem removida (só possível sem itens): seu histórico é removido junto — é limpeza de algo criado por engano.
 - App inativado: itens permanecem; a linha na checagem indica que o app está inativo.
 - Dois títulos iguais: o segundo recebe id com sufixo (`atualizar-net-10-2`), como squads e apps (ADR-006).
 - Checagem com centenas de apps: a tela precisa continuar usável (busca/filtro dentro da checagem por nome, squad e status).
@@ -111,14 +115,17 @@ Antes de uma reunião com o coordenador, o tech lead abre a lista de checagens e
 - **FR-011**: O sistema DEVE permitir fechar uma checagem manualmente, sem exigir 100%, e reabri-la.
 - **FR-012**: O sistema DEVE permitir remover uma checagem apenas se ela não tiver nenhum app; caso contrário, só fechar.
 - **FR-013**: Um app PODE estar em qualquer número de checagens simultaneamente.
-- **FR-014**: Ao remover um app do sistema, o sistema DEVE remover seus itens de todas as checagens. Inativar um app NÃO remove seus itens.
+- **FR-014**: O sistema DEVE impedir a remoção de um app que esteja em qualquer checagem (aberta ou fechada), respondendo com conflito. Inativar continua permitido e NÃO remove seus itens.
+- **FR-015**: O sistema DEVE registrar, num histórico por checagem, só de acréscimo, com data e hora: fechar, reabrir, adicionar app, retirar app (com o último status) e mudança de status de item (de → para). Mudanças de observação e de metadados ficam fora nesta versão. Entradas nunca são editadas nem removidas, exceto junto com a remoção da própria checagem.
+- **FR-016**: O sistema DEVE exibir o histórico no detalhe da checagem, do mais recente para o mais antigo.
 
 ### Key Entities
 
 - **Check** (Checagem): `id` (slug), `title`, `description?`, `category?`, `author?`, `startDate?`, `endDate?`, `status` (`open` | `closed`), `createdAt`, `closedAt?`.
 - **CheckItem** (uma linha da checagem): `checkId`, `appId`, `status` (`CheckItemStatus`), `notes?`, `updatedAt`. Identidade composta `(checkId, appId)`.
 - **CheckItemStatus**: `pendente` | `em-andamento` | `conforme` | `nao-se-aplica` | `concluido`. Enum no domínio (ver Design notes — é uma exceção deliberada à convenção de status como string livre). Ciclo típico: `pendente → em-andamento → concluido`; `conforme` e `nao-se-aplica` são saídas diretas de `pendente`.
-- **App**: inalterado. Ganha uma visão derivada ("minhas checagens"), não um campo.
+- **CheckEvent** (entrada do histórico): `id`, `checkId`, `appId?`, `type` (`closed` | `reopened` | `item-added` | `item-removed` | `item-status-changed`), `fromStatus?`, `toStatus?`, `occurredAt`. Imutável. Sem "quem fez" até haver autenticação (ADR-007).
+- **App**: sem campo novo. Ganha uma visão derivada ("minhas checagens") e uma condição a mais na guarda de remoção (FR-014).
 
 ## Success Criteria
 
@@ -129,53 +136,69 @@ Antes de uma reunião com o coordenador, o tech lead abre a lista de checagens e
 
 ## Assumptions
 
-Cada uma pode ser contestada; confirmar todas transforma o Status em Aprovada.
+Todas confirmadas pelo usuário (as últimas em 2026-10-12).
 
 - **Seleção de apps é manual e explícita.** Filtros por squad/tag/nome ajudam a encontrar; não existe checagem "automática por regra" (ex.: "todos os apps da squad X, para sempre").
 - **Cinco status, sem `bloqueado` nem `implantado`.** "Bloqueado por X" e "implantado, aguardando validação" são nuances que vão na observação do item, não em status próprio — mantém o conjunto genérico e o percentual simples. Adicionar um status depois é barato. (Decidido em 2026-09-17: `em-andamento` entrou, `implantado` saiu.)
 - **Autor é texto livre.** Não há autenticação (ADR-007); ninguém é "dono" em sentido de permissão.
 - **Datas são informativas.** Não há alerta de atraso, escalonamento nem cor de "vencido" na v1.
-- **Reporte é só na tela.** Sem export (Excel/CSV) nem histórico de percentual ao longo do tempo na v1. Ambos estão no backlog.
-- **Reabrir é permitido.** Fechar/reabrir é só um flag, sem trilha de auditoria.
-- **Remover checagem só sem itens.** Espelha ADR-005: o que tem dependentes não é apagado, é fechado.
-- **Sem notificação.** Ninguém é avisado ao ser incluído numa checagem.
+- **Reporte é só na tela.** Sem export (Excel/CSV) nem histórico de percentual ao longo do tempo na v1. Ambos estão no backlog — o histórico de percentual pode ser reconstruído depois a partir do histórico de eventos (FR-015).
+- **Reabrir é permitido, com histórico.** Fechar, reabrir, entrada e saída de app e mudança de status ficam registrados com data e hora (FR-015). "Quem fez" entra quando houver autenticação. (Decidido em 2026-10-12.)
+- **Remover checagem só sem itens.** Espelha ADR-005: o que tem dependentes não é apagado, é fechado — e fechada já é a forma de "inativar": sai da lista padrão e continua consultável pelo filtro. (Confirmado em 2026-10-12.)
+- **App em checagem não é removido, é inativado.** Participação em checagem é histórico; vale a mesma lógica dos snapshots no ADR-005. Substitui a decisão anterior de cascatear a remoção para os itens. (Decidido em 2026-10-12.)
+- **Sem notificação nesta versão.** Primeiro validar o uso e se o gerenciamento básico é eficiente. (Confirmado em 2026-10-12.)
 - **Uma checagem não pertence a uma squad.** Ela é transversal por natureza (a demanda atinge apps de várias squads); a squad de cada app aparece na linha.
 
 ## Design notes
 
 ### Access patterns
 
+Revistos para SQL em 2026-10-12 (a versão original, em DynamoDB, está no histórico do git). Com banco relacional nenhum deles exige desnormalização, e a dúvida sobre repetir nome e squad do app no item deixou de existir: é um join.
+
 | # | Padrão | Resolução prevista |
 |---|---|---|
-| AP-1 | Listar checagens (abertas / todas) | Query GSI1 `GSI1PK = "CHECK"` (mesmo padrão de partição única usado para squads; mesma limitação de escala, aceitável) |
-| AP-2 | Abrir uma checagem com todos os itens | Query `PK = CHECK#{id}` — traz `METADATA` + todos os `ITEM#…` |
-| AP-3 | Checagens de um app com status | Query GSI1 `GSI1PK = "APP#{appId}" AND begins_with(GSI1SK, "CHECK#")` |
-| AP-4 | Adicionar / remover app | `PutItem` / `DeleteItem` em `PK = CHECK#{id}, SK = ITEM#{appId}` (idempotente por construção) |
-| AP-5 | Atualizar status / observação | `UpdateItem` no item |
-| AP-6 | Percentual e contagem por status | Calculado em memória a partir de AP-2 (coerente com ADR-002: sem pré-agregação) |
-| AP-7 | Criar / editar / fechar / reabrir / remover checagem | `TryCreateAsync` condicional (ADR-006) / `UpdateItem` / `DeleteItem` guardado no serviço |
-| AP-8 | Ao remover um App, apagar seus itens | AP-3 para descobrir os itens + `BatchWriteItem` de delete |
+| AP-1 | Listar checagens (abertas / todas), com nº de apps e contagem por status | `checks` com `LEFT JOIN check_items` e `GROUP BY`; o percentual é calculado no domínio a partir das contagens |
+| AP-2 | Abrir uma checagem com todos os itens | `check_items` com `JOIN apps` (nome, squad, status do app) filtrado por `check_id` |
+| AP-3 | Checagens de um app, com status | `check_items` com `JOIN checks` filtrado por `app_id` |
+| AP-4 | Adicionar / retirar app | `INSERT … ON CONFLICT DO NOTHING` (idempotente; portável para Postgres) / `DELETE` — cada um com seu evento, na mesma transação |
+| AP-5 | Atualizar status / observação | `UPDATE` no item; se o status mudou, evento na mesma transação |
+| AP-6 | Percentual e contagem por status | Em memória a partir de AP-2, ou das contagens de AP-1 |
+| AP-7 | Criar / editar / fechar / reabrir / remover checagem | `INSERT` capturando violação de PK (ADR-006) / `UPDATE` / fechar e reabrir com evento na mesma transação / `DELETE` guardado no serviço |
+| AP-8 | Guarda de remoção de app | `EXISTS` em `check_items` por `app_id`, junto da guarda de snapshots que já existe |
+| AP-9 | Apps ainda não incluídos numa checagem (seletor) | `apps` com `NOT EXISTS` em `check_items` daquela checagem, no servidor |
+| AP-10 | Histórico de uma checagem | `check_events` por `check_id`, `ORDER BY occurred_at DESC` |
 
-### Modelo DynamoDB (proposta, a confirmar no plano)
+### Modelo SQL (proposta, a confirmar no plano)
 
-| Item | `PK` | `SK` | `GSI1PK` | `GSI1SK` |
-|---|---|---|---|---|
-| Check | `CHECK#{checkId}` | `METADATA` | `CHECK` | `CHECK#{checkId}` |
-| CheckItem | `CHECK#{checkId}` | `ITEM#{appId}` | `APP#{appId}` | `CHECK#{checkId}` |
+```sql
+checks       (id PK, title, description, category, author, start_date, end_date,
+              status, created_at, closed_at)
+check_items  (check_id FK→checks, app_id FK→apps, status, notes, updated_at,
+              PK(check_id, app_id))
+check_events (id PK, check_id FK→checks CASCADE, app_id, type,
+              from_status, to_status, occurred_at)
 
-`APP#{appId}` como valor de `GSI1PK` é um espaço novo — os itens App usam `SQUAD#…` e os itens Squad usam `SQUAD`. Não colide, e **não exige GSI novo**. `CheckItem` denormaliza `appName` e `squadId` para a tabela da checagem não precisar de um `BatchGetItem` por abertura; nome desatualizado após renomear o app é aceito (é só exibição) — alternativa é `BatchGetItem` dos apps, decidir no plano.
+índices: check_items(app_id), check_events(check_id, occurred_at)
+```
+
+- **`check_items.app_id` sem cascata**: a FK impede apagar um app que está em checagem mesmo que o serviço falhe em checar. O serviço verifica antes e responde 409 (FR-014); a FK é a rede de segurança.
+- **`check_items.check_id` sem cascata**: remover checagem só sem itens (FR-012) — mesma lógica.
+- **`check_events.check_id` com cascata**: o histórico some junto com a checagem, que só pode ser removida vazia.
+- **`check_events.app_id` sem FK**: o evento registra um fato passado. Um app retirado de uma checagem e depois removido do sistema deixa eventos com o id dele; a tela mostra o id quando o app não existe mais. Mesmo raciocínio de `quality_snapshots.sonar_project_id`.
+- Ids gerados na aplicação, datas em `TEXT` ISO-8601 UTC, sem tipo específico do SQLite — como o resto do schema (ADR-009).
 
 ### Decisões que merecem registro
 
 - **`CheckItemStatus` como enum**, não string livre: o cálculo do percentual (FR-007) depende de saber quais valores contam. É exceção à convenção de `.agents/rules/backend.md` ("status é string, convenção da UI") e deve ser registrada — provavelmente uma linha nova na própria regra, não um ADR.
-- **Remoção de App cascateia para itens de checagem** (FR-014). Hoje `DeleteAllAsync` apaga só a partição do app; os itens vivem na partição da checagem. `AppService.DeleteAsync` passa a fazer AP-8 antes. Alternativa considerada e descartada: bloquear a remoção do app se estiver em checagem — desproporcional, porque remoção já só é permitida para apps sem histórico (recém-criados por engano).
+- **App em checagem não pode ser removido** (FR-014). Estende a guarda do ADR-005: o ADR ganha uma nota com a nova condição. Substitui a decisão anterior desta spec (cascatear a remoção do app para os itens), revista em 2026-10-12: participação em checagem é histórico, e o caminho para tirar um app de circulação já existe — inativar.
+- **Histórico só de acréscimo** (FR-015), gravado na mesma transação da mudança que registra. Mesmo princípio do `QualitySnapshot`: o passado não é editado. Escopo mínimo de propósito — observação e metadados ficam fora para o histórico não virar ruído.
 - **Sem entidade "Demanda" separada de "Checagem".** O prompt original falava em relacionar apps a demandas; na prática a checagem *é* a demanda vista pelo time. Uma entidade a mais não paga o custo.
 
 ### Telas
 
 - `/checks` — lista (abertas por padrão, toggle para fechadas), botão "+ Nova checagem".
 - `/checks/new`, `/checks/:id/edit` — formulário de metadados.
-- `/checks/:id` — a "planilha": cabeçalho com resumo (percentual, contagem por status, autor, período), botão "Adicionar apps" (abre seletor com filtro por squad/tag/nome e multi-seleção), tabela com status como dropdown inline e observação editável inline, filtro dentro da tabela, ações Fechar/Reabrir.
+- `/checks/:id` — a "planilha": cabeçalho com resumo (percentual, contagem por status, autor, período), botão "Adicionar apps" (abre seletor com filtro por squad/tag/nome e multi-seleção), tabela com status como dropdown inline e observação editável inline, filtro dentro da tabela, ações Fechar/Reabrir, e seção "Histórico" (recolhida por padrão).
 - `AppDetail` — nova seção "Checagens": abertas com status, fechadas recolhidas.
 
 ### API (esboço)
@@ -190,11 +213,13 @@ POST   /api/checks/{checkId}/reopen
 DELETE /api/checks/{checkId}                      # 409 se houver itens
 PUT    /api/checks/{checkId}/items/{appId}        # cria se não existe (status/notes)
 DELETE /api/checks/{checkId}/items/{appId}
+GET    /api/checks/{checkId}/history              # do mais recente para o mais antigo
 GET    /api/apps/{appId}/checks
+DELETE /api/apps/{appId}                         # existente; passa a responder 409 se o app estiver em checagem
 ```
 
 `close`/`reopen` como ações explícitas (não `PUT status`) porque são transições com semântica (`closedAt`), diferente do `status` de Squad/App que é só um flag.
 
 ### Fora desta spec (backlog)
 
-Detecção automática de status (coletor via GitHub), export Excel/CSV, histórico de percentual no tempo, alertas de prazo, seleção por solução/topologia quando essas entidades existirem.
+Detecção automática de status (coletor via GitHub), export Excel/CSV, histórico de percentual no tempo (reconstruível pelo histórico de eventos), alertas de prazo, seleção por solução ou sigla quando esses dados existirem, notificações, "quem fez" no histórico (depende de autenticação).

@@ -28,11 +28,11 @@ Estágio do roadmap: **Inventário + Health + Evolution concluídos** (ver `.age
 - **Tags chave-valor** (backlog): proposta no estilo Datadog, em app e repositório, com a **regra campo × tag** — dado com que o sistema toma decisões é campo, não tag.
 - **Mapa de aplicações** (backlog): grafo de apps, Solução como subgrafo nomeado, ligações com origem e confiança.
 - **Visão AI-friendly** (`vision.md`): AI-friendly ≠ IA dentro; primeiro passo provável é um servidor MCP expondo o CheckApps para as ferramentas que o time já usa. O template de spec agora pergunta identidade, relações, proveniência e tempo de cada dado novo.
+- **Spec 003 (Checagens) aprovada**: assumptions confirmadas. Mudanças em relação ao rascunho: app em checagem **não pode ser removido** (409, só inativar — estende ADR-005, substitui a cascata); **histórico só de acréscimo** de fechar/reabrir, entrada/saída de app e mudança de status (`check_events`); design notes e access patterns (#21–#29, #31) reescritos para SQL.
 - **Nada disso está implementado.** `sqlite-schema.md` e `access-patterns.md` continuam descrevendo o que existe; mudam quando a spec correspondente for implementada.
 
 ## Decisões pendentes / perguntas abertas
 
-- **Spec 003 (Checagens)** segue em análise: faltam confirmar as assumptions sobre remoção de app cascatear itens, reabrir sem trilha, remover checagem só sem itens e ausência de notificação. Os access patterns #21–#29 dela precisam ser revistos à luz do SQL.
 - **Navegação global** (menu/shell): deliberadamente adiada para junto da spec 003. Pendência independente e barata: os breadcrumbs atuais são inconsistentes e não mostram o nome da squad.
 - **Solução e Tipo de app**: definições no glossário aguardam revisão do usuário. Leitura atual: "modal"/"carrinho" são soluções (subgrafo nomeado); "topologia" e "arquitetura" são termos a evitar.
 - **Convenção de nome dos repositórios** é uniforme na organização ou varia por sigla? Define se a configuração do scan é um padrão único ou um por sigla.
@@ -49,7 +49,7 @@ Em documentação: exemplos de sigla, sigla-app e convenção de nome usam valor
 ## Próximos passos (em ordem)
 
 1. Revisão do usuário no glossário (Solução, Tipo de app).
-2. **Fechar as assumptions da spec 003** e implementá-la, junto com a navegação global.
+2. **Implementar a spec 003**, junto com a navegação global — começar pelo plano (plan mode), a partir dos incrementos do `checklist.md` dela.
 3. Leitor de GitHub, fase 1 (ferramenta de linha de comando, inventário por sigla) — depende de acesso ao GitHub corporativo; junto vêm os campos de repositório (sigla, sigla-app, papel) e o CRUD de Repository.
 4. Na migração para a máquina corporativa: `.github/copilot-instructions.md` e verificação do `.agents/skills/`.
 5. Antes de qualquer uso compartilhado: substituir ADR-007 por uma decisão de autenticação.

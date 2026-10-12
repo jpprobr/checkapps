@@ -39,17 +39,18 @@ Vocabulário do CheckApps. Serve a pessoas de squads diferentes (para que um ter
 | Termo | Status | Significado |
 |---|---|---|
 | **Ativo / Inativo** | Definido | `status` de squad ou app. **Inativar** é a forma normal de tirar algo de circulação: reversível, não apaga nada, preserva histórico. |
-| **Remover** | Definido | Exclusão definitiva, permitida **só** quando não há dependentes com valor histórico: app sem nenhum snapshot; squad sem nenhum app. Caso contrário, a resposta é inativar (ADR-005). |
+| **Remover** | Definido | Exclusão definitiva, permitida **só** quando não há dependentes com valor histórico: app sem nenhum snapshot e fora de qualquer checagem; squad sem nenhum app; checagem sem nenhum item. Caso contrário, a resposta é inativar (ADR-005). |
 | **Seed** | Definido | Massa de dados de demonstração (2 squads, 5 apps, 3 meses de histórico) carregada por `tools/CheckApps.Seed`. |
 
-## Checagens (spec 003, em análise)
+## Checagens (spec 003, aprovada)
 
 | Termo | Status | Significado |
 |---|---|---|
 | **Checagem** | Definido na spec | Lista de trabalho do time para responder a uma demanda que atinge vários apps (exigência de segurança, direcionamento da empresa, atualização de dependência). Substitui a planilha montada à mão. **Não** pertence a uma squad — é transversal. **Não** é sistema de registro de governança. |
 | **Item de checagem** | Definido na spec | Um app dentro de uma checagem, com status e observação. Um app pode estar em várias checagens ao mesmo tempo. |
 | **Status do item** | Definido na spec | `pendente` (não iniciado) · `em-andamento` (iniciado, não terminado) · `conforme` (já estava adequado) · `nao-se-aplica` · `concluido`. Contam como concluídos: `conforme`, `nao-se-aplica`, `concluido`. Nuances ("implantado, aguardando validação", "bloqueado pela lib X") vão na **observação**. |
-| **Fechar / Reabrir** | Definido na spec | Encerramento **manual** de uma checagem, sem exigir 100% — permite manter aberta, por tempo indefinido, uma pendência que o time não consegue priorizar. |
+| **Fechar / Reabrir** | Definido na spec | Encerramento **manual** de uma checagem, sem exigir 100% — permite manter aberta, por tempo indefinido, uma pendência que o time não consegue priorizar. Fechada é a forma de "inativar" uma checagem: sai da lista padrão e continua consultável. |
+| **Histórico da checagem** | Definido na spec | Registro só de acréscimo, com data e hora, de fechar, reabrir, entrada e saída de app e mudança de status de item. Nunca editado. "Quem fez" entra com autenticação. |
 
 ## Integrações e dados (futuro próximo)
 
