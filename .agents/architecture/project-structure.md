@@ -13,7 +13,8 @@ CheckApps.slnx
 │   ├── CheckApps.UnitTests         Domain + Application, com fakes à mão
 │   └── CheckApps.IntegrationTests  repositórios contra SQLite temporário
 ├── tools/
-│   └── CheckApps.Seed              popula o banco com dados de demonstração
+│   ├── CheckApps.Seed              popula o banco com dados de demonstração
+│   └── CheckApps.GitHubScan        scan por sigla: descobre repositórios e grava a caixa de entrada
 ├── frontend/                       Angular 20, standalone components
 ├── specs/                          especificações por feature (ver AGENTS.md)
 └── .agents/                        contexto para agentes (este diretório)

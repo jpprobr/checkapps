@@ -1,3 +1,4 @@
+using CheckApps.Application.Discovery;
 using CheckApps.Application.Persistence;
 using CheckApps.Application.Sonar;
 using CheckApps.Domain.QualityAssessment;
@@ -13,6 +14,7 @@ public static class ServiceCollectionExtensions
     public static IServiceCollection AddCheckAppsInfrastructure(this IServiceCollection services, IConfiguration configuration)
     {
         services.Configure<SqliteOptions>(configuration.GetSection(SqliteOptions.SectionName));
+        services.AddSingleton(configuration.GetSection(ScanOptions.SectionName).Get<ScanOptions>() ?? new ScanOptions());
 
         services.AddSingleton<SqliteConnectionFactory>();
         services.AddSingleton<SqliteSchemaBootstrapper>();
@@ -21,6 +23,7 @@ public static class ServiceCollectionExtensions
         services.AddSingleton<IAppRepository, AppRepository>();
         services.AddSingleton<IQualitySnapshotRepository, QualitySnapshotRepository>();
         services.AddSingleton<ICheckRepository, CheckRepository>();
+        services.AddSingleton<IDiscoveredRepositoryRepository, DiscoveredRepositoryRepository>();
 
         services.AddSingleton<IQualityAssessmentEngine, QualityAssessmentEngineV1>();
         services.AddSingleton<ISonarProvider, MockSonarProvider>();

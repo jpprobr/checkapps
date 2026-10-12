@@ -19,7 +19,8 @@ public static class DtoMapping
         app.CurrentQualityLevel, app.CurrentMetrics?.ToDto(), app.LastSnapshotAt, app.AssessmentRulesVersion);
 
     public static RepositoryDto ToDto(this Repository repository) => new(
-        repository.Id, repository.Name, repository.Provider, repository.Url, repository.Status);
+        repository.Id, repository.Name, repository.Provider, repository.Url, repository.Status,
+        repository.Sigla, repository.SiglaApp, repository.Role, repository.Source);
 
     public static SonarProjectDto ToDto(this SonarProject sonarProject) => new(
         sonarProject.Id, sonarProject.ProjectKey, sonarProject.Name, sonarProject.Url, sonarProject.Status, sonarProject.Source);

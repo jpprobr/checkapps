@@ -62,7 +62,8 @@ public class AppRepository(SqliteConnectionFactory connectionFactory) : IAppRepo
         var repositories = await connection.QueryAsync<Repository>(new CommandDefinition(
             """
             SELECT id AS Id, app_id AS AppId, name AS Name, provider AS Provider,
-                   url AS Url, external_id AS ExternalId, status AS Status
+                   url AS Url, external_id AS ExternalId, status AS Status,
+                   sigla AS Sigla, sigla_app AS SiglaApp, role AS Role, source AS Source
             FROM repositories WHERE app_id = @appId ORDER BY id
             """,
             new { appId }, cancellationToken: cancellationToken));
@@ -152,11 +153,13 @@ public class AppRepository(SqliteConnectionFactory connectionFactory) : IAppRepo
         using var connection = connectionFactory.Create();
         await connection.ExecuteAsync(new CommandDefinition(
             """
-            INSERT INTO repositories (id, app_id, name, provider, url, external_id, status)
-            VALUES (@Id, @AppId, @Name, @Provider, @Url, @ExternalId, @Status)
+            INSERT INTO repositories (id, app_id, name, provider, url, external_id, status, sigla, sigla_app, role, source)
+            VALUES (@Id, @AppId, @Name, @Provider, @Url, @ExternalId, @Status, @Sigla, @SiglaApp, @Role, @Source)
             ON CONFLICT (id) DO UPDATE SET
                 app_id = excluded.app_id, name = excluded.name, provider = excluded.provider,
-                url = excluded.url, external_id = excluded.external_id, status = excluded.status
+                url = excluded.url, external_id = excluded.external_id, status = excluded.status,
+                sigla = excluded.sigla, sigla_app = excluded.sigla_app, role = excluded.role,
+                source = excluded.source
             """,
             repository, cancellationToken: cancellationToken));
     }

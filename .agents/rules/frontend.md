@@ -22,6 +22,8 @@ Leia antes de editar código Angular. Só o que é específico deste projeto.
 - A URL base está em `core/api-config.ts` (`http://localhost:5232/api`). Só um lugar.
 - **`AppSummary` não carrega `description` nem `externalId`.** Antes de fazer `PUT /api/apps/{id}` a partir da lista (ex.: inativar), busque o `AppDetail` completo — o PUT substitui o item inteiro, e enviar `null` apaga o campo.
 - Erros 409 da API trazem mensagem em texto no body; mostre `err.error` ao usuário em vez de uma mensagem genérica.
+- **`.tag` e `.inline-checkbox` são globais** (`styles.css`). Antes só existiam dentro de componentes específicos, e várias telas os usavam sem estilo. Estilo reutilizado por mais de uma tela vai para o global, não para o CSS de uma delas.
+- **Triagem de repositórios descobertos (`/discovered`)**: toda ação é explícita e "Criar app" **não grava nada** até a confirmação do painel. Sugestão aparece como sugestão (com confiança em texto — "alta"/"baixa" —, nunca só em cor) e é editável.
 - **Status de checagem circulam como códigos** (`em-andamento`…); rótulos de tela ficam em `core/check-labels.ts`, num lugar só.
 
 ## Visual

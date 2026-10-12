@@ -55,6 +55,10 @@ export interface RepositoryInfo {
   provider: string | null;
   url: string | null;
   status: string | null;
+  sigla: string | null;
+  siglaApp: string | null;
+  role: string | null;
+  source: string | null;
 }
 
 export interface SonarProjectInfo {
@@ -206,4 +210,43 @@ export interface UpsertCheckRequest {
   author: string | null;
   startDate: string | null;
   endDate: string | null;
+}
+
+// Repositórios descobertos (spec 005). Status e confiança chegam como códigos.
+export type TriageStatus = 'new' | 'ignored' | 'other-squad';
+export type SuggestionConfidence = 'high' | 'low';
+
+export interface Suggestion {
+  role: string | null;
+  name: string;
+  confidence: SuggestionConfidence;
+}
+
+export interface DiscoveredRepository {
+  id: string;
+  provider: string;
+  externalId: string;
+  name: string;
+  url: string | null;
+  sigla: string;
+  siglaApp: string | null;
+  archived: boolean;
+  pushedAt: string | null;
+  status: TriageStatus;
+  firstSeenAt: string;
+  lastSeenAt: string;
+  source: string;
+  suggestion: Suggestion;
+}
+
+export interface CreateAppFromDiscoveryRequest {
+  name: string;
+  squadId: string;
+  description: string | null;
+  role: string | null;
+}
+
+export interface LinkDiscoveryRequest {
+  appId: string;
+  role: string | null;
 }

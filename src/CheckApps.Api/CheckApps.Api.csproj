@@ -4,6 +4,8 @@
     <TargetFramework>net10.0</TargetFramework>
     <Nullable>enable</Nullable>
     <ImplicitUsings>enable</ImplicitUsings>
+    <!-- Scan:NameTemplate (sugestões da caixa de entrada) fica em user-secrets, fora do repositório. -->
+    <UserSecretsId>checkapps-api-3b8e5a21</UserSecretsId>
   </PropertyGroup>
 
   <ItemGroup>

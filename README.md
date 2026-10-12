@@ -37,7 +37,7 @@ Cria o schema (se não existir) e popula 2 squads e 5 apps com histórico de 3 m
 cobrindo evolução positiva, negativa e estável, um app com múltiplos repositórios e
 outro com múltiplos projetos Sonar.
 
-### 2. Rodar a API
+### 2. Rodar a API (depois, opcional: descobrir repositórios)
 
 ```bash
 dotnet run --project src/CheckApps.Api --urls http://localhost:5232
@@ -55,6 +55,18 @@ npm start   # ng serve, http://localhost:4200
 ```
 
 O frontend espera a API em `http://localhost:5232/api` (`frontend/src/app/core/api-config.ts`).
+
+### 4. (Opcional) Descobrir repositórios do GitHub
+
+```bash
+# sem rede nem token — dados de demonstração:
+dotnet run --project tools/CheckApps.GitHubScan -- --sigla ab1,cd2 --source fake
+
+# GitHub de verdade (configuração e token em user-secrets; veja o guia):
+dotnet run --project tools/CheckApps.GitHubScan -- --sigla ab1 --dry-run
+```
+
+Os repositórios aparecem no menu **Descobertos**, onde a pessoa decide o destino de cada um. O scan nunca cria app. Configuração, token e organização de teste: [`docs/leitor-github.md`](docs/leitor-github.md).
 
 ## Testes
 
@@ -76,5 +88,6 @@ tests/
   CheckApps.IntegrationTests
 tools/
   CheckApps.Seed             popula o banco com dados de demonstração
+  CheckApps.GitHubScan       descobre repositórios por sigla e os grava na caixa de entrada
 frontend/                    Angular 20
 ```

@@ -1,0 +1,101 @@
+using CheckApps.Application.Persistence;
+using CheckApps.Domain.Discovery;
+
+namespace CheckApps.Application.Discovery;
+
+/// <summary>
+/// O scan propõe, a pessoa decide: lê os repositórios das siglas e os grava na caixa de
+/// entrada. **Nunca cria App.** Toda a leitura acontece antes de qualquer gravação, para que uma
+/// falha na segunda sigla não deixe um scan pela metade.
+/// </summary>
+public class ScanService(
+    IRepositoryDiscoverySource source, IDiscoveredRepositoryRepository discovered, ScanOptions options, TimeProvider timeProvider)
+{
+    /// <exception cref="ArgumentException">Nenhuma sigla, ou fora do formato — antes de consultar a fonte.</exception>
+    /// <exception cref="InvalidOperationException">Convenção de nome não configurada.</exception>
+    /// <exception cref="ScanLimitExceededException">Alguma busca passaria do limite de resultados.</exception>
+    public async Task<ScanReport> ScanAsync(
+        IEnumerable<string>? siglas, bool dryRun, CancellationToken cancellationToken = default)
+    {
+        var scope = ScanScope.Create(siglas, options.SiglaPattern);
+
+        if (string.IsNullOrWhiteSpace(options.NameTemplate))
+        {
+            throw new InvalidOperationException(
+                $"Configure {ScanOptions.SectionName}:{nameof(ScanOptions.NameTemplate)} com a convenção de nome dos repositórios (ex.: {{prefixo}}-{{sigla}}-).");
+        }
+
+        var convention = new RepositoryNameConvention(options.NameTemplate);
+        var now = timeProvider.GetUtcNow();
+        var warnings = new List<string>();
+        var found = new Dictionary<string, (DiscoveredRepository Repository, RepositorySuggestion Suggestion)>();
+
+        foreach (var sigla in scope.Siglas)
+        {
+            var infos = await source.DiscoverAsync(sigla, convention.PrefixFor(sigla), options.MaxResults, cancellationToken);
+
+            // A fonte já filtra, mas o prefixo exato é regra nossa (FR-003), não de quem implementa a porta.
+            foreach (var info in infos.Where(i => convention.Matches(i.Name, sigla)))
+            {
+                var repository = new DiscoveredRepository
+                {
+                    Id = DiscoveredRepository.IdFor(source.Provider, info.ExternalId),
+                    Provider = source.Provider,
+                    ExternalId = info.ExternalId,
+                    Name = info.Name,
+                    Url = info.Url,
+                    Sigla = sigla,
+                    SiglaApp = info.SiglaApp,
+                    Archived = info.Archived,
+                    PushedAt = info.PushedAt,
+                    FirstSeenAt = now,
+                    LastSeenAt = now,
+                    Source = RepositorySources.GithubScan
+                };
+
+                if (info.Warning is not null)
+                {
+                    warnings.Add($"{info.Name}: {info.Warning}");
+                }
+
+                // Divergência entre sigla e sigla-app é aviso, nunca erro: certo numa squad, provável na organização.
+                if (info.SiglaApp is not null && !SiglaAppConvention.Matches(info.SiglaApp, sigla))
+                {
+                    warnings.Add($"{info.Name}: a sigla-app '{info.SiglaApp}' não começa com a sigla '{sigla}'.");
+                }
+
+                found[repository.Id] = (repository, convention.Suggest(info.Name, sigla, info.SiglaApp));
+            }
+        }
+
+        var items = new List<ScanItem>();
+        foreach (var (repository, suggestion) in found.Values)
+        {
+            var outcome = dryRun
+                ? await ClassifyAsync(repository, cancellationToken)
+                : await discovered.UpsertAsync(repository, cancellationToken);
+            items.Add(new ScanItem(repository, outcome, suggestion));
+        }
+
+        return new ScanReport(dryRun, items, warnings);
+    }
+
+    /// <summary>No modo de simulação: o que o upsert devolveria, sem gravar.</summary>
+    private async Task<UpsertOutcome> ClassifyAsync(DiscoveredRepository repository, CancellationToken cancellationToken)
+    {
+        var existing = await discovered.GetAsync(repository.Id, cancellationToken);
+        if (existing is null)
+        {
+            return UpsertOutcome.New;
+        }
+
+        return existing.SameObservation(repository) ? UpsertOutcome.Unchanged : UpsertOutcome.Updated;
+    }
+}
+
+public record ScanItem(DiscoveredRepository Repository, UpsertOutcome Outcome, RepositorySuggestion Suggestion);
+
+public record ScanReport(bool DryRun, IReadOnlyList<ScanItem> Items, IReadOnlyList<string> Warnings)
+{
+    public int Count(UpsertOutcome outcome) => Items.Count(i => i.Outcome == outcome);
+}

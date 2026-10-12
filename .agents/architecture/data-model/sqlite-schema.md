@@ -13,10 +13,11 @@ Banco em arquivo único. Caminho: `Sqlite:DatabasePath` — absoluto é usado co
 | `squads` | `id` | |
 | `apps` | `id` | `squad_id` → `squads(id)`. **Sem colunas de estado de qualidade** |
 | `app_tags` | `(app_id, tag)` | `app_id` → `apps` CASCADE |
-| `repositories` | `id` | `app_id` → `apps` CASCADE |
+| `repositories` | `id` | `app_id` → `apps` CASCADE. Desde a spec 005: `sigla`, `sigla_app` (**único quando presente**), `role` e `source` |
 | `sonar_projects` | `id` | `app_id` → `apps` CASCADE |
 | `app_links` | `id` | `app_id` → `apps` CASCADE |
 | `quality_snapshots` | `id` | `app_id` → `apps` CASCADE; métricas em colunas, não JSON |
+| `discovered_repositories` | `id` (`github:{externalId}`) | Caixa de entrada do leitor de GitHub (spec 005). `UNIQUE (provider, external_id)`; **sem FK** para `repositories` |
 | `checks` | `id` (slug) | Checagens (spec 003). `status` = `open`/`closed`; datas de calendário em TEXT `yyyy-MM-dd` |
 | `check_items` | `(check_id, app_id)` | `check_id` → `checks` e `app_id` → `apps`, **ambas sem cascata** |
 | `check_events` | `id` | `check_id` → `checks` CASCADE; `app_id` **sem FK**. Só de acréscimo |
@@ -47,11 +48,15 @@ Consequência boa: a armadilha do `SaveAsync` sumiu estruturalmente — não há
 
 **FKs de `check_items` sem cascata, de propósito** (spec 003). Um app em checagem não pode ser removido (FR-014) e uma checagem com itens também não (FR-012). `AppService` e `CheckService` verificam antes e respondem 409 com mensagem; a FK é a segunda camada, que recusa mesmo se o serviço falhar. Consequência: `apps` deixou de ser apagável por cascata em qualquer situação — um teste de integração cobre a recusa.
 
+**`discovered_repositories` guarda só o que não dá para derivar**: `status` é `new`, `ignored` ou `other-squad`. "Já está no catálogo" **não é um status** — é a existência de uma linha em `repositories` com o mesmo `(provider, external_id)`; assim, remover um app não deixa o descoberto num estado mentiroso. Sem FK porque o descoberto precede e sobrevive ao vínculo. O upsert atualiza os dados observados e `last_seen_at`, e **nunca** toca `status` nem `first_seen_at`.
+
+**`repositories.sigla_app` é único só quando presente** (índice único parcial `ux_repositories_sigla_app`): a sigla-app identifica um repositório, e repositórios de infra não têm. O índice é criado pelo `SqliteSchemaBootstrapper`, não pelo `schema.sql`, porque depende de uma coluna que bancos antigos ainda não têm.
+
 **`check_events` é histórico só de acréscimo**, gravado na mesma transação da mudança que registra (fechar, reabrir, entrada e saída de app, mudança de status). `app_id` sem FK pelo mesmo motivo de `quality_snapshots.sonar_project_id`: o evento é um fato passado e precisa sobreviver à remoção do app. Cascateia com a checagem, que só pode ser removida vazia. Status e tipos são gravados como os códigos do glossário (`em-andamento`, `item-added`), não como nomes de enum.
 
 ## Evolução do schema
 
-Hoje: apenas `schema.sql`, idempotente, aplicado no bootstrap (`SqliteSchemaBootstrapper`). Scripts numerados de migration passam a existir **a partir do primeiro deploy com dados reais** — antes disso, recriar é mais barato que versionar.
+Hoje: `schema.sql`, idempotente, aplicado no bootstrap (`SqliteSchemaBootstrapper`), **mais um passo aditivo**: `CREATE TABLE IF NOT EXISTS` não acrescenta colunas a uma tabela existente, então o bootstrapper confere `pragma_table_info` e roda `ALTER TABLE … ADD COLUMN` para as colunas listadas em `AdditiveColumns` (hoje as 4 de `repositories`). É um paliativo — só `ADD COLUMN`, nunca recria nem converte — e há teste sobre um banco antigo. **Toda coluna nova entra no `CREATE TABLE` do `schema.sql` E em `AdditiveColumns`.** Scripts numerados de migration passam a existir **a partir do primeiro deploy com dados reais** — antes disso, recriar é mais barato que versionar.
 
 `ALTER TABLE` do SQLite é limitado: `ADD COLUMN`, `RENAME`, e `DROP COLUMN` só a partir da 3.35. Mudança de tipo ou constraint exige criar tabela nova, copiar e trocar.
 

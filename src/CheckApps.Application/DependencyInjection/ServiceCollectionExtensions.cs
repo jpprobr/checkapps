@@ -1,5 +1,6 @@
 using CheckApps.Application.Apps;
 using CheckApps.Application.Checks;
+using CheckApps.Application.Discovery;
 using CheckApps.Application.QualitySnapshots;
 using CheckApps.Application.Squads;
 using Microsoft.Extensions.DependencyInjection;
@@ -15,6 +16,9 @@ public static class ServiceCollectionExtensions
         services.AddScoped<AppService>();
         services.AddScoped<QualitySnapshotService>();
         services.AddScoped<CheckService>();
+        // ScanService fica de fora de propósito: depende de IRepositoryDiscoverySource, que só a
+        // ferramenta de scan registra. Registrá-lo aqui quebraria a API (validação de DI em Development).
+        services.AddScoped<TriageService>();
         services.TryAddSingleton(TimeProvider.System);
         return services;
     }

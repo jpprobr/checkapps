@@ -12,10 +12,11 @@ Stack: .NET 10 (ASP.NET Core Web API, monólito modular) + Angular 20 (standalon
 
 ```bash
 dotnet run --project tools/CheckApps.Seed             # cria o schema e popula dados de demo
+dotnet run --project tools/CheckApps.GitHubScan -- --sigla ab1,cd2 --source fake   # caixa de entrada de demonstração
 dotnet run --project src/CheckApps.Api --urls http://localhost:5232
 cd frontend && npm install && npm start               # Angular em :4200
 
-dotnet test                                           # 48 testes; nenhum exige Docker ou serviço externo
+dotnet test                                           # 176 testes; nenhum exige Docker, serviço externo ou rede
 ```
 
 Persistência é SQLite em arquivo (`%LOCALAPPDATA%\CheckApps\checkapps.db`). Não há banco para subir.
@@ -35,6 +36,7 @@ A skill `run-local` (`.agents/skills/run-local/`) encapsula essa sequência com 
 | Propor um access pattern, GSI ou desnormalização nova | `.agents/architecture/data-model/access-patterns.md` (registro vivo com o fit de cada padrão) e os gatilhos do ADR-002 |
 | Mudar algo estrutural (stack, modelo, padrões) | `.agents/architecture/decisions/` — ADRs numerados; se a decisão já existe, respeite-a ou proponha um novo ADR |
 | Entender por que uma decisão passada foi revista | `.agents/architecture/retrospectives/` — avaliações de experimentos concluídos (histórico, não vivo) |
+| Mexer no leitor de GitHub (scan, caixa de entrada, triagem) | `specs/005-leitor-github-fase-1/`, ADR-010 e `docs/leitor-github.md` — **token e nome da organização nunca entram no Git** |
 | Implementar uma feature | A spec correspondente em `specs/NNN-*/spec.md` e seu `checklist.md` |
 | Criar uma feature nova | Copie `specs/_template/` para `specs/NNN-nome/` e preencha antes de codar |
 | Subir o ambiente local | Skill `run-local` em `.agents/skills/run-local/SKILL.md` |

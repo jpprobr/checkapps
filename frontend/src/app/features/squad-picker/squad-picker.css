@@ -41,10 +41,3 @@
   font-size: 0.9rem;
 }
 
-.inline-checkbox {
-  display: flex;
-  align-items: center;
-  gap: 0.4rem;
-  font-size: 0.9rem;
-  color: var(--text-secondary);
-}

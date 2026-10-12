@@ -30,6 +30,9 @@ CREATE TABLE IF NOT EXISTS app_tags (
     PRIMARY KEY (app_id, tag)
 );
 
+-- sigla, sigla_app, role e source (spec 005) também são acrescentadas por
+-- SqliteSchemaBootstrapper a bancos criados antes delas: CREATE TABLE IF NOT EXISTS não
+-- altera uma tabela existente. O índice único de sigla_app mora lá, pelo mesmo motivo.
 CREATE TABLE IF NOT EXISTS repositories (
     id          TEXT PRIMARY KEY,
     app_id      TEXT NOT NULL REFERENCES apps(id) ON DELETE CASCADE,
@@ -37,7 +40,11 @@ CREATE TABLE IF NOT EXISTS repositories (
     provider    TEXT NULL,
     url         TEXT NULL,
     external_id TEXT NULL,
-    status      TEXT NULL
+    status      TEXT NULL,
+    sigla       TEXT NULL,
+    sigla_app   TEXT NULL,
+    role        TEXT NULL,
+    source      TEXT NULL
 );
 
 CREATE TABLE IF NOT EXISTS sonar_projects (
@@ -121,6 +128,27 @@ CREATE TABLE IF NOT EXISTS check_events (
     occurred_at TEXT NOT NULL
 );
 
+-- Caixa de entrada do leitor de GitHub (spec 005). O scan nunca cria App: ele grava aqui, e a
+-- pessoa decide. status guarda só o que não dá para derivar (new, ignored, other-squad); "já no
+-- catálogo" é a existência de uma linha em repositories com o mesmo (provider, external_id).
+-- Sem FK para repositories de propósito: o descoberto precede e sobrevive ao vínculo.
+CREATE TABLE IF NOT EXISTS discovered_repositories (
+    id            TEXT PRIMARY KEY,
+    provider      TEXT NOT NULL,
+    external_id   TEXT NOT NULL,
+    name          TEXT NOT NULL,
+    url           TEXT NULL,
+    sigla         TEXT NOT NULL,
+    sigla_app     TEXT NULL,
+    archived      INTEGER NOT NULL,
+    pushed_at     TEXT NULL,
+    status        TEXT NOT NULL,
+    first_seen_at TEXT NOT NULL,
+    last_seen_at  TEXT NOT NULL,
+    source        TEXT NOT NULL,
+    UNIQUE (provider, external_id)
+);
+
 CREATE INDEX IF NOT EXISTS ix_apps_squad_id
     ON apps (squad_id);
 
@@ -134,3 +162,6 @@ CREATE INDEX IF NOT EXISTS ix_check_items_app_id
 
 CREATE INDEX IF NOT EXISTS ix_check_events_check_occurred
     ON check_events (check_id, occurred_at DESC);
+
+CREATE INDEX IF NOT EXISTS ix_discovered_repositories_status_sigla
+    ON discovered_repositories (status, sigla);

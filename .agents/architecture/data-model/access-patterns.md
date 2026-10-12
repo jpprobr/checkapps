@@ -63,6 +63,16 @@ Revistos para SQL em 2026-10-12. Os ⚠️ da versão DynamoDB (partição únic
 | 29 | Guarda: app em checagem não é removido | `EXISTS` em `check_items` por `app_id` + FK sem cascata | ✅ | Substitui a cascata prevista antes (decisão de 2026-10-12) |
 | 31 | Histórico de uma checagem | `check_events` por `check_id`, mais recente primeiro | ✅ | Índice em `check_events(check_id, occurred_at)` |
 
+## Spec 005 — Leitor de GitHub, fase 1 (implementada)
+
+| # | Padrão | Resolução | Fit | Observação |
+|---|---|---|---|---|
+| 32 | Upsert de descoberto por `(provider, external_id)` | `SELECT` + `INSERT`/`UPDATE` em transação | ✅ | Lê antes para classificar novo/atualizado/inalterado (o scan reporta); **nunca** toca `status` nem `first_seen_at`. `ON CONFLICT` não informaria o resultado |
+| 33 | Caixa de entrada por status e sigla, sem os já catalogados | `discovered_repositories` com `NOT EXISTS` em `repositories` | ✅ | Índice em `(status, sigla)` |
+| 34 | "Já está no catálogo?" | `EXISTS` em `repositories` por `(provider, external_id)` | ✅ | É o que define o estado; não há status duplicado |
+| 35 | Sigla-app em uso? | `EXISTS` em `repositories` por `sigla_app` | ✅ | Índice único parcial é a rede de segurança (FR-013) |
+| 36 | Repositórios de um app, com sigla, sigla-app e papel | `repositories` por `app_id` | ✅ | Pré-existente; ganhou as colunas |
+
 ## Fora de escopo hoje — agora por decisão de produto, não de banco
 
 Com SQLite, todos os itens abaixo são tecnicamente triviais. Seguem fora de escopo porque ninguém pediu ainda — o que muda é que incluí-los passou a ser decisão de produto, e não mais "o banco não deixa". O ❌ registra como era no DynamoDB.

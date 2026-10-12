@@ -1,0 +1,156 @@
+<main class="page">
+  <h1>Repositórios descobertos</h1>
+  <p class="subtitle">
+    O scan propõe, você decide. Nada vira app sem a sua confirmação.
+  </p>
+
+  @if (notice(); as n) {
+    <div class="card notice" role="status">
+      {{ n.text }}
+      @if (n.appId) { <a [routerLink]="['/apps', n.appId]">Abrir o app</a> }
+      @for (warning of n.warnings; track warning) {
+        <p class="warning">⚠ {{ warning }}</p>
+      }
+      <button type="button" class="secondary" (click)="notice.set(null)">Fechar aviso</button>
+    </div>
+  }
+
+  <div class="filters">
+    <select aria-label="Status" [ngModel]="statusFilter()" (ngModelChange)="setStatus($event)">
+      <option value="new">Novos</option>
+      <option value="other-squad">De outra squad</option>
+      <option value="ignored">Ignorados</option>
+      <option value="all">Todos</option>
+    </select>
+    <select aria-label="Sigla" [ngModel]="siglaFilter()" (ngModelChange)="siglaFilter.set($event)">
+      <option value="">Todas as siglas</option>
+      @for (sigla of siglas(); track sigla) {
+        <option [value]="sigla">{{ sigla.toUpperCase() }}</option>
+      }
+    </select>
+  </div>
+
+  @if (actionError()) {
+    <p class="error">{{ actionError() }}</p>
+  }
+
+  @if (loading()) {
+    <p>Carregando…</p>
+  } @else if (error()) {
+    <p class="error">Não foi possível carregar os repositórios descobertos.</p>
+  } @else {
+    <table>
+      <thead>
+        <tr>
+          <th>Repositório</th>
+          <th>Sigla-app</th>
+          <th>Sugestão</th>
+          <th>Último push</th>
+          <th></th>
+        </tr>
+      </thead>
+      <tbody>
+        @for (row of visibleRows(); track row.id) {
+          <tr>
+            <td>
+              @if (row.url) {
+                <a [href]="row.url" target="_blank" rel="noopener">{{ row.name }}</a>
+              } @else {
+                {{ row.name }}
+              }
+              <span class="tag">{{ row.sigla.toUpperCase() }}</span>
+              @if (row.archived) { <span class="tag">arquivado</span> }
+              @if (row.status !== 'new') {
+                <span class="tag">{{ row.status === 'ignored' ? 'ignorado' : 'de outra squad' }}</span>
+              }
+            </td>
+            <td>{{ row.siglaApp ?? '—' }}</td>
+            <td>
+              {{ row.suggestion.role ?? 'papel não identificado' }}
+              <span class="confidence" [class.low]="row.suggestion.confidence === 'low'">
+                confiança {{ row.suggestion.confidence === 'high' ? 'alta' : 'baixa' }}
+              </span>
+            </td>
+            <td>{{ row.pushedAt ? (row.pushedAt | date: 'dd/MM/yyyy' : 'UTC') : '—' }}</td>
+            <td>
+              <div class="row-actions">
+                @if (row.status === 'new') {
+                  <button type="button" (click)="openCreate(row)">Criar app</button>
+                  <button type="button" class="secondary" (click)="openLink(row)">Vincular a app…</button>
+                  <button type="button" class="secondary" (click)="markOtherSquad(row)">De outra squad</button>
+                  <button type="button" class="secondary" (click)="ignore(row)">Ignorar</button>
+                } @else {
+                  <button type="button" class="secondary" (click)="restore(row)">Restaurar</button>
+                }
+              </div>
+            </td>
+          </tr>
+
+          @if (panelFor() === row.id) {
+            <tr class="panel-row">
+              <td colspan="5">
+                <form class="card form panel" (ngSubmit)="panelMode() === 'create' ? confirmCreate(row) : confirmLink(row)">
+                  @if (panelMode() === 'create') {
+                    <h2>Criar app a partir de {{ row.name }}</h2>
+                    <p class="subtitle">Sugestões preenchidas — corrija o que for preciso. Nada é gravado até confirmar.</p>
+                    <label>
+                      Nome do app *
+                      <input type="text" name="name" [ngModel]="formName()" (ngModelChange)="formName.set($event)" />
+                    </label>
+                    <label>
+                      Squad *
+                      <select name="squad" [ngModel]="formSquadId()" (ngModelChange)="formSquadId.set($event)">
+                        @for (squad of currentSquad.squads(); track squad.id) {
+                          <option [value]="squad.id">{{ squad.name }}</option>
+                        }
+                      </select>
+                    </label>
+                    <label>
+                      Descrição
+                      <input type="text" name="description" [ngModel]="formDescription()" (ngModelChange)="formDescription.set($event)" />
+                    </label>
+                  } @else {
+                    <h2>Vincular {{ row.name }} a um app existente</h2>
+                    <label>
+                      App *
+                      <select name="app" [ngModel]="formAppId()" (ngModelChange)="formAppId.set($event)">
+                        <option value="" disabled>Escolha o app…</option>
+                        @for (option of appOptions(); track option.id) {
+                          <option [value]="option.id">{{ option.label }}</option>
+                        }
+                      </select>
+                    </label>
+                  }
+
+                  <label>
+                    Papel do repositório
+                    <input type="text" name="role" list="roles" [ngModel]="formRole()" (ngModelChange)="formRole.set($event)" />
+                    <datalist id="roles">
+                      @for (role of roles; track role) {
+                        <option [value]="role"></option>
+                      }
+                    </datalist>
+                  </label>
+
+                  <div class="form-actions">
+                    <button type="submit" [disabled]="saving()">
+                      {{ saving() ? 'Salvando…' : (panelMode() === 'create' ? 'Criar app' : 'Vincular') }}
+                    </button>
+                    <button type="button" class="secondary" (click)="closePanel()">Cancelar</button>
+                  </div>
+                </form>
+              </td>
+            </tr>
+          }
+        } @empty {
+          <tr>
+            <td colspan="5">
+              Nenhum repositório aqui. Rode o scan:
+              <code>dotnet run --project tools/CheckApps.GitHubScan -- --sigla &lt;sigla&gt;</code>
+            </td>
+          </tr>
+        }
+      </tbody>
+    </table>
+  }
+</main>

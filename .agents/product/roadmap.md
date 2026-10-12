@@ -33,6 +33,10 @@ Saber se os apps estão melhorando ou piorando ao longo do tempo, e quais indica
 
 Não é um estágio: é a primeira feature operacional — acompanhar, app a app, uma demanda que atinge vários apps (substitui a planilha). Entregue em `specs/003-checagens/` (2026-10-12), junto com a navegação global. A metade "detectar" (pré-preencher status a partir dos repositórios) depende do leitor de GitHub; ver `backlog.md`.
 
+## ✅ Leitor de GitHub, fase 1 (fora da sequência)
+
+Primeiro conector real do produto: descobre repositórios por sigla e os coloca numa caixa de entrada, onde a pessoa decide criar app, vincular, marcar como de outra squad ou ignorar — o scan nunca cria app. Entregue em `specs/005-leitor-github-fase-1/` (ADR-010). Dependências de biblioteca (fase 2) e entre apps (fase 3) seguem no `backlog.md`.
+
 **O MVP termina aqui.** Os estágios abaixo são direção, não compromisso.
 
 ## ○ Context

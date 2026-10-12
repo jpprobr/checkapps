@@ -1,7 +1,9 @@
 using CheckApps.Application.Checks;
+using CheckApps.Application.Discovery;
 using CheckApps.Application.Persistence;
 using CheckApps.Domain;
 using CheckApps.Domain.Checks;
+using CheckApps.Domain.Discovery;
 using Repository = CheckApps.Domain.Repository;
 
 namespace CheckApps.UnitTests.TestDoubles;
@@ -43,6 +45,9 @@ public class FakeAppRepository : IAppRepository
 {
     private readonly Dictionary<string, App> _apps = [];
     private readonly Dictionary<string, AppLink> _links = [];
+    private readonly List<Repository> _repositories = [];
+
+    public IReadOnlyList<Repository> AllRepositories => _repositories;
 
     public void Add(App app) => _apps[app.Id] = app;
 
@@ -56,7 +61,7 @@ public class FakeAppRepository : IAppRepository
         Task.FromResult<IReadOnlyList<App>>(_apps.Values.Where(a => a.CurrentQualityLevel == level).ToList());
 
     public Task<IReadOnlyList<Repository>> GetRepositoriesAsync(string appId, CancellationToken ct = default) =>
-        Task.FromResult<IReadOnlyList<Repository>>([]);
+        Task.FromResult<IReadOnlyList<Repository>>(_repositories.Where(r => r.AppId == appId).ToList());
 
     public Task<IReadOnlyList<SonarProject>> GetSonarProjectsAsync(string appId, CancellationToken ct = default) =>
         Task.FromResult<IReadOnlyList<SonarProject>>([]);
@@ -80,6 +85,7 @@ public class FakeAppRepository : IAppRepository
     public Task DeleteAllAsync(string appId, CancellationToken ct = default)
     {
         _apps.Remove(appId);
+        _repositories.RemoveAll(r => r.AppId == appId);
         foreach (var linkId in _links.Values.Where(l => l.AppId == appId).Select(l => l.Id).ToList())
         {
             _links.Remove(linkId);
@@ -87,7 +93,12 @@ public class FakeAppRepository : IAppRepository
         return Task.CompletedTask;
     }
 
-    public Task AddRepositoryAsync(Repository repository, CancellationToken ct = default) => Task.CompletedTask;
+    public Task AddRepositoryAsync(Repository repository, CancellationToken ct = default)
+    {
+        _repositories.RemoveAll(r => r.Id == repository.Id);
+        _repositories.Add(repository);
+        return Task.CompletedTask;
+    }
 
     public Task AddSonarProjectAsync(SonarProject sonarProject, CancellationToken ct = default) => Task.CompletedTask;
 
@@ -268,4 +279,112 @@ public class FixedTimeProvider(DateTimeOffset now) : TimeProvider
     public override DateTimeOffset GetUtcNow() => _now;
 
     public void Advance(TimeSpan by) => _now = _now.Add(by);
+}
+
+/// <summary>
+/// Caixa de entrada em memória. "No catálogo" e "sigla-app em uso" olham o <see cref="FakeAppRepository"/>,
+/// como o banco real olha a tabela repositories.
+/// </summary>
+public class FakeDiscoveredRepositoryRepository(FakeAppRepository apps) : IDiscoveredRepositoryRepository
+{
+    private readonly Dictionary<string, DiscoveredRepository> _items = [];
+
+    public int Count => _items.Count;
+
+    public Task<UpsertOutcome> UpsertAsync(DiscoveredRepository repository, CancellationToken ct = default)
+    {
+        if (!_items.TryGetValue(repository.Id, out var existing))
+        {
+            _items[repository.Id] = Clone(repository);
+            return Task.FromResult(UpsertOutcome.New);
+        }
+
+        var unchanged = existing.SameObservation(repository);
+        existing.Name = repository.Name;
+        existing.Url = repository.Url;
+        existing.Sigla = repository.Sigla;
+        existing.SiglaApp = repository.SiglaApp;
+        existing.Archived = repository.Archived;
+        existing.PushedAt = repository.PushedAt;
+        existing.LastSeenAt = repository.LastSeenAt;
+        return Task.FromResult(unchanged ? UpsertOutcome.Unchanged : UpsertOutcome.Updated);
+    }
+
+    public Task<DiscoveredRepository?> GetAsync(string id, CancellationToken ct = default) =>
+        Task.FromResult(_items.GetValueOrDefault(id));
+
+    public Task<IReadOnlyList<DiscoveredRepository>> ListAsync(TriageStatus? status, string? sigla, CancellationToken ct = default) =>
+        Task.FromResult<IReadOnlyList<DiscoveredRepository>>(_items.Values
+            .Where(d => status is null || d.Status == status)
+            .Where(d => sigla is null || d.Sigla == sigla.ToLowerInvariant())
+            .Where(d => !InCatalog(d.Provider, d.ExternalId))
+            .OrderBy(d => d.Sigla).ThenBy(d => d.Name)
+            .ToList());
+
+    public Task SetStatusAsync(string id, TriageStatus status, CancellationToken ct = default)
+    {
+        _items[id].Status = status;
+        return Task.CompletedTask;
+    }
+
+    public Task<bool> IsInCatalogAsync(string provider, string externalId, CancellationToken ct = default) =>
+        Task.FromResult(InCatalog(provider, externalId));
+
+    public Task<bool> IsSiglaAppInUseAsync(string siglaApp, CancellationToken ct = default) =>
+        Task.FromResult(apps.AllRepositories.Any(r => r.SiglaApp == siglaApp));
+
+    private bool InCatalog(string provider, string externalId) =>
+        apps.AllRepositories.Any(r => r.Provider == provider && r.ExternalId == externalId);
+
+    private static DiscoveredRepository Clone(DiscoveredRepository r) => new()
+    {
+        Id = r.Id,
+        Provider = r.Provider,
+        ExternalId = r.ExternalId,
+        Name = r.Name,
+        Url = r.Url,
+        Sigla = r.Sigla,
+        SiglaApp = r.SiglaApp,
+        Archived = r.Archived,
+        PushedAt = r.PushedAt,
+        Status = r.Status,
+        FirstSeenAt = r.FirstSeenAt,
+        LastSeenAt = r.LastSeenAt,
+        Source = r.Source
+    };
+}
+
+/// <summary>Fonte com lista fixa por sigla; conta as consultas para provar o que NÃO foi consultado.</summary>
+public class StubDiscoverySource : IRepositoryDiscoverySource
+{
+    private readonly Dictionary<string, List<DiscoveredRepositoryInfo>> _bySigla = [];
+
+    public string Provider => "stub";
+
+    public List<string> Calls { get; } = [];
+
+    public int? FailWithTotalFor { get; set; }
+
+    public string? FailOnSigla { get; set; }
+
+    public void Add(string sigla, DiscoveredRepositoryInfo info)
+    {
+        if (!_bySigla.TryGetValue(sigla, out var list))
+        {
+            _bySigla[sigla] = list = [];
+        }
+        list.Add(info);
+    }
+
+    public Task<IReadOnlyList<DiscoveredRepositoryInfo>> DiscoverAsync(
+        string sigla, string namePrefix, int maxResults, CancellationToken ct = default)
+    {
+        Calls.Add(sigla);
+        if (sigla == FailOnSigla)
+        {
+            throw new ScanLimitExceededException(sigla, FailWithTotalFor ?? maxResults + 1, maxResults);
+        }
+
+        return Task.FromResult<IReadOnlyList<DiscoveredRepositoryInfo>>(_bySigla.GetValueOrDefault(sigla) ?? []);
+    }
 }

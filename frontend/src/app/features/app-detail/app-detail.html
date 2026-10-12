@@ -128,6 +128,9 @@
             <li>
               <strong>{{ repo.name }}</strong>
               @if (repo.status) { ({{ repo.status }}) }
+              @if (repo.role) { <span class="tag">{{ repo.role }}</span> }
+              @if (repo.sigla) { · sigla {{ repo.sigla }} }
+              @if (repo.siglaApp) { · sigla-app {{ repo.siglaApp }} }
               @if (repo.url) { — <a [href]="repo.url" target="_blank" rel="noopener">{{ repo.url }}</a> }
             </li>
           }
