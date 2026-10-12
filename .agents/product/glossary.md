@@ -14,7 +14,8 @@ Vocabulário do CheckApps. Serve a pessoas de squads diferentes (para que um ter
 | **Repositório ativo** | Em aberto | O repositório atual de um app, em oposição a legados. `Repository.status` existe, mas sem a regra "no máximo um ativo por app". Ver backlog (CRUD de Repository). |
 | **Projeto Sonar** | Definido | Projeto no SonarQube associado a um app. Um app tem 0..N; **não** é 1:1 com repositório. |
 | **Link** (`AppLink`) | Definido | Endereço corporativo relacionado a um app (Confluence, runbook, dashboard): id, descrição e URL. |
-| **Tag** | Definido | Rótulo livre para categorizar um app. Complementa os links; não os substitui. Convenções de prefixo (`solucao:`, `topologia:`) foram cogitadas como primeiro passo de classificação. |
+| **Tag** | Definido | Rótulo livre para categorizar um app. Complementa os links; não os substitui. Convenção de prefixo (`solucao:`) é o primeiro passo cogitado para classificar por solução. |
+| **Sigla** | Definido | Agrupador corporativo de repositórios, normalmente associado a uma conta AWS. É atributo do **repositório**: a sigla-app identifica o repositório, não o app. **Cruzada com squad** — uma sigla tem apps de várias squads, e uma squad tem apps em várias siglas; nunca derivar uma da outra. Hoje é atributo e parâmetro do scan; vira entidade se algo precisar de dados dela (ex.: a conta AWS). Perguntas em aberto no backlog (leitor de GitHub). |
 | **Solução** | Em aberto | Grupo nomeado de apps que, conectados, entregam um fluxo — eixo de **o que compõe**, diferente de Squad. Leitura atual: "modal" e "carrinho" são **soluções**, e no mapa de aplicações uma solução é um **subgrafo nomeado**. O `id-solution` corporativo seria identificador externo dela, nunca a chave. |
 | **Tipo de app** (`appType`) | Em aberto | O tipo de componente/runtime: `ecs`, `lambda`, `api-gateway`, `microfrontend`, `infra`… Cuidado: "BFF" é **papel na cadeia**, não tipo — um BFF pode rodar em ECS ou Lambda. |
 
@@ -52,7 +53,9 @@ Vocabulário do CheckApps. Serve a pessoas de squads diferentes (para que um ter
 | Termo | Status | Significado |
 |---|---|---|
 | **Proveniência** (`source`) | Definido | De onde um dado veio: `SONAR_MOCK`, futuramente `SONAR`, `GITHUB_SCAN`, cadastro manual. Para dado inferido, inclui **confiança**. É o que permite distinguir confirmado de inferido. |
-| **Repositório descoberto** | Em aberto | Repositório encontrado pelo leitor de GitHub e ainda não triado. A triagem decide: criar app, vincular a app existente ou ignorar. **O scan propõe, a pessoa decide.** |
+| **Repositório descoberto** | Em aberto | Repositório encontrado pelo leitor de GitHub e ainda não triado. A triagem decide: criar app, vincular a app existente, de outra squad ou ignorar. **O scan propõe, a pessoa decide.** |
+| **Escopo do scan** | Em aberto | O que o scan pode ler: **squad + siglas**. Nunca a organização inteira; protegido por limite de resultados. A squad vem do contexto do scan, não do repositório. |
+| **Pré-cadastro** | Em aberto | Sugestão de app (nome, squad, tipo) montada a partir de um repositório descoberto. Vive na caixa de entrada, **não** na tabela de apps; o app só passa a existir quando uma pessoa confirma. |
 | **Dependência de biblioteca** | Em aberto | Pacote declarado num manifesto (`PackageReference` do `.csproj`, `package.json`…), com versão. Guardada como snapshot por scan. |
 | **Ligação** (dependência entre apps) | Em aberto | Aresta do mapa: o app A depende do app B. Sempre com origem (manual, IaC, inferida por IA) e confiança. **Diferente** de dependência de biblioteca. |
 | **Mapa de aplicações** | Em aberto | Grafo de **apps** (não de repositórios) e suas ligações, colorível por Quality Level, versão, vulnerabilidade ou status de checagem. |
