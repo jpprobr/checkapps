@@ -1,6 +1,6 @@
 # Spec 005: Leitor de GitHub, fase 1 — scan por sigla, caixa de entrada e triagem
 
-**Status**: Implementada (2026-10-12) — falta apenas a primeira leitura real do GitHub (organização de teste), a cargo do usuário
+**Status**: Implementada (2026-10-12); primeira leitura real do GitHub validada no mesmo dia
 **Criada em**: 2026-10-12
 **Origem**: item "Leitor de repositórios GitHub" do backlog (análise de 2026-10-12). Um catálogo mantido à mão envelhece; ler os repositórios da organização ataca isso na origem e é o primeiro conector real do produto.
 
@@ -168,7 +168,7 @@ POST /api/discovered-repositories/{id}/restore
 - **`--dry-run` não grava dados**, mas garante o schema (DDL idempotente), porque classificar novo/atualizado/inalterado exige ler a tabela.
 - **Fonte `fake`** tem provedor `fake` (ids `fake:{n}`), nomes montados a partir do prefixo recebido, ruído fora da convenção e respeita o limite — mostra os mesmos casos da fonte real.
 - **Estilos globais**: `.tag` e `.inline-checkbox` viraram globais; várias telas (inclusive de specs anteriores) os usavam sem estilo.
-- **Não verificado ainda**: o comportamento da Search API do GitHub contra uma organização real (atraso de indexação, `total_count`, limite de 1000). Os testes cobrem o formato da resposta com JSON fixo, nunca a rede.
+- **Leitura real**: Validado em 2026-10-12 contra uma organização de teste: a busca por sigla encontrou o repositório (inclusive recém-criado), o prefixo exato e o token fine-grained funcionaram, e a sigla-app foi lida do `config.yaml` (confiança subiu de baixa para alta). **Ainda não exercitados com o GitHub real**: repositório arquivado, paginação, limite de resultados, limite de chamadas, repositório fora do acesso do token e YAML inválido. Os testes cobrem esses casos só com JSON fixo.
 
 ### Fora desta spec (backlog)
 

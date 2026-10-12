@@ -1,6 +1,6 @@
 # Checklist — Spec 005: Leitor de GitHub, fase 1
 
-Status: **implementada** em 2026-10-12. Resta um item, que só o usuário pode fazer: a primeira leitura real (marcado abaixo).
+Status: **implementada** em 2026-10-12, com a primeira leitura real do GitHub validada no mesmo dia.
 
 ## Qualidade da spec (antes de codar)
 
@@ -19,7 +19,7 @@ Status: **implementada** em 2026-10-12. Resta um item, que só o usuário pode f
 - [x] 3. Application: porta, `ScanService`, `TriageService`, `FakeRepositorySource` — testes de serviço
 - [x] 4. GitHub real: `GitHubRepositorySource` — testes com `HttpMessageHandler` falso, token fora das mensagens
 - [x] 5. Ferramenta `tools/CheckApps.GitHubScan` — fonte fake com e sem `--dry-run`, erros de uso, limite de resultados e ausência de token verificados
-- [ ] 5b. **Primeira leitura real** contra a organização de teste, em `--dry-run` (a cargo do usuário; guia em `docs/leitor-github.md`)
+- [x] 5b. **Primeira leitura real** contra a organização de teste, em `--dry-run`: repositório encontrado, sigla-app lida do YAML, confiança alta
 - [x] 6. API: `DiscoveredRepositoriesController` — `curl` incluindo 4xx
 - [x] 7. Frontend: tela `/discovered`, menu, detalhe do app — Playwright
 - [x] 8. Documentação e guia da organização de teste

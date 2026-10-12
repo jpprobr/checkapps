@@ -23,7 +23,7 @@ Estágio do roadmap: **Inventário + Health + Evolution concluídos**, mais **Ch
 ## O que está mockado / provisório
 
 - **Dados de Sonar** vêm de `MockSonarProvider` + `DemoDataFactory`. Sem integração real com SonarQube.
-- **O GitHub real nunca foi lido.** `GitHubRepositorySource` está implementada e testada com JSON no formato da API, mas a primeira leitura contra uma organização de verdade é a **pendência 5b** do checklist da spec 005, a cargo do usuário. Riscos conhecidos: atraso de indexação da Search API para repositórios novos, `total_count`, limite de 1000 resultados.
+- **O GitHub real foi lido uma vez** (2026-10-12, organização de teste, `--dry-run`): encontrou o repositório, leu a sigla-app do `config.yaml` e subiu a confiança de baixa para alta. **Ainda não exercitados com o GitHub real**: arquivado, paginação, limite de resultados, limite de chamadas, acesso parcial e YAML inválido — hoje só cobertos por JSON fixo nos testes.
 - **Sem autenticação** (ADR-007): "minha squad" é a última visitada (navegador); autor de checagem é texto livre; histórico não registra quem fez.
 - **Sem deploy, sem CI.** Litestream e deploy no ECS documentados como alvo (spec 004, ADR-009), não implementados.
 - **O seed não cria checagens nem descobertos** — o scan `--source fake` cria os descobertos de demonstração.
@@ -50,7 +50,7 @@ Os críticos estão em `AGENTS.md` e nas regras. Os que mais mordem hoje:
 
 ## Próximos passos (em ordem)
 
-1. **Primeira leitura real do GitHub** (usuário): criar a organização de teste conforme `docs/leitor-github.md`, configurar user-secrets e rodar `--dry-run`. O que aparecer de diferente do esperado (indexação, limite, YAML) vira ajuste na fonte.
+1. **Exercitar o resto da leitura real** (usuário): rodar sem `--dry-run` e triar na tela **Descobertos**; depois, no guia `docs/leitor-github.md`, criar os demais repositórios de teste (arquivado, infra, outra sigla, um fora do acesso do token) para ver os casos que ainda só os testes cobrem.
 2. Revisão do usuário no glossário (Solução, Tipo de app).
 3. Candidatos de baixo custo: checagens e descobertos na massa de demonstração do seed; CRUD manual de Repository (campos de sigla, sigla-app, papel); botão "rodar scan" na UI.
 4. Depois: fase 2 do leitor (dependências de biblioteca) — destrava "quais apps usam a biblioteca X" e a detecção automática de status das checagens; tags chave-valor; spec de Solução.
