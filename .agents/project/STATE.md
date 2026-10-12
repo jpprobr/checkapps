@@ -23,6 +23,7 @@ Estágio do roadmap: **Inventário + Health + Evolution concluídos** (ver `.age
 ## Decisões pendentes / perguntas abertas
 
 - **Spec 003 (Checagens)** segue em análise: faltam confirmar as assumptions sobre remoção de app cascatear itens, reabrir sem trilha, remover checagem só sem itens e ausência de notificação. Os access patterns #21–#29 dela precisam ser revistos à luz do SQL (vários deixaram de ter restrição).
+- **Navegação global** (menu/shell): analisada em 2026-10-12 e **deliberadamente adiada** — deve ser feita junto com a spec 003, não antes, senão `/checks` nasce inalcançável. Análise completa (personas, dependência de autenticação, faseamento) no backlog. Pendência independente e barata: os breadcrumbs atuais são inconsistentes e não mostram o nome da squad.
 - **Classificação de apps** (tipo/arquétipo, solução): conversa em aberto no backlog — recomendação é começar por convenção de tag antes de criar entidade. O termo para "modal/carrinho" ainda não foi decidido; a leitura mais recente é que se parece mais com **agrupamento (Solução)** do que com atributo do app.
 - `.github/copilot-instructions.md` ainda não existe — criar quando o Copilot entrar neste repo.
 - Confirmar, na máquina corporativa, se Devin/Copilot varrem `.agents/skills/` (premissa do ADR-008).

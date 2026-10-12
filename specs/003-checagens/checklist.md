@@ -18,7 +18,7 @@ Status: **em análise** — nenhum item marcado ainda. Vira "Aprovada" quando a 
 - [ ] 2. Infrastructure: `ICheckRepository` (`TryCreateAsync`, get com itens, list via GSI1 `CHECK`, itens por app via GSI1 `APP#…`, upsert/delete de item, delete de check); `Keys.cs` + `data-model` atualizados — testes de integração: AP-2, AP-3, idempotência de adicionar, cascata ao remover app
 - [ ] 3. Application: `CheckService` (criar com slug, editar, fechar/reabrir, remover só sem itens, adicionar/remover apps validando que existem, atualizar item); `AppService.DeleteAsync` passa a apagar itens de checagem — testes unitários com fakes, incluindo os caminhos de 409
 - [ ] 4. Api: endpoints do esboço; `DomainConflictException` → 409 — `curl` cobrindo criar, adicionar apps, mudar status, percentual, fechar, remover bloqueada
-- [ ] 5. Frontend: `checks` (lista), `check-form`, `check-detail` (planilha com edição inline e seletor de apps), seção "Checagens" em `app-detail`, rotas — Playwright: criar checagem → adicionar 3 apps → marcar status → ver percentual → ver no detalhe do app → fechar → ver em fechadas
+- [ ] 5. Frontend: `checks` (lista), `check-form`, `check-detail` (planilha com edição inline e seletor de apps), seção "Checagens" em `app-detail`, rotas, **e a navegação global junto** (ver "Navegação" em `.agents/product/backlog.md` — sem ela `/checks` nasce inalcançável, porque nenhuma tela existente linka para lá) — Playwright: criar checagem → adicionar 3 apps → marcar status → ver percentual → ver no detalhe do app → fechar → ver em fechadas
 - [ ] Regras conquistadas registradas em `.agents/rules/`
 - [ ] `.agents/architecture/data-model/dynamodb-single-table.md` atualizado com `CHECK#`/`ITEM#`
 
