@@ -1,0 +1,198 @@
+<main class="page">
+  <p class="breadcrumb"><a routerLink="/checks">Checagens</a></p>
+
+  @if (loading()) {
+    <p>Carregando…</p>
+  } @else if (error() || !check()) {
+    <p class="error">Checagem não encontrada.</p>
+  } @else {
+    @let c = check()!;
+
+    <div class="toolbar">
+      <div class="title-row">
+        <h1>{{ c.title }}</h1>
+        <span class="status-chip" [class.closed]="c.status === 'closed'">{{ c.status === 'closed' ? 'fechada' : 'aberta' }}</span>
+      </div>
+      <div class="row-actions">
+        <a [routerLink]="['/checks', checkId, 'edit']" class="button-secondary">Editar</a>
+        @if (c.status === 'open') {
+          <button type="button" class="secondary" (click)="close()">Fechar</button>
+        } @else {
+          <button type="button" class="secondary" (click)="reopen()">Reabrir</button>
+        }
+        @if (c.items.length === 0) {
+          <button type="button" class="danger" (click)="remove()">Remover</button>
+        }
+      </div>
+    </div>
+
+    <p class="subtitle">
+      @if (c.category) { {{ c.category }} · }
+      @if (c.author) { por {{ c.author }} · }
+      @if (c.startDate || c.endDate) {
+        {{ c.startDate ? (c.startDate | date: 'dd/MM/yyyy' : 'UTC') : '…' }}
+        – {{ c.endDate ? (c.endDate | date: 'dd/MM/yyyy' : 'UTC') : '…' }} ·
+      }
+      criada em {{ c.createdAt | date: 'dd/MM/yyyy' }}
+      @if (c.closedAt) { · fechada em {{ c.closedAt | date: 'dd/MM/yyyy' }} }
+    </p>
+
+    @if (c.description) {
+      <p>{{ c.description }}</p>
+    }
+
+    @if (actionError()) {
+      <p class="error">{{ actionError() }}</p>
+    }
+
+    <section class="card">
+      <div class="card-grid">
+        <div class="stat-tile">
+          <div class="stat-value">{{ formatPercent(c.progress.percent) }}</div>
+          <div class="stat-label">Concluído ({{ c.progress.done }}/{{ c.progress.total }})</div>
+        </div>
+        @for (status of statuses; track status) {
+          <div class="stat-tile">
+            <div class="stat-value">{{ c.progress.countsByStatus[status] }}</div>
+            <div class="stat-label">{{ statusLabels[status] }}</div>
+          </div>
+        }
+      </div>
+    </section>
+
+    <section>
+      <div class="toolbar">
+        <h2>Apps</h2>
+        @if (!pickerOpen()) {
+          <button type="button" (click)="openPicker()">+ Adicionar apps</button>
+        }
+      </div>
+
+      @if (pickerOpen()) {
+        <div class="card picker">
+          <div class="filters">
+            <input type="search" placeholder="Buscar app…" [ngModel]="pickerSearch()" (ngModelChange)="pickerSearch.set($event)" />
+            <select [ngModel]="pickerSquad()" (ngModelChange)="pickerSquad.set($event)">
+              <option value="">Todas as squads</option>
+              @for (squad of candidateSquads(); track squad.id) {
+                <option [value]="squad.id">{{ squad.name }}</option>
+              }
+            </select>
+            <select [ngModel]="pickerTag()" (ngModelChange)="pickerTag.set($event)">
+              <option value="">Todas as tags</option>
+              @for (tag of candidateTags(); track tag) {
+                <option [value]="tag">{{ tag }}</option>
+              }
+            </select>
+            <button type="button" class="secondary" (click)="selectAllFiltered()">Selecionar todos os filtrados</button>
+          </div>
+
+          <ul class="picker-list">
+            @for (candidate of filteredCandidates(); track candidate.appId) {
+              <li>
+                <label class="inline-checkbox">
+                  <input type="checkbox" [checked]="selected().has(candidate.appId)" (change)="toggleSelected(candidate.appId)" />
+                  {{ candidate.name }}
+                  <span class="subtitle">— {{ candidate.squadName }}</span>
+                  @if (candidate.status === 'inactive') { <span class="tag">inativo</span> }
+                </label>
+              </li>
+            } @empty {
+              <li class="subtitle">Nenhum app disponível com esses filtros.</li>
+            }
+          </ul>
+
+          <div class="form-actions">
+            <button type="button" [disabled]="selected().size === 0 || adding()" (click)="addSelected()">
+              {{ adding() ? 'Adicionando…' : 'Adicionar selecionados (' + selected().size + ')' }}
+            </button>
+            <button type="button" class="secondary" (click)="pickerOpen.set(false)">Cancelar</button>
+          </div>
+        </div>
+      }
+
+      @if (c.items.length > 0) {
+        <div class="filters">
+          <input type="search" placeholder="Buscar por nome…" [ngModel]="search()" (ngModelChange)="search.set($event)" />
+          <select [ngModel]="squadFilter()" (ngModelChange)="squadFilter.set($event)">
+            <option value="">Todas as squads</option>
+            @for (squad of squads(); track squad.id) {
+              <option [value]="squad.id">{{ squad.name }}</option>
+            }
+          </select>
+          <select [ngModel]="statusFilter()" (ngModelChange)="statusFilter.set($event)">
+            <option value="">Todos os status</option>
+            @for (status of statuses; track status) {
+              <option [value]="status">{{ statusLabels[status] }}</option>
+            }
+          </select>
+        </div>
+      }
+
+      <table>
+        <thead>
+          <tr>
+            <th>App</th>
+            <th>Squad</th>
+            <th>Status</th>
+            <th>Observação</th>
+            <th></th>
+          </tr>
+        </thead>
+        <tbody>
+          @for (item of filteredItems(); track item.appId) {
+            <tr>
+              <td>
+                <a [routerLink]="['/apps', item.appId]">{{ item.appName }}</a>
+                @if (item.appStatus === 'inactive') { <span class="tag">inativo</span> }
+              </td>
+              <td>{{ item.squadName }}</td>
+              <td>
+                <select class="inline-select" [attr.aria-label]="'Status de ' + item.appName"
+                  [ngModel]="item.status" (ngModelChange)="changeStatus(item, $event)">
+                  @for (status of statuses; track status) {
+                    <option [value]="status">{{ statusLabels[status] }}</option>
+                  }
+                </select>
+              </td>
+              <td>
+                <input type="text" class="inline-input" [attr.aria-label]="'Observação de ' + item.appName"
+                  [value]="item.notes ?? ''" #notes (blur)="saveNotes(item, notes.value)"
+                  (keydown.enter)="notes.blur()" placeholder="—" />
+              </td>
+              <td>
+                <div class="row-actions">
+                  <button type="button" class="secondary" (click)="removeApp(item)">Retirar</button>
+                </div>
+              </td>
+            </tr>
+          } @empty {
+            <tr>
+              <td colspan="5">
+                @if (c.items.length === 0) { Nenhum app nesta checagem ainda. } @else { Nenhum app com esses filtros. }
+              </td>
+            </tr>
+          }
+        </tbody>
+      </table>
+    </section>
+
+    <section class="card">
+      <button type="button" class="secondary" (click)="toggleHistory()" [attr.aria-expanded]="historyOpen()">
+        {{ historyOpen() ? '▾' : '▸' }} Histórico
+      </button>
+      @if (historyOpen()) {
+        <ul class="history">
+          @for (event of history(); track event.id) {
+            <li>
+              <span class="subtitle">{{ event.occurredAt | date: 'dd/MM/yyyy HH:mm' }}</span>
+              {{ describe(event) }}
+            </li>
+          } @empty {
+            <li class="subtitle">Nenhum registro ainda.</li>
+          }
+        </ul>
+      }
+    </section>
+  }
+</main>

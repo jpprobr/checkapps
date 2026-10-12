@@ -20,3 +20,11 @@ Ao adicionar cadastro manual de Squads e Apps (`specs/002-squad-app-management/`
 - Um App que já recebeu um snapshot não pode mais ser removido pela API — nem por engano. Limpeza de dados de teste em ambiente local exige reset do DynamoDB Local (reseed), o que é aceitável.
 - Serviços que criam snapshots (futuro sync real com Sonar) tornam apps "permanentes" na prática. É intencional: histórico de qualidade é o ativo central do produto.
 - Não há soft delete com `deletedAt`; `status` é a única marca. Se um dia for necessário distinguir "inativo" de "arquivado", será um valor novo de `status`, não um campo novo.
+
+## Nota (2026-10-12, spec 003)
+
+A guarda do App ganhou uma segunda condição: **um App que está em qualquer checagem (aberta ou fechada) não pode ser removido** — participação em checagem também é histórico. `AppService.DeleteAsync` verifica as duas condições e responde 409 orientando a inativar.
+
+Diferente do resto desta decisão, aqui há uma **segunda camada no banco**: a FK `check_items.app_id` não cascateia, então o SQLite recusa a remoção mesmo se o serviço falhar em checar. O princípio "os repositórios não protegem nada" continua valendo para a regra de negócio (a mensagem e o 409 vêm do serviço); a FK é rede de segurança, não a regra.
+
+Checagem segue a mesma lógica: só é removida sem itens; com itens, é fechada (spec 003, FR-012).

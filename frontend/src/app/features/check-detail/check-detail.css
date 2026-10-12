@@ -1,0 +1,71 @@
+.title-row {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+.title-row h1 {
+  margin: 0;
+}
+
+/* Texto sempre presente: a cor só reforça (nunca cor sozinha). */
+.status-chip {
+  border: 1px solid var(--series-1);
+  color: var(--series-1);
+  border-radius: 999px;
+  padding: 0.1rem 0.6rem;
+  font-size: 0.8rem;
+  font-weight: 600;
+}
+
+.status-chip.closed {
+  border-color: var(--baseline);
+  color: var(--text-secondary);
+}
+
+.picker {
+  margin-bottom: 1rem;
+}
+
+.picker-list {
+  list-style: none;
+  padding: 0;
+  max-height: 18rem;
+  overflow-y: auto;
+  border-top: 1px solid var(--gridline);
+  border-bottom: 1px solid var(--gridline);
+}
+
+.picker-list li {
+  padding: 0.3rem 0;
+}
+
+.inline-select,
+.inline-input {
+  padding: 0.3rem 0.5rem;
+  border: 1px solid var(--baseline);
+  border-radius: 6px;
+  background: var(--surface-1);
+  color: var(--text-primary);
+  font: inherit;
+  font-size: 0.9rem;
+}
+
+.inline-input {
+  width: 100%;
+  min-width: 12rem;
+}
+
+.history {
+  list-style: none;
+  padding: 0;
+}
+
+.history li {
+  padding: 0.3rem 0;
+  border-bottom: 1px solid var(--gridline);
+}
+
+.history .subtitle {
+  margin-right: 0.5rem;
+}

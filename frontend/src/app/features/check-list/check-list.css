@@ -1,0 +1,8 @@
+.small {
+  font-size: 0.8rem;
+  margin-top: 0.15rem;
+}
+
+tr.closed td {
+  color: var(--text-secondary);
+}

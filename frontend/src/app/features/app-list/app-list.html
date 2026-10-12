@@ -1,5 +1,5 @@
 <main class="page">
-  <p class="breadcrumb"><a routerLink="/">Squads</a> / <a [routerLink]="['/squads', squadId]">Dashboard</a></p>
+  <p class="breadcrumb"><a routerLink="/squads">Squads</a> / <a [routerLink]="['/squads', squadId]">{{ currentSquad.squadName() ?? squadId }}</a></p>
   <h1>Apps</h1>
 
   @if (loading()) {

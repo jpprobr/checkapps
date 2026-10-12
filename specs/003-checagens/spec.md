@@ -1,6 +1,6 @@
 # Spec 003: Checagens — revisões e demandas acompanhadas por app
 
-**Status**: Aprovada (assumptions confirmadas em 2026-10-12)
+**Status**: Implementada (2026-10-12; aprovada no mesmo dia)
 **Criada em**: 2026-09-17
 **Origem**: dor recorrente do tech lead — com 50+ repositórios (ECS, API Gateway, Lambda, infra), qualquer revisão ou demanda transversal vira uma planilha montada à mão: copiar nomes de apps/repos, criar colunas de controle, marcar quem já está conforme. Rascunho original discutido em 2026-09-16/17; as decisões abaixo já refletem as respostas do usuário.
 
@@ -211,7 +211,9 @@ PUT    /api/checks/{checkId}
 POST   /api/checks/{checkId}/close
 POST   /api/checks/{checkId}/reopen
 DELETE /api/checks/{checkId}                      # 409 se houver itens
-PUT    /api/checks/{checkId}/items/{appId}        # cria se não existe (status/notes)
+GET    /api/checks/{checkId}/candidates           # apps ainda não incluídos (AP-9), com squad e tags
+POST   /api/checks/{checkId}/items                # { appIds: [...] } — em lote, idempotente; devolve { added }
+PUT    /api/checks/{checkId}/items/{appId}        # só atualiza status/notes; 404 se o app não está na checagem
 DELETE /api/checks/{checkId}/items/{appId}
 GET    /api/checks/{checkId}/history              # do mais recente para o mais antigo
 GET    /api/apps/{appId}/checks
@@ -219,6 +221,17 @@ DELETE /api/apps/{appId}                         # existente; passa a responder 
 ```
 
 `close`/`reopen` como ações explícitas (não `PUT status`) porque são transições com semântica (`closedAt`), diferente do `status` de Squad/App que é só um flag.
+
+### Notas da implementação (2026-10-12)
+
+- **Adicionar apps é em lote** (`POST …/items`), porque o seletor é de múltipla escolha. Todos os apps são validados antes de gravar qualquer um: um id inexistente recusa o lote inteiro (400). O `PUT …/items/{appId}` do esboço original deixou de criar item.
+- **Status como códigos do glossário** (`em-andamento`…) na API e no banco, via `CheckCodes` no Domain — os enums não passam pelo `JsonStringEnumConverter`. Regra registrada em `.agents/rules/backend.md`.
+- **Erros**: checagem ou item inexistente → 404; input inválido (título vazio, fim antes do início, app inexistente, status desconhecido) → 400; fechar o que já está fechado, reabrir o que já está aberto, remover com itens, remover app em checagem → 409.
+- **Checagem fechada continua editável** (status, observação, apps). A spec não pedia bloqueio, e bloquear obrigaria a reabrir para corrigir um detalhe; o histórico registra tudo do mesmo jeito.
+- **Observação vazia vira `null`**; mudança só de observação não entra no histórico (FR-015), e um teste de ponta a ponta verifica isso.
+- **Percentual com uma casa decimal** (33,3%), calculado no Domain (`CheckProgress`); com zero apps, `null` → "—".
+- **Horários do histórico em horário local** na tela — são instantes reais, ao contrário dos períodos mensais de demonstração (exceção registrada em `.agents/rules/frontend.md`).
+- **Navegação entregue junto**: shell com `Squads` | `Checagens`, seletor de squad ciente de contexto, `/` → última squad visitada, lista de squads em `/squads`, breadcrumbs com o nome da squad. Trocar de squad pelo seletor exigiu `ParamAwareReuseStrategy`: o Angular reaproveitava o componente quando só o parâmetro mudava.
 
 ### Fora desta spec (backlog)
 

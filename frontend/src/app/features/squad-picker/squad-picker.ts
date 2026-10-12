@@ -1,6 +1,7 @@
 import { Component, computed, inject, signal } from '@angular/core';
 import { RouterLink } from '@angular/router';
 
+import { CurrentSquadService } from '../../core/current-squad.service';
 import { SquadsApiService } from '../../core/squads-api.service';
 import { Squad } from '../../core/models';
 
@@ -12,6 +13,7 @@ import { Squad } from '../../core/models';
 })
 export class SquadPicker {
   private readonly squadsApi = inject(SquadsApiService);
+  private readonly currentSquad = inject(CurrentSquadService);
 
   protected readonly squads = signal<Squad[]>([]);
   protected readonly loading = signal(true);
@@ -28,6 +30,7 @@ export class SquadPicker {
   }
 
   private reload(): void {
+    this.currentSquad.refresh(); // o seletor do header reflete criação, inativação e remoção
     this.loading.set(true);
     this.squadsApi.list().subscribe({
       next: (squads) => {
@@ -56,7 +59,10 @@ export class SquadPicker {
 
     this.actionError.set(null);
     this.squadsApi.delete(squad.id).subscribe({
-      next: () => this.reload(),
+      next: () => {
+        this.currentSquad.clear(squad.id);
+        this.reload();
+      },
       error: (err) =>
         this.actionError.set(typeof err?.error === 'string' ? err.error : `Não foi possível remover "${squad.name}".`),
     });

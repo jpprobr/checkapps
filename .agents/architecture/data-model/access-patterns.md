@@ -46,7 +46,7 @@ Schema vigente: `sqlite-schema.md`. Fonte da verdade: `schema.sql`.
 |---|---|---|---|---|
 | 30 | Histórico de todos os apps de uma squad | `quality_snapshots` com `INNER JOIN apps` e filtro de período | ✅ | Criado para eliminar o N+1 do padrão #11; não existia equivalente no DynamoDB |
 
-## Spec 003 — Checagens (aprovada, a implementar)
+## Spec 003 — Checagens (implementada)
 
 Revistos para SQL em 2026-10-12. Os ⚠️ da versão DynamoDB (partição única, desnormalização de nome do app, diferença calculada no cliente) deixaram de existir. Detalhes na spec.
 

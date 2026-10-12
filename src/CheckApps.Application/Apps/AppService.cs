@@ -4,7 +4,8 @@ using Repository = CheckApps.Domain.Repository;
 
 namespace CheckApps.Application.Apps;
 
-public class AppService(IAppRepository apps, ISquadRepository squads, IQualitySnapshotRepository snapshots)
+public class AppService(
+    IAppRepository apps, ISquadRepository squads, IQualitySnapshotRepository snapshots, ICheckRepository checks)
 {
     public Task<App?> GetAppAsync(string appId, CancellationToken cancellationToken = default) =>
         apps.GetAsync(appId, cancellationToken);
@@ -89,6 +90,14 @@ public class AppService(IAppRepository apps, ISquadRepository squads, IQualitySn
         {
             throw new DomainConflictException(
                 $"App '{appId}' possui histórico de qualidade e não pode ser removido. Inative o app em vez de removê-lo.");
+        }
+
+        // Participação em checagem também é histórico (spec 003, FR-014). A FK de
+        // check_items.app_id recusaria de qualquer forma; aqui vira 409 com mensagem.
+        if (await checks.IsAppInAnyCheckAsync(appId, cancellationToken))
+        {
+            throw new DomainConflictException(
+                $"App '{appId}' está em uma ou mais checagens e não pode ser removido. Inative o app em vez de removê-lo.");
         }
 
         await apps.DeleteAllAsync(appId, cancellationToken);

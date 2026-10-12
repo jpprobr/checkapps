@@ -2,6 +2,7 @@ import { DatePipe } from '@angular/common';
 import { Component, computed, inject, signal } from '@angular/core';
 import { ActivatedRoute, RouterLink } from '@angular/router';
 
+import { CurrentSquadService } from '../../core/current-squad.service';
 import { SquadsApiService } from '../../core/squads-api.service';
 import { AppQualityTrend, AppSummary, QualityLevel, Squad, SquadQualityEvolution } from '../../core/models';
 import { QualityBadge } from '../../shared/quality-badge/quality-badge';
@@ -18,6 +19,7 @@ const ATTENTION_LEVELS: QualityLevel[] = ['C', 'D', 'E'];
 export class SquadDashboard {
   private readonly route = inject(ActivatedRoute);
   private readonly squadsApi = inject(SquadsApiService);
+  private readonly currentSquad = inject(CurrentSquadService);
 
   protected readonly squadId = this.route.snapshot.paramMap.get('squadId')!;
   protected readonly squad = signal<Squad | null>(null);
@@ -51,9 +53,13 @@ export class SquadDashboard {
     this.loading.set(true);
     this.error.set(false);
 
+    this.currentSquad.set(squadId);
     this.squadsApi.get(squadId).subscribe({
       next: (squad) => this.squad.set(squad),
-      error: () => this.error.set(true),
+      error: () => {
+        this.error.set(true);
+        this.currentSquad.clear(squadId); // não redirecionar "/" para uma squad que não existe mais
+      },
     });
 
     this.squadsApi.listApps(squadId).subscribe({

@@ -1,6 +1,7 @@
 using CheckApps.Api.Contracts;
 using CheckApps.Application;
 using CheckApps.Application.Apps;
+using CheckApps.Application.Checks;
 using CheckApps.Application.QualitySnapshots;
 using CheckApps.Domain;
 using Microsoft.AspNetCore.Mvc;
@@ -9,7 +10,7 @@ namespace CheckApps.Api.Controllers;
 
 [ApiController]
 [Route("api/apps")]
-public class AppsController(AppService appService, QualitySnapshotService snapshotService) : ControllerBase
+public class AppsController(AppService appService, QualitySnapshotService snapshotService, CheckService checkService) : ControllerBase
 {
     [HttpGet]
     public async Task<ActionResult<IReadOnlyList<AppSummaryDto>>> ListByQualityLevel(
@@ -101,6 +102,13 @@ public class AppsController(AppService appService, QualitySnapshotService snapsh
     {
         await appService.DeleteLinkAsync(appId, linkId, cancellationToken);
         return NoContent();
+    }
+
+    [HttpGet("{appId}/checks")]
+    public async Task<ActionResult<IReadOnlyList<AppCheckDto>>> ListChecks(string appId, CancellationToken cancellationToken)
+    {
+        var entries = await checkService.ListByAppAsync(appId, cancellationToken);
+        return Ok(entries.Select(e => e.ToDto()).ToList());
     }
 
     [HttpGet("{appId}/repositories")]

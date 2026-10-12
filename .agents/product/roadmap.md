@@ -29,6 +29,10 @@ Saber se os apps estão melhorando ou piorando ao longo do tempo, e quais indica
 - Entregue no MVP: histórico de `QualitySnapshot` por app, gráfico de evolução do Quality Level, tabela de histórico de métricas, tendência por app (melhorou / piorou / estável) e distribuição por Quality Level no dashboard da squad.
 - Limitação conhecida: a evolução agregada da squad é calculada em memória a cada request, não pré-agregada. Adequado à escala atual; revisitar só se virar gargalo.
 
+## ✅ Checagens (fora da sequência)
+
+Não é um estágio: é a primeira feature operacional — acompanhar, app a app, uma demanda que atinge vários apps (substitui a planilha). Entregue em `specs/003-checagens/` (2026-10-12), junto com a navegação global. A metade "detectar" (pré-preencher status a partir dos repositórios) depende do leitor de GitHub; ver `backlog.md`.
+
 **O MVP termina aqui.** Os estágios abaixo são direção, não compromisso.
 
 ## ○ Context

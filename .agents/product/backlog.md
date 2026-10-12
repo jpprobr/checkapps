@@ -2,7 +2,7 @@
 
 Demandas identificadas e conscientemente adiadas. Nenhuma tem spec ainda; quando uma for puxada, ela vira `specs/NNN-…/` copiando `specs/_template/`. Ordem aproximada de valor, não compromisso.
 
-Com spec, ainda não implementada: **Checagens** — `specs/003-checagens/` (aprovada em 2026-10-12).
+Nenhuma spec pendente de implementação. A última, **Checagens** (`specs/003-checagens/`), foi implementada em 2026-10-12 junto com a navegação global.
 
 ## Estágio Health (completa o que o MVP mockou)
 
@@ -38,39 +38,29 @@ Com spec, ainda não implementada: **Checagens** — `specs/003-checagens/` (apr
 - **Export de checagens** (Excel/CSV) — a POC exportava; reporte em reunião pode pedir. Só depois de validar que os indicadores de tela não bastam.
 - **Histórico de percentual no tempo** — "como estava semana passada". O histórico de eventos da spec 003 (mudanças de status com data e hora) permite reconstruí-lo sem snapshot periódico; falta só a consulta e a visualização.
 - **Filtro por sigla no seletor de apps** — demandas que seguem a conta AWS ("tudo na sigla X precisa de Y") chegam por sigla. Depende de a sigla estar registrada nos repositórios (fase 1 do leitor de GitHub).
+- **Checagens na massa de demonstração** — o seed não cria nenhuma; numa instalação nova a tela começa vazia. Barato: uma checagem aberta com alguns status variados.
 - **Alertas de prazo** — cor de "vencido", lembrete. Cuidado: é o primeiro passo em direção a governança; decidir explicitamente.
 
-## Navegação (fazer JUNTO com a spec 003, não antes)
+## Navegação — evoluções (a base foi entregue com a spec 003)
 
-Análise feita em 2026-10-12 e já concluída — quando o assunto voltar, é executar, não reanalisar.
+Entregue em 2026-10-12: shell com `Squads` | `Checagens`, seletor de squad ciente de contexto no header, `/` → última squad visitada (lembrada no navegador), lista de squads em `/squads`, breadcrumbs com o nome da squad. Detalhes em `specs/003-checagens/spec.md` (Notas da implementação).
 
-**Por que não agora**: o que justifica uma barra de seções é dar casa às Checagens, que são transversais por natureza (a spec 003 diz explicitamente que uma checagem não pertence a uma squad). Mas Checagens não tem uma linha de código e nenhuma rota. Construir o menu antes daria uma barra com **uma seção só**, e obrigaria a decidir às cegas sobre a persona de dev — que a própria implementação da 003 vai esclarecer. **Se a 003 for implementada sem navegação, `/checks` nasce inalcançável**: não há tela de onde linkar.
-
-**Personas e quantas squads cada uma vê** (respostas do usuário, 2026-10-12):
+**Personas e quantas squads cada uma vê** (respostas do usuário, 2026-10-12) — continua sendo a referência para evoluir a navegação:
 
 | Persona | Squads | Observação |
 |---|---|---|
-| Tech Lead | sempre 1 | usuário mais frequente; a home como lista de squads é puro atrito para ele |
-| Coordenador de grupo | 2 a 5 | trocar de squad **é** a navegação primária |
+| Tech Lead | sempre 1 | usuário mais frequente; `/` já abre na squad dele |
+| Coordenador de grupo | 2 a 5 | trocar de squad **é** a navegação primária — é o seletor do header |
 | Coordenação ampla (futuro) | ~10 a 15 | a partir daí um dropdown plano incomoda; prever filtro |
 | Dev | 1–2 apps | é quem **menos** precisa de menu: favorita `/apps/{id}` e resolve |
 
-Todos os apps pertencem a alguma squad — a árvore squad→app é válida, não há órfãos.
+**Próximos passos, com gatilho**:
+- **Filtro no seletor de squad** — quando a visão ampla (10–15 squads) existir.
+- **"Minha squad" de verdade** — hoje é a última visitada, lembrada no navegador. Vira o default real quando houver autenticação (ADR que substituir o 007).
+- **Busca global de apps** — parecia a dor central até sabermos que os usuários frequentes são Tech Lead e Coordenador, que pensam por squad, e que o dev favorita o app dele. Reavaliar quando existir a visão ampla ou se o uso real mostrar gente caçando app.
+- **Escopo por usuário e restrição de dev** (ex.: dev só escreve em item de checagem) — decisão de autenticação.
 
-**Dependência de autenticação**: "minha squad" / "minhas squads" exige saber quem está olhando, e não há autenticação (ADR-007). Enquanto não houver, todos veem tudo. Desenhar de forma que vire persona-aware depois, sem redesenho. Paliativo barato e sem identidade: **lembrar a última squad visitada no navegador** e fazer `/` ir direto para ela (volta a ser lista se não houver). Dá ao Tech Lead o "já abre na minha squad", e quando a autenticação chegar isso vira o default real.
-
-**Escopo quando for feito**:
-- Shell fino em `app.html` (hoje é só `<router-outlet />`) com nome do produto → home e seções de topo `Squads` | `Checagens`.
-- Seletor de squad no header, **ciente de contexto**: trocar de squad na lista de apps leva à lista de apps da outra, não à home. Serve também de indicador permanente de "qual squad estou vendo".
-- `/` redireciona para a última squad visitada.
-- Desenhar o seletor aceitando um filtro depois, sem refazer (pensando nas 10–15 squads).
-
-**Fora do escopo, com gatilho explícito**:
-- **Busca global de apps** — parecia a dor central até sabermos que os usuários frequentes são Tech Lead e Coordenador, que pensam por squad, e que o dev favorita o app dele. Reavaliar quando existir a visão ampla (10–15 squads) ou se o uso real mostrar gente caçando app.
-- **Sidebar com árvore** de squads expandindo apps — duplica as telas de lista e vira parede de links na escala real.
-- **Escopo por usuário e restrição de dev** (ex.: dev só escreve em item de checagem) — é decisão de autenticação, entra com o ADR que substituir o 007.
-
-**Independente disso e fazível a qualquer momento**: os breadcrumbs são **defeito, não arquitetura**. Hoje a lista de apps diz "Dashboard" em vez do nome da squad; o detalhe do app tem trilha mais rasa (`Squads`) que a lista (`Squads / Dashboard`), apesar de estar mais fundo; e nenhum mostra o nome da squad. Não depende da 003 nem de autenticação.
+**Descartado**: sidebar com árvore de squads expandindo apps — duplica as telas de lista e vira parede de links na escala real.
 
 ## Leitor de repositórios GitHub (fundação de vários itens deste backlog)
 

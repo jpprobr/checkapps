@@ -1,5 +1,11 @@
 <main class="page">
-  <p class="breadcrumb"><a routerLink="/">Squads</a></p>
+  <p class="breadcrumb">
+    <a routerLink="/squads">Squads</a>
+    @if (app(); as a) {
+      / <a [routerLink]="['/squads', a.squadId]">{{ currentSquad.squadName() ?? a.squadId }}</a>
+      / <a [routerLink]="['/squads', a.squadId, 'apps']">Apps</a>
+    }
+  </p>
 
   @if (loading()) {
     <p>Carregando…</p>
@@ -11,7 +17,7 @@
       <a [routerLink]="['/apps', appId, 'edit']" class="button-secondary">Editar</a>
     </div>
     <p class="subtitle">
-      <a [routerLink]="['/squads', app()!.squadId]">Squad</a>
+      Squad <a [routerLink]="['/squads', app()!.squadId]">{{ currentSquad.squadName() ?? app()!.squadId }}</a>
       @if (app()!.criticality) { · criticidade {{ app()!.criticality }} }
       @if (app()!.status) { · {{ app()!.status }} }
     </p>
@@ -41,6 +47,40 @@
         </div>
       }
       <p class="subtitle">Último snapshot: {{ app()!.lastSnapshotAt ? (app()!.lastSnapshotAt | date: 'dd/MM/yyyy' : 'UTC') : '—' }}</p>
+    </section>
+
+    <section class="card">
+      <h2>Checagens</h2>
+      @if (checks().length === 0) {
+        <p class="subtitle">Este app não está em nenhuma checagem.</p>
+      } @else {
+        @if (openChecks().length === 0) {
+          <p class="subtitle">Nenhuma checagem aberta.</p>
+        } @else {
+          <ul>
+            @for (entry of openChecks(); track entry.checkId) {
+              <li>
+                <a [routerLink]="['/checks', entry.checkId]">{{ entry.title }}</a> —
+                <strong>{{ statusLabels[entry.itemStatus] }}</strong>
+                @if (entry.notes) { <span class="subtitle">({{ entry.notes }})</span> }
+              </li>
+            }
+          </ul>
+        }
+        @if (closedChecks().length > 0) {
+          <details>
+            <summary>Fechadas ({{ closedChecks().length }})</summary>
+            <ul>
+              @for (entry of closedChecks(); track entry.checkId) {
+                <li>
+                  <a [routerLink]="['/checks', entry.checkId]">{{ entry.title }}</a> —
+                  {{ statusLabels[entry.itemStatus] }}
+                </li>
+              }
+            </ul>
+          </details>
+        }
+      }
     </section>
 
     <section class="card">

@@ -1,0 +1,55 @@
+<main class="page">
+  <p class="breadcrumb">
+    <a routerLink="/checks">Checagens</a>
+    @if (isEditMode) { / <a [routerLink]="['/checks', checkId]">{{ title() || checkId }}</a> }
+  </p>
+  <h1>{{ isEditMode ? 'Editar checagem' : 'Nova checagem' }}</h1>
+
+  @if (loading()) {
+    <p>Carregando…</p>
+  } @else {
+    <form class="card form" (ngSubmit)="submit()">
+      @if (error()) {
+        <p class="error">{{ error() }}</p>
+      }
+
+      <label>
+        Título *
+        <input type="text" required [ngModel]="title()" (ngModelChange)="title.set($event)" name="title"
+          placeholder="Ex.: Atualizar para .NET 10" />
+      </label>
+
+      <label>
+        Descrição
+        <textarea [ngModel]="description()" (ngModelChange)="description.set($event)" name="description"></textarea>
+      </label>
+
+      <label>
+        Categoria / origem
+        <input type="text" [ngModel]="category()" (ngModelChange)="category.set($event)" name="category"
+          placeholder="Ex.: segurança, demanda da empresa" />
+      </label>
+
+      <label>
+        Autor
+        <input type="text" [ngModel]="author()" (ngModelChange)="author.set($event)" name="author" />
+      </label>
+
+      <div class="date-row">
+        <label>
+          Início
+          <input type="date" [ngModel]="startDate()" (ngModelChange)="startDate.set($event)" name="startDate" />
+        </label>
+        <label>
+          Fim
+          <input type="date" [ngModel]="endDate()" (ngModelChange)="endDate.set($event)" name="endDate" />
+        </label>
+      </div>
+
+      <div class="form-actions">
+        <button type="submit" [disabled]="saving()">{{ saving() ? 'Salvando…' : 'Salvar' }}</button>
+        <a [routerLink]="isEditMode ? ['/checks', checkId] : ['/checks']" class="button-secondary">Cancelar</a>
+      </div>
+    </form>
+  }
+</main>

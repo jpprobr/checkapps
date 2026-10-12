@@ -42,7 +42,7 @@ Vocabulário do CheckApps. Serve a pessoas de squads diferentes (para que um ter
 | **Remover** | Definido | Exclusão definitiva, permitida **só** quando não há dependentes com valor histórico: app sem nenhum snapshot e fora de qualquer checagem; squad sem nenhum app; checagem sem nenhum item. Caso contrário, a resposta é inativar (ADR-005). |
 | **Seed** | Definido | Massa de dados de demonstração (2 squads, 5 apps, 3 meses de histórico) carregada por `tools/CheckApps.Seed`. |
 
-## Checagens (spec 003, aprovada)
+## Checagens (spec 003, implementada)
 
 | Termo | Status | Significado |
 |---|---|---|

@@ -1,5 +1,5 @@
 <main class="page">
-  <p class="breadcrumb"><a routerLink="/">Squads</a></p>
+  <p class="breadcrumb"><a routerLink="/squads">Squads</a></p>
   <h1>{{ isEditMode ? 'Editar Squad' : 'Nova Squad' }}</h1>
 
   @if (loading()) {
@@ -32,7 +32,7 @@
 
       <div class="form-actions">
         <button type="submit" [disabled]="saving()">{{ saving() ? 'Salvando…' : 'Salvar' }}</button>
-        <a routerLink="/" class="button-secondary">Cancelar</a>
+        <a routerLink="/squads" class="button-secondary">Cancelar</a>
       </div>
     </form>
   }

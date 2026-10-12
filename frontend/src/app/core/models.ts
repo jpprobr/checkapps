@@ -130,3 +130,80 @@ export interface UpsertAppLinkRequest {
   description: string;
   uri: string;
 }
+
+// Checagens (spec 003). Status e tipos de evento chegam como os códigos do glossário.
+export type CheckItemStatus = 'pendente' | 'em-andamento' | 'conforme' | 'nao-se-aplica' | 'concluido';
+export type CheckStatus = 'open' | 'closed';
+export type CheckEventType = 'closed' | 'reopened' | 'item-added' | 'item-removed' | 'item-status-changed';
+
+export interface CheckProgress {
+  total: number;
+  done: number;
+  percent: number | null;
+  countsByStatus: Record<CheckItemStatus, number>;
+}
+
+export interface CheckSummary {
+  id: string;
+  title: string;
+  category: string | null;
+  author: string | null;
+  startDate: string | null;
+  endDate: string | null;
+  status: CheckStatus;
+  createdAt: string;
+  closedAt: string | null;
+  progress: CheckProgress;
+}
+
+export interface CheckItem {
+  appId: string;
+  appName: string;
+  squadId: string;
+  squadName: string;
+  appStatus: string | null;
+  status: CheckItemStatus;
+  notes: string | null;
+  updatedAt: string;
+}
+
+export interface CheckDetail extends CheckSummary {
+  description: string | null;
+  items: CheckItem[];
+}
+
+export interface AppCheck {
+  checkId: string;
+  title: string;
+  checkStatus: CheckStatus;
+  closedAt: string | null;
+  itemStatus: CheckItemStatus;
+  notes: string | null;
+}
+
+export interface CheckCandidate {
+  appId: string;
+  name: string;
+  squadId: string;
+  squadName: string;
+  status: string | null;
+  tags: string[];
+}
+
+export interface CheckEvent {
+  id: string;
+  appId: string | null;
+  type: CheckEventType;
+  fromStatus: CheckItemStatus | null;
+  toStatus: CheckItemStatus | null;
+  occurredAt: string;
+}
+
+export interface UpsertCheckRequest {
+  title: string;
+  description: string | null;
+  category: string | null;
+  author: string | null;
+  startDate: string | null;
+  endDate: string | null;
+}

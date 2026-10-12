@@ -82,6 +82,45 @@ CREATE TABLE IF NOT EXISTS quality_snapshots (
     assessment_rules_version TEXT NOT NULL
 );
 
+-- Checagens (spec 003). As FKs de check_items NÃO cascateiam de propósito: um app
+-- em checagem não pode ser removido (FR-014) e uma checagem com itens também não
+-- (FR-012). Os serviços verificam antes e respondem 409; a FK é a rede de segurança.
+CREATE TABLE IF NOT EXISTS checks (
+    id          TEXT PRIMARY KEY,
+    title       TEXT NOT NULL,
+    description TEXT NULL,
+    category    TEXT NULL,
+    author      TEXT NULL,
+    start_date  TEXT NULL,
+    end_date    TEXT NULL,
+    status      TEXT NOT NULL,
+    created_at  TEXT NOT NULL,
+    closed_at   TEXT NULL
+);
+
+CREATE TABLE IF NOT EXISTS check_items (
+    check_id   TEXT NOT NULL REFERENCES checks(id),
+    app_id     TEXT NOT NULL REFERENCES apps(id),
+    status     TEXT NOT NULL,
+    notes      TEXT NULL,
+    updated_at TEXT NOT NULL,
+    PRIMARY KEY (check_id, app_id)
+);
+
+-- Histórico só de acréscimo (FR-015), gravado na mesma transação da mudança.
+-- app_id SEM FK, como quality_snapshots.sonar_project_id: o evento registra um fato
+-- passado e deve sobreviver à remoção do app. Cascateia com a checagem, que só pode
+-- ser removida vazia.
+CREATE TABLE IF NOT EXISTS check_events (
+    id          TEXT PRIMARY KEY,
+    check_id    TEXT NOT NULL REFERENCES checks(id) ON DELETE CASCADE,
+    app_id      TEXT NULL,
+    type        TEXT NOT NULL,
+    from_status TEXT NULL,
+    to_status   TEXT NULL,
+    occurred_at TEXT NOT NULL
+);
+
 CREATE INDEX IF NOT EXISTS ix_apps_squad_id
     ON apps (squad_id);
 
@@ -89,3 +128,9 @@ CREATE INDEX IF NOT EXISTS ix_apps_squad_id
 -- que é como o estado de qualidade atual de um App é derivado.
 CREATE INDEX IF NOT EXISTS ix_quality_snapshots_app_collected
     ON quality_snapshots (app_id, collected_at DESC);
+
+CREATE INDEX IF NOT EXISTS ix_check_items_app_id
+    ON check_items (app_id);
+
+CREATE INDEX IF NOT EXISTS ix_check_events_check_occurred
+    ON check_events (check_id, occurred_at DESC);

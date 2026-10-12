@@ -20,6 +20,7 @@ public static class ServiceCollectionExtensions
         services.AddSingleton<ISquadRepository, SquadRepository>();
         services.AddSingleton<IAppRepository, AppRepository>();
         services.AddSingleton<IQualitySnapshotRepository, QualitySnapshotRepository>();
+        services.AddSingleton<ICheckRepository, CheckRepository>();
 
         services.AddSingleton<IQualityAssessmentEngine, QualityAssessmentEngineV1>();
         services.AddSingleton<ISonarProvider, MockSonarProvider>();

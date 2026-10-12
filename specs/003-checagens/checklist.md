@@ -1,6 +1,6 @@
 # Checklist — Spec 003: Checagens
 
-Status: **aprovada** em 2026-10-12. Vira "Implementada" quando tudo estiver marcado.
+Status: **implementada** em 2026-10-12.
 
 ## Qualidade da spec (antes de codar)
 
@@ -14,26 +14,28 @@ Status: **aprovada** em 2026-10-12. Vira "Implementada" quando tudo estiver marc
 
 ## Implementação (incrementos previstos — refinar no plano)
 
-- [ ] 1. Domain: `Check`, `CheckItem`, `CheckItemStatus`; regra de percentual (`conforme + nao-se-aplica + concluido`) como função pura — testes unitários do cálculo, incluindo zero apps
-- [ ] 2. Infrastructure: tabelas `checks`, `check_items`, `check_events` em `schema.sql`; `ICheckRepository` (criar capturando PK, get com itens via join, list com contagens, checagens por app, adicionar idempotente, retirar, atualizar item, fechar/reabrir, remover, histórico) — cada mudança com seu evento na mesma transação — testes de integração: AP-1, AP-2, AP-3, idempotência de adicionar, evento gravado junto, FK recusando remover app em checagem
-- [ ] 3. Application: `CheckService` (criar com slug, editar, fechar/reabrir, remover só sem itens, adicionar/retirar apps validando que existem, atualizar item); `AppService.DeleteAsync` passa a recusar (409) app em checagem — testes unitários com fakes, incluindo os caminhos de 409
-- [ ] 4. Api: endpoints do esboço, incluindo o histórico; `DomainConflictException` → 409 — `curl` cobrindo criar, adicionar apps, mudar status, percentual, fechar, reabrir, histórico, remover checagem bloqueada, remover app em checagem bloqueada
-- [ ] 5. Frontend: `checks` (lista), `check-form`, `check-detail` (planilha com edição inline, seletor de apps e histórico), seção "Checagens" em `app-detail`, rotas, **e a navegação global junto** (ver "Navegação" em `.agents/product/backlog.md` — sem ela `/checks` nasce inalcançável, porque nenhuma tela existente linka para lá) — Playwright: criar checagem → adicionar 3 apps → marcar status → ver percentual → ver no detalhe do app → fechar → ver em fechadas → reabrir → ver histórico
-- [ ] Decisão sobre `CheckItemStatus` como enum registrada em `.agents/rules/backend.md`
-- [ ] Regras conquistadas registradas em `.agents/rules/`
-- [ ] ADR-005 com nota sobre a nova condição de guarda (app em checagem)
-- [ ] `.agents/architecture/data-model/sqlite-schema.md` e `access-patterns.md` atualizados
+- [x] 1. Domain: `Check`, `CheckItem`, `CheckEvent`, enums, `CheckCodes`, `CheckProgress` — 13 testes unitários (percentual com zero apps, arredondamento, ida e volta dos códigos)
+- [x] 2. Infrastructure: `checks`, `check_items`, `check_events` em `schema.sql`; `CheckRepository` — 8 testes de integração (AP-1/2/3/9, idempotência em linhas e histórico, ordem do histórico, FK recusando remover app, remoção de checagem levando o histórico)
+- [x] 3. Application: `CheckService` e guarda nova em `AppService.DeleteAsync` — 13 testes de serviço + 1 em `AppServiceTests`; os testes existentes só ganharam o fake novo no construtor, nenhuma asserção mudou
+- [x] 4. Api: `ChecksController` + `GET /api/apps/{appId}/checks` — `curl` cobrindo criar, lote (inclusive repetido), status, observação, percentual, fechar/reabrir (e 409 ao repetir), histórico, candidatos, remover checagem com itens (409), remover app em checagem (409, e 204 depois de retirá-lo), app inexistente (400), status desconhecido (400), checagem inexistente (404)
+- [x] 5. Frontend: `check-list`, `check-form`, `check-detail` (planilha, seletor de apps, histórico), seção "Checagens" em `app-detail`, rotas
+- [x] 6. Navegação global: shell, `CurrentSquadService`, seletor de squad, `/` → última squad, `/squads`, breadcrumbs corrigidos — Playwright: criar checagem → adicionar 3 apps → marcar status → ver percentual → ver no detalhe do app → fechar → ver em fechadas → reabrir → ver histórico → trocar de squad pelo header (lista e dashboard) → `/` cai na última squad
+- [x] Decisão sobre os enums de checagem registrada em `.agents/rules/backend.md`
+- [x] Regras conquistadas registradas em `.agents/rules/` (evento na mesma transação, `TimeProvider`, `ArgumentException` → 400, shell e `CurrentSquadService`, `ParamAwareReuseStrategy`, horário local no histórico, Playwright com escopo em `main`)
+- [x] ADR-005 com nota sobre a nova condição de guarda (app em checagem)
+- [x] `.agents/architecture/data-model/sqlite-schema.md` e `access-patterns.md` atualizados
 
 ## Verificação
 
-- [ ] `dotnet build` sem erros nem avisos
-- [ ] `dotnet test` verde (unitários + integração)
-- [ ] Endpoints exercitados via `curl`, incluindo 4xx
-- [ ] Fluxo completo no browser sem erros de console
-- [ ] `README.md` / `AGENTS.md` atualizados se algo mudou em como rodar
+- [x] `dotnet build` sem erros nem avisos
+- [x] `dotnet test` verde: 64 unitários + 20 de integração (eram 37 + 12)
+- [x] Endpoints exercitados via `curl`, incluindo 4xx
+- [x] Fluxo completo no browser sem erros de console; roteiros Playwright das specs 001 e 002 continuam passando — só os seletores de texto ganharam escopo `main`, porque o seletor de squad do header repete os nomes das squads
+- [x] `README.md` / `AGENTS.md`: nada mudou em como rodar; a skill `run-local` foi ajustada (`/` agora redireciona)
+- [x] Banco local existente recebeu as tabelas novas pelo bootstrap idempotente, sem perda (5 apps e 15 snapshots antes e depois)
 
 ## Encerramento
 
-- [ ] Status desta spec atualizado
-- [ ] `.agents/project/STATE.md` reescrito
-- [ ] `.agents/product/backlog.md` atualizado (itens desta spec removidos; novos descobertos adicionados)
+- [x] Status desta spec atualizado
+- [x] `.agents/project/STATE.md` reescrito
+- [x] `.agents/product/backlog.md` atualizado (navegação e breadcrumbs entregues; itens novos descobertos adicionados)

@@ -1,5 +1,7 @@
+using CheckApps.Application.Checks;
 using CheckApps.Application.Persistence;
 using CheckApps.Domain;
+using CheckApps.Domain.Checks;
 using Repository = CheckApps.Domain.Repository;
 
 namespace CheckApps.UnitTests.TestDoubles;
@@ -150,4 +152,120 @@ public class FakeQualitySnapshotRepository : IQualitySnapshotRepository
         string squadId, DateTimeOffset? from = null, DateTimeOffset? to = null, CancellationToken ct = default) =>
         Task.FromResult<IReadOnlyList<QualitySnapshot>>(
             _snapshots.OrderBy(s => s.AppId).ThenBy(s => s.CollectedAt).ToList());
+}
+
+/// <summary>
+/// Itens e histórico em memória. A visão de item usa o próprio appId como nome e uma
+/// squad fictícia — os testes de serviço não dependem do join, que é coberto pela integração.
+/// </summary>
+public class FakeCheckRepository : ICheckRepository
+{
+    private readonly Dictionary<string, Check> _checks = [];
+    private readonly List<CheckItem> _items = [];
+    private readonly List<CheckEvent> _events = [];
+
+    public IReadOnlyList<CheckEvent> Events => _events;
+
+    public Task<bool> TryCreateAsync(Check check, CancellationToken ct = default) =>
+        Task.FromResult(_checks.TryAdd(check.Id, check));
+
+    public Task SaveAsync(Check check, CancellationToken ct = default)
+    {
+        _checks[check.Id] = check;
+        return Task.CompletedTask;
+    }
+
+    public Task<Check?> GetAsync(string checkId, CancellationToken ct = default) =>
+        Task.FromResult(_checks.GetValueOrDefault(checkId));
+
+    public Task<IReadOnlyList<CheckSummary>> ListAsync(bool includeClosed, CancellationToken ct = default) =>
+        Task.FromResult<IReadOnlyList<CheckSummary>>(_checks.Values
+            .Where(c => includeClosed || c.Status == CheckStatus.Open)
+            .Select(c => new CheckSummary(c, CheckProgress.From(_items.Where(i => i.CheckId == c.Id).Select(i => i.Status))))
+            .ToList());
+
+    public Task<IReadOnlyList<CheckItemView>> GetItemsAsync(string checkId, CancellationToken ct = default) =>
+        Task.FromResult<IReadOnlyList<CheckItemView>>(_items
+            .Where(i => i.CheckId == checkId)
+            .Select(i => new CheckItemView(i.AppId, i.AppId, "sq", "Squad", "active", i.Status, i.Notes, i.UpdatedAt))
+            .ToList());
+
+    public Task<CheckItem?> GetItemAsync(string checkId, string appId, CancellationToken ct = default) =>
+        Task.FromResult(_items.SingleOrDefault(i => i.CheckId == checkId && i.AppId == appId));
+
+    public Task<IReadOnlyList<AppCheckEntry>> ListByAppAsync(string appId, CancellationToken ct = default) =>
+        Task.FromResult<IReadOnlyList<AppCheckEntry>>(_items
+            .Where(i => i.AppId == appId)
+            .Select(i =>
+            {
+                var c = _checks[i.CheckId];
+                return new AppCheckEntry(c.Id, c.Title, c.Status, c.ClosedAt, i.Status, i.Notes);
+            })
+            .ToList());
+
+    public Task<IReadOnlyList<CheckCandidateApp>> ListCandidateAppsAsync(string checkId, CancellationToken ct = default) =>
+        Task.FromResult<IReadOnlyList<CheckCandidateApp>>([]);
+
+    public Task<bool> AddItemAsync(CheckItem item, CheckEvent added, CancellationToken ct = default)
+    {
+        if (_items.Any(i => i.CheckId == item.CheckId && i.AppId == item.AppId))
+        {
+            return Task.FromResult(false);
+        }
+
+        _items.Add(item);
+        _events.Add(added);
+        return Task.FromResult(true);
+    }
+
+    public Task RemoveItemAsync(string checkId, string appId, CheckEvent removed, CancellationToken ct = default)
+    {
+        _items.RemoveAll(i => i.CheckId == checkId && i.AppId == appId);
+        _events.Add(removed);
+        return Task.CompletedTask;
+    }
+
+    public Task UpdateItemAsync(CheckItem item, CheckEvent? statusChanged, CancellationToken ct = default)
+    {
+        _items.RemoveAll(i => i.CheckId == item.CheckId && i.AppId == item.AppId);
+        _items.Add(item);
+        if (statusChanged is not null)
+        {
+            _events.Add(statusChanged);
+        }
+        return Task.CompletedTask;
+    }
+
+    public Task SetStatusAsync(Check check, CheckEvent changed, CancellationToken ct = default)
+    {
+        _checks[check.Id] = check;
+        _events.Add(changed);
+        return Task.CompletedTask;
+    }
+
+    public Task DeleteAsync(string checkId, CancellationToken ct = default)
+    {
+        _checks.Remove(checkId);
+        _events.RemoveAll(e => e.CheckId == checkId);
+        return Task.CompletedTask;
+    }
+
+    public Task<bool> IsAppInAnyCheckAsync(string appId, CancellationToken ct = default) =>
+        Task.FromResult(_items.Any(i => i.AppId == appId));
+
+    public Task<IReadOnlyList<CheckEvent>> GetHistoryAsync(string checkId, CancellationToken ct = default) =>
+        Task.FromResult<IReadOnlyList<CheckEvent>>(_events
+            .Where(e => e.CheckId == checkId)
+            .OrderByDescending(e => e.OccurredAt)
+            .ToList());
+}
+
+/// <summary>Relógio controlável: cada chamada a <see cref="Advance"/> move o tempo.</summary>
+public class FixedTimeProvider(DateTimeOffset now) : TimeProvider
+{
+    private DateTimeOffset _now = now;
+
+    public override DateTimeOffset GetUtcNow() => _now;
+
+    public void Advance(TimeSpan by) => _now = _now.Add(by);
 }

@@ -1,0 +1,8 @@
+.date-row {
+  display: flex;
+  gap: 1rem;
+}
+
+.date-row label {
+  flex: 1;
+}

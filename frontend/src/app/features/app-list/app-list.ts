@@ -4,6 +4,7 @@ import { ActivatedRoute, RouterLink } from '@angular/router';
 import { FormsModule } from '@angular/forms';
 
 import { AppsApiService } from '../../core/apps-api.service';
+import { CurrentSquadService } from '../../core/current-squad.service';
 import { SquadsApiService } from '../../core/squads-api.service';
 import { AppSummary, QualityLevel } from '../../core/models';
 import { QualityBadge } from '../../shared/quality-badge/quality-badge';
@@ -20,6 +21,7 @@ export class AppList {
   private readonly route = inject(ActivatedRoute);
   private readonly squadsApi = inject(SquadsApiService);
   private readonly appsApi = inject(AppsApiService);
+  protected readonly currentSquad = inject(CurrentSquadService);
 
   protected readonly squadId = this.route.snapshot.paramMap.get('squadId')!;
   protected readonly apps = signal<AppSummary[]>([]);
@@ -53,6 +55,7 @@ export class AppList {
   });
 
   constructor() {
+    this.currentSquad.set(this.squadId);
     this.reload();
   }
 

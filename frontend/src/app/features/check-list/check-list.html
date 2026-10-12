@@ -1,0 +1,65 @@
+<main class="page">
+  <h1>Checagens</h1>
+  <p class="subtitle">Demandas que atingem vários apps, acompanhadas app a app.</p>
+
+  <div class="toolbar">
+    <label class="inline-checkbox">
+      <input type="checkbox" [checked]="showClosed()" (change)="toggleClosed()" />
+      Mostrar fechadas
+    </label>
+    <a routerLink="/checks/new" class="button-secondary">+ Nova checagem</a>
+  </div>
+
+  @if (loading()) {
+    <p>Carregando…</p>
+  } @else if (error()) {
+    <p class="error">Não foi possível carregar as checagens.</p>
+  } @else {
+    <table>
+      <thead>
+        <tr>
+          <th>Checagem</th>
+          <th>Autor</th>
+          <th>Período</th>
+          <th>Apps</th>
+          <th>Concluído</th>
+        </tr>
+      </thead>
+      <tbody>
+        @for (check of checks(); track check.id) {
+          <tr [class.closed]="check.status === 'closed'">
+            <td>
+              <a [routerLink]="['/checks', check.id]">{{ check.title }}</a>
+              @if (check.status === 'closed') {
+                <span class="tag">fechada</span>
+              }
+              @if (check.category) {
+                <div class="subtitle small">{{ check.category }}</div>
+              }
+            </td>
+            <td>{{ check.author ?? '—' }}</td>
+            <td>
+              @if (check.startDate || check.endDate) {
+                {{ check.startDate ? (check.startDate | date: 'dd/MM/yyyy' : 'UTC') : '…' }}
+                – {{ check.endDate ? (check.endDate | date: 'dd/MM/yyyy' : 'UTC') : '…' }}
+              } @else {
+                —
+              }
+            </td>
+            <td>{{ check.progress.total }}</td>
+            <td>
+              <strong>{{ formatPercent(check.progress.percent) }}</strong>
+              <span class="subtitle small"> ({{ check.progress.done }}/{{ check.progress.total }})</span>
+            </td>
+          </tr>
+        } @empty {
+          <tr>
+            <td colspan="5">
+              @if (showClosed()) { Nenhuma checagem. } @else { Nenhuma checagem aberta. }
+            </td>
+          </tr>
+        }
+      </tbody>
+    </table>
+  }
+</main>

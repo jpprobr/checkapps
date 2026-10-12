@@ -17,8 +17,11 @@ Banco em arquivo único. Caminho: `Sqlite:DatabasePath` — absoluto é usado co
 | `sonar_projects` | `id` | `app_id` → `apps` CASCADE |
 | `app_links` | `id` | `app_id` → `apps` CASCADE |
 | `quality_snapshots` | `id` | `app_id` → `apps` CASCADE; métricas em colunas, não JSON |
+| `checks` | `id` (slug) | Checagens (spec 003). `status` = `open`/`closed`; datas de calendário em TEXT `yyyy-MM-dd` |
+| `check_items` | `(check_id, app_id)` | `check_id` → `checks` e `app_id` → `apps`, **ambas sem cascata** |
+| `check_events` | `id` | `check_id` → `checks` CASCADE; `app_id` **sem FK**. Só de acréscimo |
 
-Índices: `apps(squad_id)` e `quality_snapshots(app_id, collected_at DESC)` — o segundo serve tanto o histórico por período quanto a busca do snapshot mais recente.
+Índices: `apps(squad_id)`, `quality_snapshots(app_id, collected_at DESC)` — o segundo serve tanto o histórico por período quanto a busca do snapshot mais recente —, `check_items(app_id)` e `check_events(check_id, occurred_at DESC)`.
 
 ## Decisões que não são óbvias no DDL
 
@@ -41,6 +44,10 @@ Consequência boa: a armadilha do `SaveAsync` sumiu estruturalmente — não há
 **`PRAGMA foreign_keys` é por conexão e vem desligado.** `SqliteConnectionFactory` liga em toda conexão, junto com `journal_mode = WAL` e `busy_timeout`. Sem isso, as cascatas declaradas aqui simplesmente não acontecem.
 
 **Datas em TEXT ISO-8601 UTC** (`IsoTimestamp`), exatamente como no DynamoDB — é o que mantém a serialização da API idêntica e o schema portável.
+
+**FKs de `check_items` sem cascata, de propósito** (spec 003). Um app em checagem não pode ser removido (FR-014) e uma checagem com itens também não (FR-012). `AppService` e `CheckService` verificam antes e respondem 409 com mensagem; a FK é a segunda camada, que recusa mesmo se o serviço falhar. Consequência: `apps` deixou de ser apagável por cascata em qualquer situação — um teste de integração cobre a recusa.
+
+**`check_events` é histórico só de acréscimo**, gravado na mesma transação da mudança que registra (fechar, reabrir, entrada e saída de app, mudança de status). `app_id` sem FK pelo mesmo motivo de `quality_snapshots.sonar_project_id`: o evento é um fato passado e precisa sobreviver à remoção do app. Cascateia com a checagem, que só pode ser removida vazia. Status e tipos são gravados como os códigos do glossário (`em-andamento`, `item-added`), não como nomes de enum.
 
 ## Evolução do schema
 
