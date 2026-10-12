@@ -9,6 +9,7 @@ Critério de "concluído". A spec só muda para `Implementada` quando tudo abaix
 - [ ] Cada FR é testável (dá para escrever um teste que falha se ele não for atendido)
 - [ ] Success Criteria são mensuráveis e não citam tecnologia
 - [ ] Decisões estruturais têm ADR em `.agents/architecture/decisions/`
+- [ ] Dados novos são AI-friendly: identidade estável, relações explícitas, proveniência (de onde veio; confiança, se inferido) e data definidas — ou "não se aplica" justificado (ver `.agents/product/vision.md`)
 
 ## Implementação
 

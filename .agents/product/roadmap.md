@@ -38,6 +38,7 @@ Relacionar um App a mais do que Squad/Repository/Sonar: Produto, Operação de n
 - É o estágio em que o CheckApps deixa de ser "dashboard de qualidade" e vira "camada de contexto".
 - A persistência já foi revisitada por conta disso: o single-table DynamoDB não atendia bem consultas que cruzam entidades, e o projeto migrou para SQLite (ADR-009), com Postgres previsto quando o modelo estabilizar. Joins e agregações deixaram de ser restrição.
 - Pré-requisito prático: integrações reais (Sonar, catálogo corporativo de apps) para que o contexto não dependa de cadastro manual.
+- **Porta de entrada provável (2026-10)**: o **leitor de repositórios GitHub** — primeiro conector real do produto. Em fases: inventário assistido (metadados, dono), dependências de biblioteca, e por último dependências entre apps. É a fonte que viabiliza o **mapa de aplicações** sem que ele vire planilha desenhada. Detalhes em `backlog.md`.
 
 ## ○ Intelligence
 
@@ -49,7 +50,8 @@ Análises que cruzam contexto: quais jornadas são impactadas por um app com qua
 
 Agentes e RAG operando sobre a camada de contexto: gerar SDD, interagir com Harness/CI/CD, responder perguntas em linguagem natural sobre o ecossistema.
 
-- É o motivo de o modelo de dados ter sido desenhado com identidade estável, relações explícitas, proveniência e temporalidade desde o MVP — mas nada disso é construído antes de Context e Intelligence estarem provados.
+- É o motivo de o modelo de dados ter sido desenhado com identidade estável, relações explícitas, proveniência e temporalidade desde o MVP.
+- **Ajuste de 2026-10**: este estágio pode começar antes do previsto, mas não como IA dentro do CheckApps — e sim como o CheckApps **alimentando as ferramentas de IA que o time já usa** (Claude, Copilot, Devin) via servidor MCP, expondo consultas determinísticas. É barato, não traz custo de modelo nem questão nova de governança, e entrega valor assim que houver dados reais (leitor de GitHub, qualidade, checagens). Agentes e RAG próprios continuam dependendo de Context e Intelligence provados. Ver "AI-friendly não é ter IA dentro" em `vision.md`.
 
 ## O que está explicitamente fora de qualquer estágio próximo
 

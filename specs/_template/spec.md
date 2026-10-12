@@ -42,6 +42,8 @@
 
 - **[Entidade]**: o que representa, atributos relevantes para esta spec, relação com outras entidades. Não repita o modelo de dados inteiro — aponte para `.agents/architecture/data-model/` quando for o caso.
 
+Para cada dado novo, deixe explícito: **identidade** (id estável, independente de nomes externos), **relações** (com o que se liga, e em que direção), **proveniência** (de onde vem — cadastro manual, Sonar, GitHub…; e a confiança, se for inferido) e **tempo** (quando foi observado; se muda, é histórico ou sobrescreve?). É o que mantém o CheckApps AI-friendly sem construir nada de IA — ver `.agents/product/vision.md`.
+
 ## Success Criteria *(obrigatório)*
 
 Mensuráveis e agnósticos de tecnologia — "um QA consegue X em Y segundos", não "o endpoint responde em 200ms".

@@ -77,6 +77,28 @@ Ainda **não** responde (estágios futuros): por que uma arquitetura é ruim, qu
 - **Temporalidade** — dados históricos têm timestamp claro e são imutáveis (`QualitySnapshot`).
 - **Context** — o modelo permite, no futuro, relacionar um App a Product, Operation, Dependency, Documentation, SDD, Harness — sem criar essas entidades hoje.
 
+### AI-friendly não é ter IA dentro (refinado em 2026-10-12)
+
+Ser AI-friendly é ter **dados que qualquer IA consiga usar bem** — e as propriedades que tornam dados bons para uma LLM são as mesmas que os tornam bons para pessoas e integrações. Por isso a preparação acontece de forma orgânica, com uma regra: **cada preparação precisa ter valor hoje, sem IA**.
+
+| Preparação | Valor hoje, sem IA | O que destrava depois | Situação |
+|---|---|---|---|
+| **Identidade estável e legível** | URLs, links entre telas | referências que uma LLM consegue citar | existe (slugs) |
+| **Proveniência** (+ confiança quando inferido) | confiança no dado, auditoria | a IA cita a fonte e distingue confirmado de inferido — o principal antídoto contra alucinação | parcial; estender a todo dado novo |
+| **Temporalidade** | evolução no tempo, a tese do MVP | perguntas como "o que mudou desde o mês passado" | existe nos snapshots; estender às dependências |
+| **Relações como dados** (ligações com origem e confiança) | mapa de aplicações | grafo que a LLM navega: "o que depende de X" | criar com a primeira ligação app→app |
+| **API completa e documentada** | frontend, integrações | ferramentas para agentes (ver abaixo) | OpenAPI exposto; manter completo |
+| **Vocabulário do domínio explícito** | alinhar termos entre squads ("modal", "carrinho", "solução") | camada semântica para a LLM interpretar termos | existe: `.agents/product/glossary.md` (a revisar) |
+| **Campos de texto** (descrição, README resumido, observações) | leitura humana | busca semântica (RAG) | quando surgirem naturalmente |
+
+**O primeiro passo de IA provavelmente não é IA dentro do CheckApps.** O time já usa Claude, Copilot e Devin. O caminho mais curto para gerar valor com IA é o CheckApps virar **fonte de contexto para essas ferramentas**, via um servidor MCP (o protocolo que permite a uma LLM chamar ferramentas externas): o CheckApps expõe consultas determinísticas — "apps da squad X", "quem usa a biblioteca Y", "o que está pendente para o app Z" — e o tech lead pergunta no próprio assistente: *"quais apps da minha squad ainda estão no .NET 8 e qual a qualidade deles?"*. Nenhuma LLM dentro do CheckApps, nenhum custo de modelo, nenhuma questão nova de governança além da própria API — e é a visão de "camada de contexto" implementada com o protocolo feito para isso.
+
+**Infraestrutura de IA vem do banco que já está no plano.** No Postgres, grafo é uma tabela de ligações com consultas recursivas, e busca semântica é a extensão `pgvector`. Não há necessidade prevista de banco vetorial nem de banco de grafo separados.
+
+**O que fica fora até haver demanda real**: embeddings, banco vetorial separado, banco de grafo, framework de agentes, e ontologia genérica de "tudo se relaciona com tudo" desenhada antes da primeira relação concreta.
+
+**Como isso se mantém orgânico**: o template de spec pergunta, em cada feature, se os dados novos têm identidade estável, relações explícitas, proveniência e data. O CheckApps fica AI-friendly spec a spec, guiado por demanda — não por uma "fundação de IA" construída antecipadamente.
+
 **Métrica ≠ avaliação.** Uma métrica é um dado observado (`coverage = 72.4`). Um Quality Level (`B`) é uma classificação derivada de regras organizacionais, que evoluem. As duas camadas são separadas de propósito, e cada snapshot guarda qual versão da regra o classificou.
 
 ## Público

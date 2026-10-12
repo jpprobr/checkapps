@@ -12,7 +12,7 @@ Com spec, ainda não implementadas: **Migração para SQLite** — `specs/004-mi
 ## Estágio Inventário (completa o cadastro)
 
 - **CRUD de Repository e SonarProject** — hoje só entram pelo seed. Mesma forma da spec 002: ações inline no detalhe do app, formulários simples, filhos de App na mesma partição. Sem guarda de remoção necessária (não têm histórico próprio). Provavelmente a spec mais barata da lista. **Inclui "repositório ativo"**: `Repository.status` já existe (`active`/`legacy` no seed) mas não há invariante nem UI — a spec deve garantir no máximo um repositório ativo por app e uma ação "marcar como ativo". Com isso, "quais repositórios já podem ser arquivados" vira um filtro (`status != active`) ou uma checagem (spec 003) — não precisa de feature própria.
-- **Import em lote** — CSV ou JSON de squads/apps para carga inicial em ambiente novo, em vez de cadastrar um a um. Útil na migração para a máquina corporativa.
+- **Import em lote** — CSV ou JSON de squads/apps para carga inicial em ambiente novo. **Provavelmente substituído pela fase 1 do "Leitor de repositórios GitHub"** (abaixo), que descobre os repositórios em vez de exigir que alguém os liste. Só vale fazer se a fase 1 atrasar (ex.: acesso ao GitHub corporativo demorar).
 
 ## Operação (necessário antes de qualquer uso compartilhado)
 
@@ -32,7 +32,7 @@ Com spec, ainda não implementadas: **Migração para SQLite** — `specs/004-mi
 
 ## Evoluções de Checagens (após a spec 003 estar implementada)
 
-- **Detecção automática de status** — um "coletor" que varre repositórios (GitHub) para responder "quais apps têm a dependência X / estão no .NET Y" e pré-preenche o status dos itens de uma checagem. É a metade "detectar" que a spec 003 deliberadamente deixou de fora ("rastrear ≠ detectar"). Exige integração com GitHub e leitura de manifestos (`.csproj`, `package.json`…). Provavelmente a evolução de maior valor da feature.
+- **Detecção automática de status** — pré-preencher uma checagem com os apps afetados e marcar como `conforme` os que já atendem (ex.: "Atualizar para .NET 10"). É a metade "detectar" que a spec 003 deixou de fora ("rastrear ≠ detectar"). **Depende da fase 2 do "Leitor de repositórios GitHub"** (abaixo), que é quem extrai as dependências — este item é só a ponte entre os dois. Provavelmente a evolução de maior valor das Checagens.
 - **Export de checagens** (Excel/CSV) — a POC exportava; reporte em reunião pode pedir. Só depois de validar que os indicadores de tela não bastam.
 - **Histórico de percentual no tempo** — "como estava semana passada". Exige snapshot periódico da contagem por status; mesmo padrão de `QualitySnapshot`.
 - **Alertas de prazo** — cor de "vencido", lembrete. Cuidado: é o primeiro passo em direção a governança; decidir explicitamente.
@@ -69,10 +69,49 @@ Todos os apps pertencem a alguma squad — a árvore squad→app é válida, nã
 
 **Independente disso e fazível a qualquer momento**: os breadcrumbs são **defeito, não arquitetura**. Hoje a lista de apps diz "Dashboard" em vez do nome da squad; o detalhe do app tem trilha mais rasa (`Squads`) que a lista (`Squads / Dashboard`), apesar de estar mais fundo; e nenhum mostra o nome da squad. Não depende da 003 nem de autenticação.
 
+## Leitor de repositórios GitHub (fundação de vários itens deste backlog)
+
+Análise de 2026-10-12. Motivação: catálogo mantido à mão envelhece — é o risco que aparece em vários itens deste backlog. Ler os repositórios da organização ataca isso na origem, e é o primeiro conector real do produto (o Sonar ainda é mock), alinhado à visão de "camada de contexto sobre ferramentas existentes". Contexto adicional: o superintendente da comunidade apresentou uma solução que lê repositórios do GitHub com IA e desenha um mapa de aplicações. A intenção é **convergência, não competição** — o que o CheckApps acrescenta a um levantamento pontual é evolução no tempo, dono por squad, qualidade do Sonar e checagens que transformam o achado em ação acompanhada. O leitor dele pode inclusive virar uma fonte alimentando o CheckApps pela mesma porta.
+
+**Princípio central: o scan propõe, a pessoa decide.** O scan não cria Apps. Ele popula uma área de **repositórios descobertos**, e a pessoa escolhe para cada um: *criar app*, *vincular a app existente* ou *ignorar*. Motivos: repositório não é App (o domínio separou os dois de propósito — App tem id estável e N repositórios); parte dos repos é infra, biblioteca, fork ou arquivado; e, pela remoção guardada (ADR-005), um app que recebe snapshot não sai mais — auto-criação errada vira permanente. A triagem é **recorrente**, não carga única: cada scan mostra "repositórios novos desde o último scan, ainda não triados", que é o que mantém o catálogo coerente com repos sendo criados com frequência.
+
+**Três coisas diferentes, com dificuldades diferentes**:
+
+| Fase | O que se lê | Exemplo | Como |
+|---|---|---|---|
+| **1 — Inventário assistido** | metadados do repositório | dono (`CODEOWNERS`), arquivado, último push, linguagem, topics | API do GitHub, determinístico |
+| **2 — Dependências de biblioteca** | manifestos | `TargetFramework` e `PackageReference` do `.csproj`; `package.json`, `pom.xml` | parsing, determinístico |
+| **3 — Dependências entre apps** | configuração, IaC, código | o BFF chama a API de pagamentos | parte determinística (Terraform referenciando outro serviço, integração de API Gateway com destino explícito); parte heurística ou IA |
+
+Fase 1 já entrega: cadastro facilitado, repos sem dono, repos parados (o cenário de arquivamento que originou a spec 003). Começar como ferramenta de linha de comando, no molde do seed (`tools/CheckApps.GitHubScan`), sem agendador.
+
+Fase 2 guarda dependências como **snapshot por scan** (versões mudam — mesmo padrão temporal do `QualitySnapshot`) e entrega o caso de uso que mais pesa para a coordenação: **"saiu uma vulnerabilidade na biblioteca X — quais dos nossos apps são afetados, de quais squads, em que versão?"**, respondido em segundos. Também o panorama de versão de .NET por squad e o pré-preenchimento de checagens. É dependência → repositório → app → squad: três joins, trivial em SQL (ADR-009 pagando dividendo).
+
+Fase 3 é onde a IA tem papel real: descrever o que o app faz, inferir o tipo quando a infraestrutura é ambígua, sugerir que dois repos são o mesmo app, inferir ligações entre apps. **Sempre como sugestão com proveniência e confiança, nunca como verdade gravada.** Observação: a maior parte do que se lê no GitHub é parsing, não IA.
+
+**Encaixe na arquitetura**: porta em `Application` no mesmo molde de `ISonarProvider`; implementação em `Infrastructure`. `Repository` já tem `Provider` e `ExternalId` desde o MVP — vincular ao id do repositório no GitHub não exige mudar schema. Todo dado do scan nasce com `source = GITHUB_SCAN`. Integração com sistema externo, credencial e proveniência merecem ADR quando for implementado.
+
+**Restrições práticas — onde deve demorar**:
+- **Acesso ao GitHub corporativo**: o caminho correto é um *GitHub App* instalado na organização (permissão fina, não amarrado a uma pessoa), que tende a passar por aprovação de segurança — pode ser o item mais lento, como o RDS foi. Para provar valor, um token pessoal somente leitura, lendo só metadados e manifestos, deve bastar.
+- **Governança de dados com IA**: enviar código ou configuração de repositórios de banco para uma LLM externa é questão de política. A fase 3 exige a LLM aprovada pela empresa; as fases 1 e 2 não têm essa questão — mais um motivo para virem primeiro.
+- Limites da API do GitHub não preocupam nessa escala.
+
+**Consideração sobre o superintendente**: se ele já resolveu o acesso ao GitHub corporativo e tem prompts de IA funcionando, uma conversa curta antes das fases 2 ou 3 pode poupar justamente as partes mais lentas. A fase 1 é feita de qualquer forma e já é algo concreto para mostrar.
+
+## Mapa de aplicações
+
+Também visto na solução do superintendente (lá, construído a partir de repositórios). Depende do leitor de GitHub: sem fonte automática de ligações, vira planilha desenhada.
+
+- **Mapa de apps, não de repositórios.** Um App agrega N repositórios (legado + novo, componentes); o mapa mostra a arquitetura lógica, não a dispersão de repos.
+- **Colorível pelo que só o CheckApps sabe**: Quality Level, versão de .NET, apps afetados por uma vulnerabilidade, status numa checagem ("mostre no mapa quem está pendente na checagem X").
+- **Solução = subgrafo nomeado** (ver item Solução no estágio Context).
+- **Toda ligação diz de onde veio**: cadastrada à mão, extraída de IaC ou inferida por IA, com confiança. O mapa desenha confirmado e inferido de forma diferente.
+- **Modelagem**: uma tabela de ligações com origem e confiança, criada junto com a primeira ligação app→app — e não antes. É a semente do grafo; em Postgres, consultas recursivas atendem sem banco de grafo.
+
 ## Estágio Context (visão, não plano)
 
 Produto, Operação, Jornadas, Dependências, Integrações, Documentação, Arquitetura relacionados a um App. Depende de integrações reais existirem primeiro. Ver `roadmap.md`. Ideias já levantadas (2026-09-17), em ordem de custo:
 
 - **Topologia / arquitetura do app** ("modal" legado vs "carrinho" recente) — com dois valores conhecidos, é classificação, não entidade. **Começar por convenção de tag** (`topologia:carrinho`), que já filtra na UI e pode ser usada como filtro no seletor de apps das checagens, sem mudar modelo. Só vira entidade se precisar de atributos próprios (descrição, diagrama, dono). O termo "topologia" ainda está em aberto.
-- **Solução (`id-solution`)** — agrupar apps e repositórios que compõem uma mesma solução. É um segundo eixo de agrupamento ao lado de Squad (Squad = quem cuida; Solução = o que compõe) e por isso merece ADR. **Começar também por tag** (`solucao:pagamentos`); promover a entidade quando uma checagem precisar selecionar "por solução" com dados que a solução carrega, ou quando diagramas precisarem dela.
-- **Dependências entre apps** (A depende de B) para diagrama de dependência — o item de maior risco: grafo mantido à mão envelhece em semanas (o mesmo problema da planilha). Só vale com uma fonte de detecção (chamadas observadas, manifestos, API Gateway) ou uma necessidade de diagrama forte o bastante para pagar a manutenção manual.
+- **Solução (`id-solution`)** — agrupar apps e repositórios que compõem uma mesma solução. **Leitura mais recente (2026-10)**: "modal" e "carrinho" são exemplos de Solução, não de atributo do app — um caminho de apps conectados (microfrontend → API Gateway BFF → BFF → API Gateway → API no ECS). No mapa de aplicações, uma Solução é um **subgrafo nomeado**, o que tende a encerrar a dúvida topologia × solução. É um segundo eixo de agrupamento ao lado de Squad (Squad = quem cuida; Solução = o que compõe) e por isso merece ADR. **Começar também por tag** (`solucao:pagamentos`); promover a entidade quando uma checagem precisar selecionar "por solução" com dados que a solução carrega, ou quando diagramas precisarem dela.
+- **Dependências entre apps** (A depende de B) — absorvido pelo **"Mapa de aplicações"** (abaixo). O risco registrado aqui continua valendo: grafo mantido à mão envelhece em semanas. Por isso o mapa depende da fase 3 do leitor de GitHub como fonte de ligações.
