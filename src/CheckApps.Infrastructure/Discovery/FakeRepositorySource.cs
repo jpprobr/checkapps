@@ -29,6 +29,8 @@ public class FakeRepositorySource : IRepositoryDiscoverySource
 
     public string Provider => ProviderName;
 
+    public string? ConfigurationProblem => null;
+
     public Task<IReadOnlyList<DiscoveredRepositoryInfo>> DiscoverAsync(
         string sigla, string namePrefix, int maxResults, CancellationToken cancellationToken = default)
     {

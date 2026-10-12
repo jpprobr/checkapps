@@ -8,6 +8,8 @@ import {
   CreateAppFromDiscoveryRequest,
   DiscoveredRepository,
   LinkDiscoveryRequest,
+  ScanReport,
+  ScanStatus,
   TriageStatus,
 } from './models';
 
@@ -33,6 +35,14 @@ export class DiscoveredApiService {
 
   ignore(id: string): Observable<void> {
     return this.http.post<void>(`${API_BASE_URL}/discovered-repositories/${id}/ignore`, {});
+  }
+
+  scanStatus(): Observable<ScanStatus> {
+    return this.http.get<ScanStatus>(`${API_BASE_URL}/discovered-repositories/scan/status`);
+  }
+
+  scan(siglas: string[], dryRun: boolean): Observable<ScanReport> {
+    return this.http.post<ScanReport>(`${API_BASE_URL}/discovered-repositories/scan`, { siglas, dryRun });
   }
 
   restore(id: string): Observable<void> {

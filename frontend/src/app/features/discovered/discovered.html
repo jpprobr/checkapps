@@ -4,6 +4,103 @@
     O scan propõe, você decide. Nada vira app sem a sua confirmação.
   </p>
 
+  <section class="card scan-block">
+    <button type="button" class="secondary scan-toggle" (click)="toggleScan()" [attr.aria-expanded]="scanOpen()">
+      {{ scanOpen() ? '▾' : '▸' }} Buscar no GitHub
+    </button>
+
+    @if (scanOpen()) {
+      @if (scanStatusFailed()) {
+        <p class="error">Não foi possível consultar a disponibilidade do scan.</p>
+      } @else if (!scanStatus()) {
+        <p class="subtitle">Verificando…</p>
+      } @else if (!scanStatus()!.enabled) {
+        <div class="scan-unavailable" role="status">
+          <p><strong>O scan pela tela está desligado.</strong></p>
+          <p class="subtitle">
+            Para ligar, configure na API <code>Scan:Enabled = true</code> (por exemplo,
+            <code>dotnet user-secrets set "Scan:Enabled" "true" --project src/CheckApps.Api</code>) e reinicie.
+            Detalhes em <code>docs/leitor-github.md</code>. O scan também pode ser rodado no terminal.
+          </p>
+        </div>
+      } @else if (scanStatus()!.problem) {
+        <div class="scan-unavailable" role="status">
+          <p><strong>O scan não está pronto.</strong></p>
+          <p>{{ scanStatus()!.problem }}</p>
+        </div>
+      } @else {
+        <form class="scan-form" (ngSubmit)="runScan(false)">
+          <label>
+            Siglas
+            <input type="text" name="siglas" placeholder="ab1, cd2" autocomplete="off"
+              [ngModel]="scanSiglas()" (ngModelChange)="scanSiglas.set($event)" />
+          </label>
+          <div class="scan-actions">
+            <button type="button" class="secondary" [disabled]="scanning() || parsedSiglas().length === 0" (click)="runScan(true)">
+              Pré-visualizar
+            </button>
+            <button type="submit" [disabled]="scanning() || parsedSiglas().length === 0">Escanear</button>
+          </div>
+        </form>
+        <p class="subtitle small">
+          Fonte: {{ scanStatus()!.source }} · no máximo {{ scanStatus()!.maxResults }} repositórios por sigla.
+          "Pré-visualizar" mostra o que seria gravado, sem gravar nada.
+        </p>
+
+        @if (scanning()) {
+          <p role="status" class="scanning">Lendo o GitHub…</p>
+        }
+
+        @if (scanError()) {
+          <p class="error" role="alert">{{ scanError() }}</p>
+        }
+
+        @if (scanReport(); as report) {
+          <div class="scan-result" role="status">
+            <p>
+              <strong>{{ report.dryRun ? 'Pré-visualização' : 'Scan concluído' }}:</strong>
+              {{ report.counts.new }} novos, {{ report.counts.updated }} atualizados, {{ report.counts.unchanged }} inalterados.
+              @if (report.dryRun) { <strong>Nada foi gravado.</strong> }
+            </p>
+            @for (warning of report.warnings; track warning) {
+              <p class="warning">⚠ {{ warning }}</p>
+            }
+            @if (report.items.length > 0) {
+              <table class="scan-items">
+                <thead>
+                  <tr>
+                    <th>Repositório</th>
+                    <th>Sigla-app</th>
+                    <th>Sugestão</th>
+                    <th>Resultado</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  @for (item of report.items; track item.id) {
+                    <tr>
+                      <td>
+                        {{ item.name }}
+                        @if (item.archived) { <span class="tag">arquivado</span> }
+                      </td>
+                      <td>{{ item.siglaApp ?? '—' }}</td>
+                      <td>
+                        {{ item.suggestion.role ?? 'papel não identificado' }}
+                        <span class="confidence" [class.low]="item.suggestion.confidence === 'low'">
+                          confiança {{ item.suggestion.confidence === 'high' ? 'alta' : 'baixa' }}
+                        </span>
+                      </td>
+                      <td>{{ outcomeLabels[item.outcome] }}</td>
+                    </tr>
+                  }
+                </tbody>
+              </table>
+            }
+          </div>
+        }
+      }
+    }
+  </section>
+
   @if (notice(); as n) {
     <div class="card notice" role="status">
       {{ n.text }}
@@ -39,7 +136,7 @@
   } @else if (error()) {
     <p class="error">Não foi possível carregar os repositórios descobertos.</p>
   } @else {
-    <table>
+    <table class="inbox">
       <thead>
         <tr>
           <th>Repositório</th>
@@ -145,7 +242,7 @@
         } @empty {
           <tr>
             <td colspan="5">
-              Nenhum repositório aqui. Rode o scan:
+              Nenhum repositório aqui. Use <strong>Buscar no GitHub</strong> acima, ou rode o scan no terminal:
               <code>dotnet run --project tools/CheckApps.GitHubScan -- --sigla &lt;sigla&gt;</code>
             </td>
           </tr>

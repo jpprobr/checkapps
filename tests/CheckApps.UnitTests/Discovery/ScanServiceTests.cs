@@ -120,6 +120,44 @@ public class ScanServiceTests
     }
 
     [Fact]
+    public void ConfigurationProblem_IsNull_WhenTheTemplateAndTheSourceAreReady()
+    {
+        Assert.Null(Sut().ConfigurationProblem);
+    }
+
+    [Fact]
+    public void ConfigurationProblem_ReportsAMissingTemplate_FirstAndWithoutValues()
+    {
+        _options.NameTemplate = null;
+        _source.ConfigurationProblem = "A fonte também tem um problema.";
+
+        var problem = Sut().ConfigurationProblem;
+
+        Assert.Contains("NameTemplate", problem);
+        Assert.DoesNotContain("A fonte também", problem);
+    }
+
+    [Fact]
+    public async Task ScanAsync_WhenTheSourceReportsAProblem_ThrowsItsMessage_WithoutQueryingTheSource()
+    {
+        _source.ConfigurationProblem = "Configure GitHub:Token.";
+
+        var error = await Assert.ThrowsAsync<InvalidOperationException>(() => Sut().ScanAsync(["ab1"], dryRun: false));
+
+        Assert.Equal("Configure GitHub:Token.", error.Message);
+        Assert.Empty(_source.Calls);
+    }
+
+    [Fact]
+    public async Task ScanAsync_InvalidScope_IsReportedBeforeAConfigurationProblem()
+    {
+        _source.ConfigurationProblem = "Configure GitHub:Token.";
+
+        // a ordem importa para o CLI e para a tela: o escopo inválido é a primeira recusa
+        await Assert.ThrowsAsync<ArgumentException>(() => Sut().ScanAsync(["lab-"], dryRun: false));
+    }
+
+    [Fact]
     public async Task ScanAsync_WhenASearchExceedsTheLimit_WritesNothingEvenForTheOtherSiglas()
     {
         _source.Add("ab1", Info("1", "lab-ab1-app-pagamentos", "AB1-0001"));

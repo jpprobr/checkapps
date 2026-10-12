@@ -28,3 +28,13 @@ A spec 005 introduz o primeiro conector real do produto (o Sonar ainda é mock).
 - O formato real do YAML e a convenção de nome do corporativo ainda não são conhecidos; ficam isolados em configuração e na função de convenção, que é pura e testável.
 - Um token pessoal é amarrado a uma pessoa e expira. É aceitável no laboratório; **não** deve ser a credencial de qualquer uso compartilhado.
 - Esta ADR não cobre as fases 2 e 3 (dependências de biblioteca e entre apps), que podem exigir leitura de mais arquivos e, na fase 3, uma LLM aprovada pela empresa — decisão própria.
+
+## Nota (2026-10-12, spec 006): scan pela tela
+
+O scan também pode ser disparado pela API (`POST /api/discovered-repositories/scan`), executando o mesmo `ScanService` do CLI. Consequências para esta decisão:
+
+- **O token passa a existir também na configuração da API** (user-secrets próprios, nunca em arquivo versionado). Continua sem sair dela: respostas, logs e mensagens de erro não o contêm.
+- **O endpoint é desligado por padrão** (`Scan:Enabled`). Ligar é decisão explícita de quem opera.
+- **Sem autenticação (ADR-007), quem abre o sistema pode disparar scans** com o token configurado. Para o laboratório local isso é aceitável; **antes de qualquer uso compartilhado, o endpoint exige autenticação** — pré-requisito, não opcional. O escopo continua protegido (siglas validadas, limite de resultados) e só um scan roda por vez.
+- **Falha da fonte responde 502**, falha de escopo 400 e indisponibilidade/concorrência 409.
+- A fonte passou a expor `ConfigurationProblem` em vez de lançar no construtor, para a API subir sem credencial e a tela explicar o que falta.

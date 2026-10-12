@@ -11,21 +11,29 @@ namespace CheckApps.Application.Discovery;
 public class ScanService(
     IRepositoryDiscoverySource source, IDiscoveredRepositoryRepository discovered, ScanOptions options, TimeProvider timeProvider)
 {
+    /// <summary>
+    /// O que impede o scan de rodar (convenção de nome ausente, ou a fonte sem credencial), ou
+    /// <c>null</c> se está pronto. Sem valores de configuração — a tela mostra este texto.
+    /// </summary>
+    public string? ConfigurationProblem =>
+        string.IsNullOrWhiteSpace(options.NameTemplate)
+            ? $"Configure {ScanOptions.SectionName}:{nameof(ScanOptions.NameTemplate)} com a convenção de nome dos repositórios (ex.: {{prefixo}}-{{sigla}}-)."
+            : source.ConfigurationProblem;
+
     /// <exception cref="ArgumentException">Nenhuma sigla, ou fora do formato — antes de consultar a fonte.</exception>
-    /// <exception cref="InvalidOperationException">Convenção de nome não configurada.</exception>
+    /// <exception cref="InvalidOperationException">Convenção de nome ou credencial não configuradas.</exception>
     /// <exception cref="ScanLimitExceededException">Alguma busca passaria do limite de resultados.</exception>
     public async Task<ScanReport> ScanAsync(
         IEnumerable<string>? siglas, bool dryRun, CancellationToken cancellationToken = default)
     {
         var scope = ScanScope.Create(siglas, options.SiglaPattern);
 
-        if (string.IsNullOrWhiteSpace(options.NameTemplate))
+        if (ConfigurationProblem is { } problem)
         {
-            throw new InvalidOperationException(
-                $"Configure {ScanOptions.SectionName}:{nameof(ScanOptions.NameTemplate)} com a convenção de nome dos repositórios (ex.: {{prefixo}}-{{sigla}}-).");
+            throw new InvalidOperationException(problem);
         }
 
-        var convention = new RepositoryNameConvention(options.NameTemplate);
+        var convention = new RepositoryNameConvention(options.NameTemplate!);
         var now = timeProvider.GetUtcNow();
         var warnings = new List<string>();
         var found = new Dictionary<string, (DiscoveredRepository Repository, RepositorySuggestion Suggestion)>();

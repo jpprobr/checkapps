@@ -2,6 +2,7 @@ using CheckApps.Application.Discovery;
 using CheckApps.Application.Persistence;
 using CheckApps.Application.Sonar;
 using CheckApps.Domain.QualityAssessment;
+using CheckApps.Infrastructure.Discovery;
 using CheckApps.Infrastructure.Sonar;
 using CheckApps.Infrastructure.Sqlite;
 using Microsoft.Extensions.Configuration;
@@ -14,7 +15,7 @@ public static class ServiceCollectionExtensions
     public static IServiceCollection AddCheckAppsInfrastructure(this IServiceCollection services, IConfiguration configuration)
     {
         services.Configure<SqliteOptions>(configuration.GetSection(SqliteOptions.SectionName));
-        services.AddSingleton(configuration.GetSection(ScanOptions.SectionName).Get<ScanOptions>() ?? new ScanOptions());
+        AddRepositoryDiscovery(services, configuration);
 
         services.AddSingleton<SqliteConnectionFactory>();
         services.AddSingleton<SqliteSchemaBootstrapper>();
@@ -29,5 +30,45 @@ public static class ServiceCollectionExtensions
         services.AddSingleton<ISonarProvider, MockSonarProvider>();
 
         return services;
+    }
+
+    /// <summary>
+    /// Composição única do scan, usada pela API e pela ferramenta de linha de comando: opções, fonte
+    /// escolhida por <c>Scan:Source</c> (<c>github</c> | <c>fake</c>) e <see cref="ScanService"/>.
+    /// A fonte nunca falha na construção — sem credencial ela expõe <c>ConfigurationProblem</c> —,
+    /// então a API sobe sem token e a tela explica o motivo.
+    /// </summary>
+    private static void AddRepositoryDiscovery(IServiceCollection services, IConfiguration configuration)
+    {
+        var scanOptions = configuration.GetSection(ScanOptions.SectionName).Get<ScanOptions>() ?? new ScanOptions();
+        var gitHubOptions = configuration.GetSection(GitHubOptions.SectionName).Get<GitHubOptions>() ?? new GitHubOptions();
+
+        var useFake = string.Equals(scanOptions.Source, "fake", StringComparison.OrdinalIgnoreCase);
+        if (!useFake && !string.Equals(scanOptions.Source, "github", StringComparison.OrdinalIgnoreCase))
+        {
+            throw new InvalidOperationException(
+                $"{ScanOptions.SectionName}:{nameof(ScanOptions.Source)} deve ser github ou fake (valor atual: \"{scanOptions.Source}\").");
+        }
+
+        // Demonstração sem configurar nada: a fonte fake monta os nomes a partir de uma convenção fictícia.
+        if (useFake && string.IsNullOrWhiteSpace(scanOptions.NameTemplate))
+        {
+            scanOptions.NameTemplate = "fake-{sigla}-";
+        }
+
+        services.AddSingleton(scanOptions);
+        services.AddSingleton(gitHubOptions);
+        services.AddHttpClient<GitHubRepositorySource>();
+
+        if (useFake)
+        {
+            services.AddSingleton<IRepositoryDiscoverySource, FakeRepositorySource>();
+        }
+        else
+        {
+            services.AddScoped<IRepositoryDiscoverySource>(sp => sp.GetRequiredService<GitHubRepositorySource>());
+        }
+
+        services.AddScoped<ScanService>();
     }
 }

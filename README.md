@@ -66,7 +66,7 @@ dotnet run --project tools/CheckApps.GitHubScan -- --sigla ab1,cd2 --source fake
 dotnet run --project tools/CheckApps.GitHubScan -- --sigla ab1 --dry-run
 ```
 
-Os repositórios aparecem no menu **Descobertos**, onde a pessoa decide o destino de cada um. O scan nunca cria app. Configuração, token e organização de teste: [`docs/leitor-github.md`](docs/leitor-github.md).
+Os repositórios aparecem no menu **Descobertos**, onde a pessoa decide o destino de cada um. O scan nunca cria app. O mesmo scan pode ser disparado pela própria tela (bloco **Buscar no GitHub**), que vem **desligada** — veja o guia para ligar e para os segredos da API. Configuração, token e organização de teste: [`docs/leitor-github.md`](docs/leitor-github.md).
 
 ## Testes
 

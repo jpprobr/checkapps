@@ -173,17 +173,38 @@ public class GitHubRepositorySourceTests
     }
 
     [Fact]
-    public void Constructor_RefusesToRunWithoutTokenOrOrganization_AndSaysHowToConfigure()
+    public void ConfigurationProblem_ExplainsWhatIsMissing_WithoutValues_AndTheConstructorNeverThrows()
     {
-        var noToken = Assert.Throws<InvalidOperationException>(() =>
-            new GitHubRepositorySource(new HttpClient(_handler), new GitHubOptions { Organization = Org }));
-        var noOrg = Assert.Throws<InvalidOperationException>(() =>
-            new GitHubRepositorySource(new HttpClient(_handler), new GitHubOptions { Token = Token }));
+        var noToken = new GitHubRepositorySource(new HttpClient(_handler), new GitHubOptions { Organization = Org });
+        var noOrg = new GitHubRepositorySource(new HttpClient(_handler), new GitHubOptions { Token = Token });
+        var ready = Sut();
 
-        Assert.Contains("GitHub:Token", noToken.Message);
-        Assert.Contains("user-secrets", noToken.Message);
-        Assert.Contains("GitHub:Organization", noOrg.Message);
-        Assert.DoesNotContain(Token, noOrg.Message);
+        Assert.Contains("GitHub:Token", noToken.ConfigurationProblem);
+        Assert.Contains("user-secrets", noToken.ConfigurationProblem);
+        Assert.Contains("GitHub:Organization", noOrg.ConfigurationProblem);
+        Assert.DoesNotContain(Token, noOrg.ConfigurationProblem);
+        Assert.Null(ready.ConfigurationProblem);
+    }
+
+    [Fact]
+    public async Task Discover_WithoutTokenOrOrganization_Throws_AndNeverTouchesTheNetwork()
+    {
+        var noToken = new GitHubRepositorySource(new HttpClient(_handler), new GitHubOptions { Organization = Org });
+
+        var error = await Assert.ThrowsAsync<InvalidOperationException>(() => noToken.DiscoverAsync("ab1", "lab-ab1-", 50));
+
+        Assert.Contains("GitHub:Token", error.Message);
+        Assert.Empty(_handler.Requests);
+    }
+
+    [Fact]
+    public async Task WithoutToken_NoAuthorizationHeaderIsEverSent()
+    {
+        var noToken = new GitHubRepositorySource(new HttpClient(_handler), new GitHubOptions { Organization = Org });
+
+        await Assert.ThrowsAsync<InvalidOperationException>(() => noToken.DiscoverAsync("ab1", "lab-ab1-", 50));
+
+        Assert.DoesNotContain(_handler.Requests, r => r.Authorization is not null);
     }
 
     // ---- helpers: JSON no formato da API do GitHub ----

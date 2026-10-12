@@ -12,6 +12,13 @@ public interface IRepositoryDiscoverySource
     string Provider { get; }
 
     /// <summary>
+    /// O que falta para a fonte funcionar (ex.: token ou organização não configurados), ou
+    /// <c>null</c> se está pronta. Em vez de lançar no construtor, a fonte *explica*: assim a API
+    /// sobe sem credencial e a tela mostra o motivo. A mensagem nunca contém valores de configuração.
+    /// </summary>
+    string? ConfigurationProblem { get; }
+
+    /// <summary>
     /// Repositórios cujo nome começa com <paramref name="namePrefix"/> (a sigla já está no prefixo).
     /// A fonte DEVE medir o total de resultados da busca **antes** de ler dados em volume e lançar
     /// <see cref="ScanLimitExceededException"/> se passar de <paramref name="maxResults"/>.

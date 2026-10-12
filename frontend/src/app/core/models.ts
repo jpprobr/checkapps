@@ -250,3 +250,34 @@ export interface LinkDiscoveryRequest {
   appId: string;
   role: string | null;
 }
+
+// Scan pela tela (spec 006). O "problem" diz O QUE configurar, nunca com que valor.
+export interface ScanStatus {
+  enabled: boolean;
+  source: string;
+  ready: boolean;
+  problem: string | null;
+  maxResults: number;
+  siglaPattern: string;
+}
+
+export type ScanOutcome = 'new' | 'updated' | 'unchanged';
+
+export interface ScanItem {
+  id: string;
+  name: string;
+  url: string | null;
+  sigla: string;
+  siglaApp: string | null;
+  archived: boolean;
+  pushedAt: string | null;
+  outcome: ScanOutcome;
+  suggestion: Suggestion;
+}
+
+export interface ScanReport {
+  dryRun: boolean;
+  counts: { new: number; updated: number; unchanged: number };
+  items: ScanItem[];
+  warnings: string[];
+}

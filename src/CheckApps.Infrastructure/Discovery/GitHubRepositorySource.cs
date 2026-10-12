@@ -27,23 +27,17 @@ public class GitHubRepositorySource : IRepositoryDiscoverySource
 
     public GitHubRepositorySource(HttpClient http, GitHubOptions options)
     {
-        if (string.IsNullOrWhiteSpace(options.Token))
-        {
-            throw new InvalidOperationException(
-                "Configure GitHub:Token (ex.: dotnet user-secrets set \"GitHub:Token\" \"<token>\"). A ferramenta não roda sem token.");
-        }
-
-        if (string.IsNullOrWhiteSpace(options.Organization))
-        {
-            throw new InvalidOperationException(
-                "Configure GitHub:Organization (ex.: dotnet user-secrets set \"GitHub:Organization\" \"<organização>\").");
-        }
-
         _http = http;
         _options = options;
 
         _http.BaseAddress ??= new Uri(options.ApiBaseUrl.TrimEnd('/') + "/");
-        _http.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", options.Token);
+
+        // Sem token não há cabeçalho de autorização — e quem tentar ler recebe ConfigurationProblem.
+        if (!string.IsNullOrWhiteSpace(options.Token))
+        {
+            _http.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", options.Token);
+        }
+
         _http.DefaultRequestHeaders.Accept.Clear();
         _http.DefaultRequestHeaders.Accept.Add(new MediaTypeWithQualityHeaderValue("application/vnd.github+json"));
         if (!_http.DefaultRequestHeaders.Contains("X-GitHub-Api-Version"))
@@ -59,9 +53,22 @@ public class GitHubRepositorySource : IRepositoryDiscoverySource
 
     public string Provider => "github";
 
+    /// <summary>Falta token ou organização? A mensagem diz como configurar e nunca traz valores.</summary>
+    public string? ConfigurationProblem =>
+        string.IsNullOrWhiteSpace(_options.Token)
+            ? "Configure GitHub:Token (ex.: dotnet user-secrets set \"GitHub:Token\" \"<token>\"). A ferramenta não roda sem token."
+            : string.IsNullOrWhiteSpace(_options.Organization)
+                ? "Configure GitHub:Organization (ex.: dotnet user-secrets set \"GitHub:Organization\" \"<organização>\")."
+                : null;
+
     public async Task<IReadOnlyList<DiscoveredRepositoryInfo>> DiscoverAsync(
         string sigla, string namePrefix, int maxResults, CancellationToken cancellationToken = default)
     {
+        if (ConfigurationProblem is { } problem)
+        {
+            throw new InvalidOperationException(problem);
+        }
+
         var hits = await SearchAsync(sigla, maxResults, cancellationToken);
 
         var result = new List<DiscoveredRepositoryInfo>();

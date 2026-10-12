@@ -46,3 +46,70 @@ code {
   padding: 0.1rem 0.4rem;
   font-size: 0.85rem;
 }
+
+/* Bloco "Buscar no GitHub" (spec 006) */
+.scan-block {
+  margin: 1rem 0;
+}
+
+.scan-toggle {
+  font-weight: 600;
+}
+
+.scan-form {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  gap: 0.75rem;
+  margin-top: 0.75rem;
+}
+
+.scan-form label {
+  display: flex;
+  flex-direction: column;
+  gap: 0.3rem;
+  font-size: 0.9rem;
+  color: var(--text-secondary);
+}
+
+.scan-form input {
+  padding: 0.5rem 0.6rem;
+  border: 1px solid var(--baseline);
+  border-radius: 8px;
+  background: var(--surface-1);
+  color: var(--text-primary);
+  font: inherit;
+  min-width: 16rem;
+}
+
+.scan-actions {
+  display: flex;
+  gap: 0.5rem;
+}
+
+.scan-block .subtitle {
+  margin-top: 0.6rem; /* o .subtitle global sobe com margem negativa; aqui ele vem logo após um formulário */
+}
+
+.small {
+  font-size: 0.8rem;
+}
+
+.scanning {
+  color: var(--text-secondary);
+  font-weight: 600;
+}
+
+.scan-unavailable p {
+  margin: 0.4rem 0;
+}
+
+.scan-result .warning {
+  margin: 0.25rem 0;
+  color: var(--text-secondary);
+}
+
+.scan-items {
+  margin-top: 0.5rem;
+  font-size: 0.9rem;
+}

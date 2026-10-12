@@ -2,7 +2,6 @@ using CheckApps.Application.Discovery;
 using CheckApps.Application.Persistence;
 using CheckApps.Domain.Discovery;
 using CheckApps.Infrastructure.DependencyInjection;
-using CheckApps.Infrastructure.Discovery;
 using CheckApps.Infrastructure.Sqlite;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
@@ -32,33 +31,30 @@ if (parsed.Error is not null || parsed.Help)
 
           --sigla     uma ou mais siglas (obrigatório). O scan nunca lê a organização inteira.
           --source    github (padrão) lê o GitHub; fake usa dados de demonstração, sem rede.
+                      (sem o argumento vale Scan:Source da configuração; o padrão é github)
           --dry-run   lê e mostra o que seria gravado, sem gravar nenhum dado.
         """);
     return parsed.Error is not null ? ExitUsage : ExitOk;
 }
 
-var configuration = new ConfigurationBuilder()
+var configurationBuilder = new ConfigurationBuilder()
     .SetBasePath(AppContext.BaseDirectory)
     .AddJsonFile("appsettings.json", optional: true)
     .AddUserSecrets<Program>(optional: true)
-    .AddEnvironmentVariables()
-    .Build();
+    .AddEnvironmentVariables();
 
-var useFake = parsed.Source == "fake";
-
-var services = new ServiceCollection();
-services.AddCheckAppsInfrastructure(configuration);
-services.AddSingleton(TimeProvider.System);
-
-// Sem convenção configurada, a demonstração usa uma fictícia — para a fonte real ela é obrigatória.
-var scanOptions = configuration.GetSection(ScanOptions.SectionName).Get<ScanOptions>() ?? new ScanOptions();
-if (useFake && string.IsNullOrWhiteSpace(scanOptions.NameTemplate))
+// --source sobrepõe Scan:Source (que, sem o argumento, vem da configuração; o padrão é github).
+if (parsed.Source is not null)
 {
-    scanOptions.NameTemplate = "fake-{sigla}-";
+    configurationBuilder.AddInMemoryCollection(
+        new Dictionary<string, string?> { [$"{ScanOptions.SectionName}:{nameof(ScanOptions.Source)}"] = parsed.Source });
 }
 
-// O escopo é validado antes de montar a fonte: sigla vazia ou fora do formato é recusada sem
+var configuration = configurationBuilder.Build();
+
+// O escopo é validado antes de montar qualquer coisa: sigla vazia ou fora do formato é recusada sem
 // pedir token nem consultar nada (o ScanService valida de novo — a regra é dele, isto é só ordem).
+var scanOptions = configuration.GetSection(ScanOptions.SectionName).Get<ScanOptions>() ?? new ScanOptions();
 try
 {
     ScanScope.Create(parsed.Siglas, scanOptions.SiglaPattern);
@@ -69,29 +65,19 @@ catch (ArgumentException ex)
     return ExitUsage;
 }
 
-services.AddSingleton(scanOptions);
-
-if (useFake)
-{
-    services.AddSingleton<IRepositoryDiscoverySource, FakeRepositorySource>();
-}
-else
-{
-    var gitHubOptions = configuration.GetSection(GitHubOptions.SectionName).Get<GitHubOptions>() ?? new GitHubOptions();
-    services.AddSingleton(gitHubOptions);
-    services.AddHttpClient<GitHubRepositorySource>();
-    services.AddSingleton<IRepositoryDiscoverySource>(sp => sp.GetRequiredService<GitHubRepositorySource>());
-}
-
-services.AddSingleton<ScanService>();
-
 try
 {
+    // A composição (fonte, opções, ScanService) é a mesma da API: AddCheckAppsInfrastructure.
+    var services = new ServiceCollection();
+    services.AddCheckAppsInfrastructure(configuration);
+    services.AddSingleton(TimeProvider.System);
+
     await using var provider = services.BuildServiceProvider();
     await provider.GetRequiredService<SqliteSchemaBootstrapper>().EnsureSchemaAsync();
 
-    var report = await provider.GetRequiredService<ScanService>().ScanAsync(parsed.Siglas, parsed.DryRun);
-    Print(report, useFake);
+    using var scope = provider.CreateScope();
+    var report = await scope.ServiceProvider.GetRequiredService<ScanService>().ScanAsync(parsed.Siglas, parsed.DryRun);
+    Print(report, fake: string.Equals(scanOptions.Source, "fake", StringComparison.OrdinalIgnoreCase) || parsed.Source == "fake");
     return ExitOk;
 }
 catch (Exception ex) when (ex is ArgumentException or InvalidOperationException)
@@ -166,10 +152,10 @@ static void Print(ScanReport report, bool fake)
     }
 }
 
-static (string[] Siglas, string Source, bool DryRun, bool Help, string? Error) ParseArguments(string[] args)
+static (string[] Siglas, string? Source, bool DryRun, bool Help, string? Error) ParseArguments(string[] args)
 {
     var siglas = new List<string>();
-    var source = "github";
+    string? source = null;
     var dryRun = false;
 
     for (var i = 0; i < args.Length; i++)

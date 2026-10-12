@@ -161,8 +161,8 @@ POST /api/discovered-repositories/{id}/restore
 
 ### Notas da implementação (2026-10-12)
 
-- **`ScanService` fica fora de `AddCheckAppsApplication`**: depende da fonte, que só a ferramenta registra; a validação de DI em Development quebraria a API. A API usa só `TriageService`.
-- **Sem `Scan:NameTemplate` a triagem funciona, sem sugestões** (papel nulo, confiança baixa); o scan recusa rodar. Com `--source fake` a ferramenta assume `fake-{sigla}-`. A API lê `Scan:NameTemplate` de user-secrets próprios (`UserSecretsId` no `CheckApps.Api`).
+- **`ScanService` ficava fora de `AddCheckAppsApplication`** (a fonte só a ferramenta registrava, e a validação de DI em Development quebraria a API); **superado pela spec 006**, que criou a composição única e fez a fonte expor `ConfigurationProblem` em vez de lançar no construtor.
+- **Sem `Scan:NameTemplate` a triagem funciona, sem sugestões** (papel nulo, confiança baixa); o scan recusa rodar. Com a fonte `fake` (padrão `fake-{sigla}-` desde a spec 006, na composição). A API lê `Scan:NameTemplate` de user-secrets próprios (`UserSecretsId` no `CheckApps.Api`).
 - **O escopo é validado antes de montar a fonte**: sigla vazia ou fora do formato é recusada sem pedir token nem consultar nada.
 - **Toda a leitura acontece antes de qualquer gravação**: um limite estourado na segunda sigla não deixa um scan pela metade.
 - **`--dry-run` não grava dados**, mas garante o schema (DDL idempotente), porque classificar novo/atualizado/inalterado exige ler a tabela.

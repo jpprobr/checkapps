@@ -36,9 +36,9 @@ dotnet user-secrets set "GitHub:Token" "<token>" --project tools/CheckApps.GitHu
 dotnet user-secrets set "Scan:NameTemplate" "<prefixo>-{sigla}-" --project tools/CheckApps.GitHubScan
 ```
 
-Opcionais (os padrões estão entre parênteses): `Scan:SiglaPattern` (`^[a-z0-9]{3}$`), `Scan:MaxResults` (`50`), `GitHub:ConfigFilePath` (`config.yaml`), `GitHub:SiglaAppKey` (`siglaApp`).
+Opcionais (os padrões estão entre parênteses): `Scan:SiglaPattern` (`^[a-z0-9]{3}$`), `Scan:MaxResults` (`50`), `Scan:Source` (`github`; `fake` para demonstração), `GitHub:ConfigFilePath` (`config.yaml`), `GitHub:SiglaAppKey` (`siglaApp`).
 
-Para a **API** mostrar sugestões de papel e nome na caixa de entrada, ela precisa da mesma convenção de nome (não precisa do token):
+Para a **API** mostrar sugestões de papel e nome na caixa de entrada, ela precisa da mesma convenção de nome (para só isso, não precisa do token; o scan pela tela, seção 5, precisa também do token e da organização):
 
 ```bash
 dotnet user-secrets set "Scan:NameTemplate" "<prefixo>-{sigla}-" --project src/CheckApps.Api
@@ -64,7 +64,24 @@ dotnet run --project tools/CheckApps.GitHubScan -- --sigla ab1,cd2
 
 Rodar de novo é seguro: atualiza o que mudou e **não desfaz nenhuma decisão de triagem**. Códigos de saída: `0` ok, `1` erro inesperado, `2` uso ou configuração, `3` falha ao ler a fonte (token, permissão, limite de chamadas, limite de resultados).
 
-## 5. Organização de teste
+## 5. Escanear pela tela
+
+O mesmo scan pode ser disparado em **Descobertos → Buscar no GitHub**: informe as siglas (`ab1, cd2`) e use *Pré-visualizar* (mostra o que seria gravado, **sem gravar nada**) ou *Escanear*. A ferramenta de linha de comando continua funcionando; os dois executam o mesmo código.
+
+A tela vem **desligada**, e a API precisa da credencial. Os user-secrets da API são **separados** dos da ferramenta de linha de comando:
+
+```bash
+dotnet user-secrets set "Scan:Enabled" "true" --project src/CheckApps.Api
+dotnet user-secrets set "GitHub:Organization" "<organização>" --project src/CheckApps.Api
+dotnet user-secrets set "GitHub:Token" "<token>" --project src/CheckApps.Api
+dotnet user-secrets set "Scan:NameTemplate" '<prefixo>-{sigla}-' --project src/CheckApps.Api
+```
+
+**Reinicie a API depois de mudar qualquer um**: a configuração é lida na subida. Se algo faltar, o bloco da tela diz **o que** configurar, sem mostrar valores. Para ver o fluxo sem rede nem token, use `Scan:Source = fake` junto com `Scan:Enabled = true`.
+
+**Segurança**: sem autenticação, quem abre o sistema pode disparar scans com o token configurado. Por isso o endpoint vem desligado, só um scan roda por vez, e o escopo continua limitado por siglas e pelo limite de resultados. Use assim apenas em ambiente de uso individual; **antes de qualquer uso compartilhado, o endpoint precisa de autenticação** (ADR-010).
+
+## 6. Organização de teste
 
 Para exercitar o scan de verdade, uma organização gratuita com repositórios no padrão `{prefixo}-{sigla}-{segmento}-{nome}` basta (repositórios podem ser vazios, exceto pelo arquivo de configuração). Usando o prefixo `lab`:
 
@@ -87,7 +104,7 @@ siglaApp: AB1-0001
 
 Esperado para `--sigla ab1`: 5 repositórios (o restrito não aparece); `app-legado` com `[arquivado]`; `infra-fila` e `contrato-api-pagamentos` sem sigla-app.
 
-## 6. Problemas comuns
+## 7. Problemas comuns
 
 | Sintoma | Causa provável |
 |---|---|
@@ -98,4 +115,8 @@ Esperado para `--sigla ab1`: 5 repositórios (o restrito não aparece); `app-leg
 | `encontraria N repositórios, acima do limite` | escopo amplo demais — use uma sigla mais específica (o limite é `Scan:MaxResults`) |
 | Repositório criado há pouco não aparece | a busca do GitHub demora a indexar; rode de novo depois |
 | `Sigla fora do formato esperado` | informe a sigla (ex.: `ab1`), não um trecho de nome |
+| "O scan pela API está desligado" | falta `Scan:Enabled = true` nos user-secrets **da API** (e reiniciar a API) |
+| "O scan não está pronto" na tela | falta `GitHub:Token`, `GitHub:Organization` ou `Scan:NameTemplate` nos user-secrets **da API**; a mensagem diz qual |
+| "Já há um scan em andamento" | outro scan está rodando; espere terminar |
+| "Não foi possível falar com o GitHub" (502) | rede indisponível ou `GitHub:ApiBaseUrl` errada |
 | Aviso de YAML | o arquivo existe mas não é um YAML válido, ou a chave não tem valor simples; o repositório entra sem sigla-app |

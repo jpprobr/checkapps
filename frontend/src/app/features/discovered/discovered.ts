@@ -7,7 +7,7 @@ import { forkJoin } from 'rxjs';
 import { AppsApiService } from '../../core/apps-api.service';
 import { CurrentSquadService } from '../../core/current-squad.service';
 import { DiscoveredApiService } from '../../core/discovered-api.service';
-import { AppSummary, DiscoveredRepository, TriageStatus } from '../../core/models';
+import { AppSummary, DiscoveredRepository, ScanOutcome, ScanReport, ScanStatus, TriageStatus } from '../../core/models';
 import { SquadsApiService } from '../../core/squads-api.service';
 
 type StatusFilter = TriageStatus | 'all';
@@ -18,9 +18,12 @@ interface AppOption {
   label: string;
 }
 
+const SIGLAS_STORAGE_KEY = 'checkapps.scanSiglas';
+
 /**
  * Caixa de entrada do leitor de GitHub (spec 005): o scan propõe, a pessoa decide. "Criar app"
- * abre um painel pré-preenchido e não grava nada até a confirmação.
+ * abre um painel pré-preenchido e não grava nada até a confirmação. O bloco "Buscar no GitHub"
+ * (spec 006) dispara o mesmo scan do CLI, quando a API o habilita.
  */
 @Component({
   selector: 'app-discovered',
@@ -55,6 +58,20 @@ export class Discovered {
   protected readonly saving = signal(false);
   protected readonly appOptions = signal<AppOption[]>([]);
 
+  // Scan pela tela (spec 006)
+  protected readonly scanOpen = signal(false);
+  protected readonly scanStatus = signal<ScanStatus | null>(null);
+  protected readonly scanStatusFailed = signal(false);
+  protected readonly scanSiglas = signal(readSavedSiglas());
+  protected readonly scanning = signal(false);
+  protected readonly scanError = signal<string | null>(null);
+  protected readonly scanReport = signal<ScanReport | null>(null);
+  protected readonly outcomeLabels: Record<ScanOutcome, string> = {
+    new: 'novo',
+    updated: 'atualizado',
+    unchanged: 'inalterado',
+  };
+
   protected readonly siglas = computed(() => [...new Set(this.rows().map((r) => r.sigla))].sort());
 
   protected readonly visibleRows = computed(() => {
@@ -62,8 +79,17 @@ export class Discovered {
     return this.rows().filter((r) => !sigla || r.sigla === sigla);
   });
 
+  /** Siglas digitadas, separadas por vírgula ou espaço; a API valida o formato e recusa o resto. */
+  protected readonly parsedSiglas = computed(() =>
+    this.scanSiglas()
+      .split(/[\s,;]+/)
+      .map((s) => s.trim())
+      .filter((s) => s.length > 0),
+  );
+
   constructor() {
     this.reload();
+    this.loadScanStatus();
   }
 
   protected setStatus(status: StatusFilter): void {
@@ -72,6 +98,44 @@ export class Discovered {
     this.closePanel();
     this.reload();
   }
+
+  // ---- scan pela tela ----
+
+  protected toggleScan(): void {
+    this.scanOpen.set(!this.scanOpen());
+  }
+
+  protected runScan(dryRun: boolean): void {
+    if (this.parsedSiglas().length === 0) {
+      this.scanError.set('Informe ao menos uma sigla (ex.: ab1, cd2).');
+      return;
+    }
+
+    this.scanning.set(true);
+    this.scanError.set(null);
+    this.scanReport.set(null);
+    saveSiglas(this.scanSiglas());
+
+    this.discoveredApi.scan(this.parsedSiglas(), dryRun).subscribe({
+      next: (report) => {
+        this.scanning.set(false);
+        this.scanReport.set(report);
+        if (!report.dryRun) {
+          this.statusFilter.set('new');
+          this.siglaFilter.set('');
+          this.reload();
+        }
+      },
+      error: (err) => {
+        this.scanning.set(false);
+        const body = (err as { error?: unknown })?.error;
+        this.scanError.set(typeof body === 'string' ? body : 'Não foi possível executar o scan.');
+        this.loadScanStatus();
+      },
+    });
+  }
+
+  // ---- triagem ----
 
   protected openCreate(row: DiscoveredRepository): void {
     this.panelFor.set(row.id);
@@ -183,6 +247,16 @@ export class Discovered {
     });
   }
 
+  private loadScanStatus(): void {
+    this.discoveredApi.scanStatus().subscribe({
+      next: (status) => {
+        this.scanStatus.set(status);
+        this.scanStatusFailed.set(false);
+      },
+      error: () => this.scanStatusFailed.set(true),
+    });
+  }
+
   /** Todos os apps, com a squad no rótulo — o vínculo pode ser com um app de qualquer squad. */
   private loadAppOptions(): void {
     this.squadsApi.list().subscribe((squads) => {
@@ -198,5 +272,22 @@ export class Discovered {
         this.appOptions.set(options.sort((a, b) => a.label.localeCompare(b.label)));
       });
     });
+  }
+}
+
+// Conveniência por navegador: quem escaneia sempre as mesmas siglas não as digita de novo.
+function readSavedSiglas(): string {
+  try {
+    return localStorage.getItem(SIGLAS_STORAGE_KEY) ?? '';
+  } catch {
+    return '';
+  }
+}
+
+function saveSiglas(value: string): void {
+  try {
+    localStorage.setItem(SIGLAS_STORAGE_KEY, value);
+  } catch {
+    // Armazenamento bloqueado: só não lembra.
   }
 }

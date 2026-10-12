@@ -19,4 +19,13 @@ public class ScanOptions
 
     /// <summary>Acima disso, a busca é recusada sem ler nada além da contagem.</summary>
     public int MaxResults { get; set; } = 50;
+
+    /// <summary>De onde vem a leitura: <c>github</c> (padrão) ou <c>fake</c> (demonstração, sem rede nem token). O <c>--source</c> do CLI o sobrepõe.</summary>
+    public string Source { get; set; } = "github";
+
+    /// <summary>
+    /// Liga o endpoint de scan da **API** (desligado por padrão: sem autenticação, quem abre o sistema
+    /// poderia disparar scans com o token configurado). A ferramenta de linha de comando ignora isto.
+    /// </summary>
+    public bool Enabled { get; set; }
 }

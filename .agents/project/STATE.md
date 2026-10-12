@@ -1,6 +1,6 @@
 # STATE.md — estado atual do projeto
 
-> Reescrito (não anexado) ao fim de cada sessão de trabalho. Se este arquivo estiver desatualizado em relação ao `git log`, o git está certo. Última atualização: **2026-10-12**, ao concluir a spec 005 (leitor de GitHub, fase 1).
+> Reescrito (não anexado) ao fim de cada sessão de trabalho. Se este arquivo estiver desatualizado em relação ao `git log`, o git está certo. Última atualização: **2026-10-12**, ao concluir a spec 006 (scan pela tela), sobre a spec 005 (leitor de GitHub, fase 1).
 
 ## Onde estamos
 
@@ -16,15 +16,17 @@ Estágio do roadmap: **Inventário + Health + Evolution concluídos**, mais **Ch
   - ferramenta `tools/CheckApps.GitHubScan` — scan **por sigla** (validada por formato, limite de resultados), `--dry-run`, `--source fake|github`; o escopo é validado antes de pedir token;
   - caixa de entrada **Descobertos** no menu: criar app (painel pré-preenchido, nada grava antes de confirmar), vincular a app existente (aviso se a sigla difere), de outra squad, ignorar, restaurar;
   - `Repository` ganhou `sigla`, `siglaApp` (único quando presente), `role` e `source`; aparecem no detalhe do app;
-  - fonte `fake` com os casos difíceis; fonte real do GitHub (Search API + YAML da sigla-app) testada **só com HTTP falso**.
-- **Testes**: 148 unitários + 28 de integração, verdes. **Nenhum exige Docker, serviço externo ou rede.**
+  - fonte `fake` com os casos difíceis; fonte real do GitHub (Search API + YAML da sigla-app) testada com HTTP falso **e lida uma vez de verdade** (ver abaixo).
+- **Scan pela tela** (`specs/006-scan-pela-tela/`): bloco **Buscar no GitHub** em Descobertos — siglas, *Pré-visualizar* (não grava) e *Escanear*; o CLI continua, e os dois executam o mesmo `ScanService` (composição única em `AddCheckAppsInfrastructure`, fonte por `Scan:Source`). **Desligado por padrão** (`Scan:Enabled`); a fonte expõe `ConfigurationProblem` em vez de lançar, então a API sobe sem credencial e a tela explica o que falta. Erros: 400 (escopo/limite), 409 (desligado, não configurado, já em andamento), 502 (falha do GitHub); um scan por vez.
+- **Testes**: 154 unitários + 35 de integração, verdes (inclui um teste de composição com a validação de DI do Development ligada). **Nenhum exige Docker, serviço externo ou rede.**
 - **Ambiente local**: skill `run-local`; `README.md` com o passo a passo.
 
 ## O que está mockado / provisório
 
 - **Dados de Sonar** vêm de `MockSonarProvider` + `DemoDataFactory`. Sem integração real com SonarQube.
 - **O GitHub real foi lido uma vez** (2026-10-12, organização de teste, `--dry-run`): encontrou o repositório, leu a sigla-app do `config.yaml` e subiu a confiança de baixa para alta. **Ainda não exercitados com o GitHub real**: arquivado, paginação, limite de resultados, limite de chamadas, acesso parcial e YAML inválido — hoje só cobertos por JSON fixo nos testes.
-- **Sem autenticação** (ADR-007): "minha squad" é a última visitada (navegador); autor de checagem é texto livre; histórico não registra quem fez.
+- **O scan pela tela ainda não foi usado contra o GitHub real** (pendência do checklist da spec 006, a cargo do usuário): exige os segredos da **API**, separados dos da ferramenta de linha de comando.
+- **Sem autenticação** (ADR-007): "minha squad" é a última visitada (navegador); autor de checagem é texto livre; histórico não registra quem fez. **O endpoint de scan da API usa o token configurado e qualquer pessoa que abra o sistema pode dispará-lo** — por isso vem desligado e só deve ficar ligado em uso individual; autenticação é pré-requisito de uso compartilhado.
 - **Sem deploy, sem CI.** Litestream e deploy no ECS documentados como alvo (spec 004, ADR-009), não implementados.
 - **O seed não cria checagens nem descobertos** — o scan `--source fake` cria os descobertos de demonstração.
 
@@ -40,9 +42,10 @@ Estágio do roadmap: **Inventário + Health + Evolution concluídos**, mais **Ch
 ## Gotchas para a próxima sessão
 
 Os críticos estão em `AGENTS.md` e nas regras. Os que mais mordem hoje:
-- **Segredos**: `GitHub:Token`, `GitHub:Organization` e `Scan:NameTemplate` ficam em `dotnet user-secrets` (ferramenta e API têm `UserSecretsId` separados) ou em variáveis `GitHub__…`. Nunca em arquivo versionado, nem em exemplo de documentação (que usa `AB1`, `AB1-0001`, `{prefixo}-{sigla}-`).
-- O caminho relativo do banco resolve contra `%LOCALAPPDATA%\CheckApps`. Para testar sem mexer na massa real: `Sqlite__DatabasePath=<nome>.db` no seed, no scan **e** na API.
-- API antiga presa em `:5232` trava o build (`taskkill //F //IM CheckApps.Api.exe`). Em Development, a API valida a DI na subida: serviço que depende de algo que só a ferramenta registra (`ScanService`) não pode estar em `AddCheckAppsApplication`.
+- **Segredos**: `GitHub:Token`, `GitHub:Organization`, `Scan:NameTemplate` e `Scan:Enabled` ficam em `dotnet user-secrets` — **a ferramenta e a API têm `UserSecretsId` e armazenamentos separados; quem usa os dois configura os dois** — ou em variáveis `GitHub__…`/`Scan__…` (que vencem os user-secrets). Nunca em arquivo versionado, nem em exemplo de documentação (que usa `AB1`, `AB1-0001`, `{prefixo}-{sigla}-`). `dotnet user-secrets list` imprime o token: filtre com `| grep "Scan:"`.
+- **A API lê a configuração só na subida**: depois de mudar um segredo, reinicie-a. Um processo antigo na porta `:5232` responde com a configuração velha (e trava o build: `taskkill //F //IM CheckApps.Api.exe`).
+- O caminho relativo do banco resolve contra `%LOCALAPPDATA%\CheckApps`. Para testar sem mexer na massa real: `Sqlite__DatabasePath=<nome>.db` no seed, no scan **e** na API. Os segredos reais da máquina interferem nos roteiros de teste (a convenção de nome, por exemplo): sobrescreva com variável de ambiente (`Scan__NameTemplate`).
+- Em Development a API valida a DI na subida: o teste de composição (`DiscoveryCompositionTests`) cobre isso — dependência de algo que só um host registra volta a quebrar a API.
 - `DatePipe` com `'UTC'` para períodos e datas de calendário; **sem** `'UTC'` para instantes reais.
 - Playwright: escopar seletores de texto a `main` (o seletor de squad do header repete os nomes); opções de `<select>` fechado não são "visíveis" — use `state: 'attached'`.
 - Status de checagem e de triagem são **códigos** (`em-andamento`, `other-squad`), não nomes de enum.
@@ -50,9 +53,9 @@ Os críticos estão em `AGENTS.md` e nas regras. Os que mais mordem hoje:
 
 ## Próximos passos (em ordem)
 
-1. **Exercitar o resto da leitura real** (usuário): rodar sem `--dry-run` e triar na tela **Descobertos**; depois, no guia `docs/leitor-github.md`, criar os demais repositórios de teste (arquivado, infra, outra sigla, um fora do acesso do token) para ver os casos que ainda só os testes cobrem.
+1. **Usar o scan pela tela com o GitHub real** (usuário): configurar os segredos da API (`docs/leitor-github.md`, seção 5), reiniciar a API e escanear em **Descobertos → Buscar no GitHub**; depois, criar os demais repositórios de teste (arquivado, infra, outra sigla, um fora do acesso do token) para ver os casos que ainda só os testes cobrem.
 2. Revisão do usuário no glossário (Solução, Tipo de app).
-3. Candidatos de baixo custo: checagens e descobertos na massa de demonstração do seed; CRUD manual de Repository (campos de sigla, sigla-app, papel); botão "rodar scan" na UI.
+3. Candidatos de baixo custo: checagens e descobertos na massa de demonstração do seed; CRUD manual de Repository (campos de sigla, sigla-app, papel); decidir o que fazer com repositório que some do GitHub.
 4. Depois: fase 2 do leitor (dependências de biblioteca) — destrava "quais apps usam a biblioteca X" e a detecção automática de status das checagens; tags chave-valor; spec de Solução.
 5. Na migração para a máquina corporativa: `.github/copilot-instructions.md` e verificação do `.agents/skills/`; GitHub App no lugar do token pessoal (ADR-010).
 6. Antes de qualquer uso compartilhado: substituir ADR-007 por uma decisão de autenticação.

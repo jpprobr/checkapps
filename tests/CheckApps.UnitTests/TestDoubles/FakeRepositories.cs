@@ -361,6 +361,8 @@ public class StubDiscoverySource : IRepositoryDiscoverySource
 
     public string Provider => "stub";
 
+    public string? ConfigurationProblem { get; set; }
+
     public List<string> Calls { get; } = [];
 
     public int? FailWithTotalFor { get; set; }
