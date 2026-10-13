@@ -85,7 +85,15 @@ public class ScanService(
             items.Add(new ScanItem(repository, outcome, suggestion));
         }
 
-        return new ScanReport(dryRun, items, warnings);
+        // "Já no catálogo" é uma informação a mais, não um quarto resultado: o outcome continua descrevendo
+        // os dados observados. Uma consulta em lote para o resultado inteiro, no scan real e na simulação.
+        var catalog = await discovered.GetCatalogAppsAsync(
+            source.Provider, items.Select(i => i.Repository.ExternalId).ToList(), cancellationToken);
+        var marked = items
+            .Select(i => catalog.TryGetValue(i.Repository.ExternalId, out var app) ? i with { CatalogApp = app } : i)
+            .ToList();
+
+        return new ScanReport(dryRun, marked, warnings);
     }
 
     /// <summary>No modo de simulação: o que o upsert devolveria, sem gravar.</summary>
@@ -101,9 +109,17 @@ public class ScanService(
     }
 }
 
-public record ScanItem(DiscoveredRepository Repository, UpsertOutcome Outcome, RepositorySuggestion Suggestion);
+/// <summary>O app em que um repositório já está no catálogo (um Repository com o mesmo provedor e id externo).</summary>
+public record CatalogApp(string AppId, string AppName);
+
+/// <param name="CatalogApp">Preenchido quando o repositório já virou app — e por isso não aparece na caixa de entrada.</param>
+public record ScanItem(
+    DiscoveredRepository Repository, UpsertOutcome Outcome, RepositorySuggestion Suggestion, CatalogApp? CatalogApp = null);
 
 public record ScanReport(bool DryRun, IReadOnlyList<ScanItem> Items, IReadOnlyList<string> Warnings)
 {
     public int Count(UpsertOutcome outcome) => Items.Count(i => i.Outcome == outcome);
+
+    /// <summary>Quantos itens do resultado já estão no catálogo. Sobrepõe-se às contagens por resultado, não as soma.</summary>
+    public int InCatalogCount => Items.Count(i => i.CatalogApp is not null);
 }

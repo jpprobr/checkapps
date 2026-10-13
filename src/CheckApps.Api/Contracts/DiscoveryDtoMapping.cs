@@ -20,10 +20,13 @@ public static class DiscoveryDtoMapping
 
     public static ScanReportDto ToDto(this ScanReport report) => new(
         report.DryRun,
-        new ScanCountsDto(report.Count(UpsertOutcome.New), report.Count(UpsertOutcome.Updated), report.Count(UpsertOutcome.Unchanged)),
+        new ScanCountsDto(
+            report.Count(UpsertOutcome.New), report.Count(UpsertOutcome.Updated), report.Count(UpsertOutcome.Unchanged),
+            report.InCatalogCount),
         report.Items.Select(i => new ScanItemDto(
             i.Repository.Id, i.Repository.Name, i.Repository.Url, i.Repository.Sigla, i.Repository.SiglaApp,
-            i.Repository.Archived, i.Repository.PushedAt, i.Outcome.ToCode(), i.Suggestion.ToDto())).ToList(),
+            i.Repository.Archived, i.Repository.PushedAt, i.Outcome.ToCode(), i.Suggestion.ToDto(),
+            i.CatalogApp is null ? null : new CatalogAppDto(i.CatalogApp.AppId, i.CatalogApp.AppName))).ToList(),
         report.Warnings);
 
     private static string ToCode(this UpsertOutcome outcome) => outcome switch

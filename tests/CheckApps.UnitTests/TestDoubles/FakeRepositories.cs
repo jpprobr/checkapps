@@ -49,6 +49,9 @@ public class FakeAppRepository : IAppRepository
 
     public IReadOnlyList<Repository> AllRepositories => _repositories;
 
+    /// <summary>Busca síncrona, para os outros doubles resolverem o nome do app.</summary>
+    public App? Find(string appId) => _apps.GetValueOrDefault(appId);
+
     public void Add(App app) => _apps[app.Id] = app;
 
     public Task<App?> GetAsync(string appId, CancellationToken ct = default) =>
@@ -329,6 +332,13 @@ public class FakeDiscoveredRepositoryRepository(FakeAppRepository apps) : IDisco
 
     public Task<bool> IsInCatalogAsync(string provider, string externalId, CancellationToken ct = default) =>
         Task.FromResult(InCatalog(provider, externalId));
+
+    public Task<IReadOnlyDictionary<string, CatalogApp>> GetCatalogAppsAsync(
+        string provider, IReadOnlyCollection<string> externalIds, CancellationToken ct = default) =>
+        Task.FromResult<IReadOnlyDictionary<string, CatalogApp>>(apps.AllRepositories
+            .Where(r => r.Provider == provider && r.ExternalId is not null && externalIds.Contains(r.ExternalId))
+            .GroupBy(r => r.ExternalId!)
+            .ToDictionary(g => g.Key, g => new CatalogApp(g.First().AppId, apps.Find(g.First().AppId)?.Name ?? g.First().AppId)));
 
     public Task<bool> IsSiglaAppInUseAsync(string siglaApp, CancellationToken ct = default) =>
         Task.FromResult(apps.AllRepositories.Any(r => r.SiglaApp == siglaApp));

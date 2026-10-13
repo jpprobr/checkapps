@@ -113,3 +113,8 @@ code {
   margin-top: 0.5rem;
   font-size: 0.9rem;
 }
+
+/* "já no catálogo" no resultado do scan: a marca e o link do app não devem colar. */
+.in-catalog + a {
+  margin-left: 0.4rem;
+}

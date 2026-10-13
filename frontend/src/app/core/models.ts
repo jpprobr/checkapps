@@ -273,11 +273,14 @@ export interface ScanItem {
   pushedAt: string | null;
   outcome: ScanOutcome;
   suggestion: Suggestion;
+  /** Preenchido quando o repositório já virou app — e por isso não está na caixa de entrada. */
+  catalogApp: { appId: string; appName: string } | null;
 }
 
 export interface ScanReport {
   dryRun: boolean;
-  counts: { new: number; updated: number; unchanged: number };
+  /** `inCatalog` se sobrepõe às demais contagens (um item pode ser inalterado e já estar no catálogo). */
+  counts: { new: number; updated: number; unchanged: number; inCatalog: number };
   items: ScanItem[];
   warnings: string[];
 }

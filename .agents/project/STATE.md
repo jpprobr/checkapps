@@ -18,7 +18,8 @@ Estágio do roadmap: **Inventário + Health + Evolution concluídos**, mais **Ch
   - `Repository` ganhou `sigla`, `siglaApp` (único quando presente), `role` e `source`; aparecem no detalhe do app;
   - fonte `fake` com os casos difíceis; fonte real do GitHub (Search API + YAML da sigla-app) testada com HTTP falso **e lida uma vez de verdade** (ver abaixo).
 - **Scan pela tela** (`specs/006-scan-pela-tela/`): bloco **Buscar no GitHub** em Descobertos — siglas, *Pré-visualizar* (não grava) e *Escanear*; o CLI continua, e os dois executam o mesmo `ScanService` (composição única em `AddCheckAppsInfrastructure`, fonte por `Scan:Source`). **Desligado por padrão** (`Scan:Enabled`); a fonte expõe `ConfigurationProblem` em vez de lançar, então a API sobe sem credencial e a tela explica o que falta. Erros: 400 (escopo/limite), 409 (desligado, não configurado, já em andamento), 502 (falha do GitHub); um scan por vez.
-- **Testes**: 154 unitários + 35 de integração, verdes (inclui um teste de composição com a validação de DI do Development ligada). **Nenhum exige Docker, serviço externo ou rede.**
+- **"Já no catálogo" no resultado do scan**: o item que já virou app aparece com a marca e o link do app (e o resumo traz a contagem); a tabela de baixo explica por que está vazia. Veio do primeiro uso real, em que o repositório escaneado já era um app e a tela parecia "não mudar".
+- **Testes**: 158 unitários + 38 de integração, verdes (inclui um teste de composição com a validação de DI do Development ligada). **Nenhum exige Docker, serviço externo ou rede.**
 - **Ambiente local**: skill `run-local`; `README.md` com o passo a passo.
 
 ## O que está mockado / provisório

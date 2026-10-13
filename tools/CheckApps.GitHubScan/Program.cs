@@ -122,7 +122,8 @@ static void Print(ScanReport report, bool fake)
 
         var role = item.Suggestion.Role ?? "papel não identificado";
         var confidence = item.Suggestion.Confidence == SuggestionConfidence.High ? "alta" : "baixa";
-        var flags = r.Archived ? "  [arquivado]" : "";
+        var flags = (r.Archived ? "  [arquivado]" : "")
+            + (item.CatalogApp is { } app ? $"  [já no catálogo: app {app.AppName}]" : "");
         Console.WriteLine($"  [{outcome,-10}] {r.Name}{flags}");
         Console.WriteLine($"                 sigla-app: {r.SiglaApp ?? "—"} · sugestão: {role} (confiança {confidence}) · último push: {r.PushedAt?.ToString("yyyy-MM-dd") ?? "—"}");
     }
@@ -145,7 +146,8 @@ static void Print(ScanReport report, bool fake)
     Console.WriteLine();
     Console.WriteLine(
         $"{report.Count(UpsertOutcome.New)} novos, {report.Count(UpsertOutcome.Updated)} atualizados, " +
-        $"{report.Count(UpsertOutcome.Unchanged)} inalterados.");
+        $"{report.Count(UpsertOutcome.Unchanged)} inalterados" +
+        (report.InCatalogCount > 0 ? $" ({report.InCatalogCount} já no catálogo)." : "."));
     if (report.DryRun)
     {
         Console.WriteLine("Nada foi gravado.");

@@ -81,6 +81,10 @@ dotnet user-secrets set "Scan:NameTemplate" '<prefixo>-{sigla}-' --project src/C
 
 **Segurança**: sem autenticação, quem abre o sistema pode disparar scans com o token configurado. Por isso o endpoint vem desligado, só um scan roda por vez, e o escopo continua limitado por siglas e pelo limite de resultados. Use assim apenas em ambiente de uso individual; **antes de qualquer uso compartilhado, o endpoint precisa de autenticação** (ADR-010).
 
+### "Já no catálogo"
+
+Se um repositório já virou app, ele **não aparece na tabela de baixo** (ela só mostra o que ainda precisa de decisão), mas **aparece no resultado do scan** com a marca **já no catálogo** e o link do app. Para ele **voltar para a caixa** e refazer a triagem, remova o app (só é possível se o app ainda não tiver histórico de qualidade nem estiver em checagem; senão, inative-o).
+
 ## 6. Organização de teste
 
 Para exercitar o scan de verdade, uma organização gratuita com repositórios no padrão `{prefixo}-{sigla}-{segmento}-{nome}` basta (repositórios podem ser vazios, exceto pelo arquivo de configuração). Usando o prefixo `lab`:
@@ -115,6 +119,7 @@ Esperado para `--sigla ab1`: 5 repositórios (o restrito não aparece); `app-leg
 | `encontraria N repositórios, acima do limite` | escopo amplo demais — use uma sigla mais específica (o limite é `Scan:MaxResults`) |
 | Repositório criado há pouco não aparece | a busca do GitHub demora a indexar; rode de novo depois |
 | `Sigla fora do formato esperado` | informe a sigla (ex.: `ab1`), não um trecho de nome |
+| Escaneei, o repositório aparece como "inalterado" e a tabela de baixo está vazia | ele já virou app — veja a marca "já no catálogo" no resultado; para triar de novo, remova o app |
 | "O scan pela API está desligado" | falta `Scan:Enabled = true` nos user-secrets **da API** (e reiniciar a API) |
 | "O scan não está pronto" na tela | falta `GitHub:Token`, `GitHub:Organization` ou `Scan:NameTemplate` nos user-secrets **da API**; a mensagem diz qual |
 | "Já há um scan em andamento" | outro scan está rodando; espere terminar |

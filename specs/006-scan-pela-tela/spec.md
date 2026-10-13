@@ -30,6 +30,8 @@ O Tech Lead abre "Descobertos", informa as siglas e escaneia. Os repositórios a
 4. **Dado** uma sigla fora do formato ou nenhuma sigla, **Quando** tento escanear, **Então** vejo a mensagem de recusa e nada foi consultado.
 5. **Dado** uma busca que passaria do limite de resultados, **Quando** escaneio, **Então** vejo que o escopo é amplo demais e que nada foi lido.
 6. **Dado** uma falha do GitHub (token inválido ou sem permissão, limite de chamadas, rede), **Quando** escaneio, **Então** vejo a mensagem do que fazer, e o token **não** aparece em lugar nenhum.
+7. **Dado** um repositório que **já virou app**, **Quando** escaneio ou pré-visualizo, **Então** o item aparece com o resultado de sempre (ex.: "inalterado") **e** a marca "já no catálogo" com o link do app, o resumo diz quantos são, e a tela explica que repositório que já virou app não aparece na tabela de baixo.
+8. **Dado** a caixa de entrada sem nada para decidir, **Quando** abro a tela, **Então** a mensagem diz que não há repositório **novo** e que os que já viraram app não aparecem ali.
 
 ### User Story 2 — Saber por que o scan não está disponível (Prioridade: P1)
 
@@ -79,6 +81,7 @@ A ferramenta de linha de comando se comporta como antes. Os dois caminhos compar
 - **FR-008**: A fonte DEVE expor um problema de configuração (`ConfigurationProblem`) em vez de lançar exceção no construtor, para que a API suba sem credencial e a tela explique o motivo.
 - **FR-009**: A tela "Descobertos" DEVE ter o bloco "Buscar no GitHub" com campo de siglas, botões "Pré-visualizar" e "Escanear", estados (indisponível, lendo, erro, resultado) e recarregar a tabela após um scan real.
 - **FR-010**: Com a fonte `fake` e `Scan:NameTemplate` ausente, a composição DEVE aplicar a convenção padrão `fake-{sigla}-` (a API e o CLI).
+- **FR-011**: O resultado do scan (real e pré-visualização) DEVE marcar cada item que já está no catálogo com o app em que está (`catalogApp`) e informar a contagem (`counts.inCatalog`). É informação **adicional**: o resultado (novo, atualizado, inalterado) continua descrevendo os dados observados, e as contagens se sobrepõem, não se somam. A consulta é uma só, em lote.
 
 ### Key Entities
 
@@ -130,6 +133,7 @@ POST /api/discovered-repositories/scan          # { siglas: ["ab1","cd2"], dryRu
 - **As siglas digitadas ficam lembradas no navegador** (`localStorage`, com `try/catch`), conveniência por navegador e não dado do sistema.
 - **A guarda de concorrência é estática no controller**: vale para o processo da API (instância única, ADR-009).
 - **Defeito de layout encontrado no navegador**: o `.subtitle` global (margem negativa) sobrepunha o campo de siglas; corrigido no CSS do bloco e registrado em `rules/frontend.md`.
+- **"Já no catálogo" no resultado (melhoria, 2026-10-12)**: no primeiro uso real o repositório escaneado já tinha virado app; por regra ele sai da caixa de entrada, a tabela de baixo ficou vazia e o resultado mostrava só "inalterado" — a regra estava certa, a tela não a comunicava. Agora o item traz `catalogApp` (app e nome) e o resumo traz `inCatalog`; a tela mostra a marca com o link do app e explica o estado vazio; o CLI imprime `[já no catálogo: app X]`. Consulta em lote (`GetCatalogAppsAsync`), sem schema novo.
 - **Não verificado ainda**: o scan pela tela contra o GitHub real (depende dos segredos da API, que são separados dos da ferramenta de linha de comando).
 
 ### Fora desta spec (backlog)

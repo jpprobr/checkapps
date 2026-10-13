@@ -10,11 +10,27 @@ public class ScanServiceTests
     private static readonly DateTimeOffset T0 = new(2026, 10, 1, 12, 0, 0, TimeSpan.Zero);
 
     private readonly StubDiscoverySource _source = new();
-    private readonly FakeDiscoveredRepositoryRepository _discovered = new(new FakeAppRepository());
+    private readonly FakeAppRepository _apps = new();
+    private readonly FakeDiscoveredRepositoryRepository _discovered;
     private readonly FixedTimeProvider _clock = new(T0);
     private readonly ScanOptions _options = new() { NameTemplate = "lab-{sigla}-" };
 
+    public ScanServiceTests()
+    {
+        _discovered = new FakeDiscoveredRepositoryRepository(_apps);
+    }
+
     private ScanService Sut() => new(_source, _discovered, _options, _clock);
+
+    /// <summary>Vincula o repositório descoberto "stub:{externalId}" a um app, como a triagem faria.</summary>
+    private async Task LinkToAppAsync(string externalId, string appId, string appName)
+    {
+        _apps.Add(new CheckApps.Domain.App { Id = appId, SquadId = "sq-1", Name = appName });
+        await _apps.AddRepositoryAsync(new CheckApps.Domain.Repository
+        {
+            Id = Guid.NewGuid().ToString("n"), AppId = appId, Name = "vinculado", Provider = "stub", ExternalId = externalId
+        });
+    }
 
     private static DiscoveredRepositoryInfo Info(string id, string name, string? siglaApp = null, string? warning = null) =>
         new(id, name, $"https://example.invalid/{name}", Archived: false, PushedAt: T0, siglaApp, warning);
@@ -117,6 +133,62 @@ public class ScanServiceTests
 
         Assert.Contains("NameTemplate", error.Message);
         Assert.Empty(_source.Calls);
+    }
+
+    [Fact]
+    public async Task ScanAsync_MarksItemsThatAreAlreadyInTheCatalog_WithTheirApp_AndKeepsTheOutcome()
+    {
+        _source.Add("ab1", Info("1", "lab-ab1-app-pagamentos", "AB1-0001"));
+        _source.Add("ab1", Info("2", "lab-ab1-infra-fila"));
+        await Sut().ScanAsync(["ab1"], dryRun: false);          // as duas entram na caixa
+        await LinkToAppAsync("1", "pagamentos", "Pagamentos");   // a pessoa cria o app a partir da primeira
+
+        var report = await Sut().ScanAsync(["ab1"], dryRun: false);
+
+        var inCatalog = report.Items.Single(i => i.Repository.ExternalId == "1");
+        Assert.Equal("pagamentos", inCatalog.CatalogApp!.AppId);
+        Assert.Equal("Pagamentos", inCatalog.CatalogApp.AppName);
+        Assert.Equal(UpsertOutcome.Unchanged, inCatalog.Outcome);   // o resultado descreve os dados observados
+        Assert.Null(report.Items.Single(i => i.Repository.ExternalId == "2").CatalogApp);
+        Assert.Equal(1, report.InCatalogCount);
+        Assert.Equal(2, report.Count(UpsertOutcome.Unchanged));     // as contagens se sobrepõem, não se somam
+    }
+
+    [Fact]
+    public async Task ScanAsync_DryRun_AlsoMarksItemsAlreadyInTheCatalog()
+    {
+        _source.Add("ab1", Info("1", "lab-ab1-app-pagamentos", "AB1-0001"));
+        await Sut().ScanAsync(["ab1"], dryRun: false);
+        await LinkToAppAsync("1", "pagamentos", "Pagamentos");
+
+        var preview = await Sut().ScanAsync(["ab1"], dryRun: true);
+
+        Assert.Equal("Pagamentos", Assert.Single(preview.Items).CatalogApp!.AppName);
+        Assert.Equal(1, preview.InCatalogCount);
+    }
+
+    [Fact]
+    public async Task ScanAsync_ARepositoryNeverSeenButAlreadyLinked_IsNewAndInTheCatalog()
+    {
+        // vínculo manual feito antes de qualquer scan: o descoberto é novo, mas o repositório já é de um app
+        await LinkToAppAsync("9", "legado", "Legado");
+        _source.Add("ab1", Info("9", "lab-ab1-app-legado"));
+
+        var item = Assert.Single((await Sut().ScanAsync(["ab1"], dryRun: true)).Items);
+
+        Assert.Equal(UpsertOutcome.New, item.Outcome);
+        Assert.Equal("legado", item.CatalogApp!.AppId);
+    }
+
+    [Fact]
+    public async Task ScanAsync_WithNothingInTheCatalog_MarksNothing()
+    {
+        _source.Add("ab1", Info("1", "lab-ab1-app-pagamentos"));
+
+        var report = await Sut().ScanAsync(["ab1"], dryRun: false);
+
+        Assert.All(report.Items, i => Assert.Null(i.CatalogApp));
+        Assert.Equal(0, report.InCatalogCount);
     }
 
     [Fact]

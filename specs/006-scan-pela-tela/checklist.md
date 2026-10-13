@@ -18,6 +18,7 @@ Status: **implementada** em 2026-10-12. Resta um item, que só o usuário pode f
 - [x] 2. API: `RepositoryScanController`, guarda de concorrência, erros 400/409/502 — `curl`
 - [x] 3. Frontend: bloco "Buscar no GitHub" — Playwright
 - [x] 4. Documentação
+- [x] 5. Melhoria: "já no catálogo" no resultado do scan (FR-011) e estado vazio explicado — consulta em lote, testes unitários e de integração, roteiro de navegador do cenário vivido no primeiro uso real
 - [x] Regras conquistadas registradas em `.agents/rules/`
 
 ## Verificação

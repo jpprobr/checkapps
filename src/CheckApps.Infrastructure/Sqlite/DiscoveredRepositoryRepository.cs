@@ -1,4 +1,5 @@
 using Dapper;
+using CheckApps.Application.Discovery;
 using CheckApps.Application.Persistence;
 using CheckApps.Domain.Discovery;
 
@@ -102,6 +103,31 @@ public class DiscoveredRepositoryRepository(SqliteConnectionFactory connectionFa
         return await connection.ExecuteScalarAsync<bool>(new CommandDefinition(
             "SELECT EXISTS (SELECT 1 FROM repositories WHERE provider = @provider AND external_id = @externalId)",
             new { provider, externalId }, cancellationToken: cancellationToken));
+    }
+
+    public async Task<IReadOnlyDictionary<string, CatalogApp>> GetCatalogAppsAsync(
+        string provider, IReadOnlyCollection<string> externalIds, CancellationToken cancellationToken = default)
+    {
+        if (externalIds.Count == 0)
+        {
+            return new Dictionary<string, CatalogApp>();
+        }
+
+        using var connection = connectionFactory.Create();
+        var rows = await connection.QueryAsync<(string ExternalId, string AppId, string AppName)>(new CommandDefinition(
+            """
+            SELECT r.external_id AS ExternalId, a.id AS AppId, a.name AS AppName
+            FROM repositories r
+            JOIN apps a ON a.id = r.app_id
+            WHERE r.provider = @provider AND r.external_id IN @externalIds
+            ORDER BY a.id
+            """,
+            new { provider, externalIds }, cancellationToken: cancellationToken));
+
+        // (provider, external_id) não é único em repositories; se houver mais de um app, vale o primeiro por id.
+        return rows
+            .GroupBy(r => r.ExternalId)
+            .ToDictionary(g => g.Key, g => new CatalogApp(g.First().AppId, g.First().AppName));
     }
 
     public async Task<bool> IsSiglaAppInUseAsync(string siglaApp, CancellationToken cancellationToken = default)

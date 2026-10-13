@@ -59,9 +59,14 @@
           <div class="scan-result" role="status">
             <p>
               <strong>{{ report.dryRun ? 'Pré-visualização' : 'Scan concluído' }}:</strong>
-              {{ report.counts.new }} novos, {{ report.counts.updated }} atualizados, {{ report.counts.unchanged }} inalterados.
+              {{ report.counts.new }} novos, {{ report.counts.updated }} atualizados, {{ report.counts.unchanged }} inalterados{{ report.counts.inCatalog > 0 ? ' (' + report.counts.inCatalog + ' já no catálogo)' : '' }}.
               @if (report.dryRun) { <strong>Nada foi gravado.</strong> }
             </p>
+            @if (report.counts.inCatalog > 0) {
+              <p class="subtitle small">
+                Repositório que já virou app não aparece na tabela abaixo: ela só mostra o que ainda precisa de uma decisão.
+              </p>
+            }
             @for (warning of report.warnings; track warning) {
               <p class="warning">⚠ {{ warning }}</p>
             }
@@ -89,7 +94,13 @@
                           confiança {{ item.suggestion.confidence === 'high' ? 'alta' : 'baixa' }}
                         </span>
                       </td>
-                      <td>{{ outcomeLabels[item.outcome] }}</td>
+                      <td>
+                        {{ outcomeLabels[item.outcome] }}
+                        @if (item.catalogApp; as app) {
+                          <span class="tag in-catalog">já no catálogo</span>
+                          <a [routerLink]="['/apps', app.appId]">{{ app.appName }}</a>
+                        }
+                      </td>
                     </tr>
                   }
                 </tbody>
@@ -242,7 +253,12 @@
         } @empty {
           <tr>
             <td colspan="5">
-              Nenhum repositório aqui. Use <strong>Buscar no GitHub</strong> acima, ou rode o scan no terminal:
+              @if (statusFilter() === 'new') {
+                <strong>Nenhum repositório novo.</strong> Os que já viraram app não aparecem aqui — o resultado do scan
+                mostra quais são. Use <strong>Buscar no GitHub</strong> acima, ou rode o scan no terminal:
+              } @else {
+                Nenhum repositório neste filtro. Use <strong>Buscar no GitHub</strong> acima, ou rode o scan no terminal:
+              }
               <code>dotnet run --project tools/CheckApps.GitHubScan -- --sigla &lt;sigla&gt;</code>
             </td>
           </tr>

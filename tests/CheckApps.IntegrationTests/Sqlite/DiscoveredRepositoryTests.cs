@@ -115,6 +115,49 @@ public class DiscoveredRepositoryTests(SqliteFixture fixture) : IClassFixture<Sq
     }
 
     [Fact]
+    public async Task GetCatalogApps_ReturnsTheAppAndItsName_OnlyForLinkedRepositories_InOneCall()
+    {
+        var appId = await CreateAppAsync();
+        var linked = Guid.NewGuid().ToString("n");
+        var otherLinked = Guid.NewGuid().ToString("n");
+        var notLinked = Guid.NewGuid().ToString("n");
+        await _apps.AddRepositoryAsync(new Repository { Id = Guid.NewGuid().ToString("n"), AppId = appId, Name = "a", Provider = "github", ExternalId = linked });
+        await _apps.AddRepositoryAsync(new Repository { Id = Guid.NewGuid().ToString("n"), AppId = appId, Name = "b", Provider = "github", ExternalId = otherLinked });
+        // mesmo id externo em OUTRO provedor não conta como "no catálogo" deste
+        await _apps.AddRepositoryAsync(new Repository { Id = Guid.NewGuid().ToString("n"), AppId = appId, Name = "c", Provider = "outro", ExternalId = notLinked });
+
+        var map = await _discovered.GetCatalogAppsAsync("github", [linked, otherLinked, notLinked]);
+
+        Assert.Equal(2, map.Count);
+        Assert.Equal(appId, map[linked].AppId);
+        Assert.Equal("App Teste", map[linked].AppName);
+        Assert.Equal(appId, map[otherLinked].AppId);
+        Assert.False(map.ContainsKey(notLinked));
+    }
+
+    [Fact]
+    public async Task GetCatalogApps_WithNoIds_IsEmpty_WithoutQuerying()
+    {
+        var map = await _discovered.GetCatalogAppsAsync("github", []);
+
+        Assert.Empty(map);
+    }
+
+    [Fact]
+    public async Task GetCatalogApps_AgreesWithIsInCatalog()
+    {
+        var appId = await CreateAppAsync();
+        var externalId = Guid.NewGuid().ToString("n");
+        Assert.Empty(await _discovered.GetCatalogAppsAsync("github", [externalId]));
+        Assert.False(await _discovered.IsInCatalogAsync("github", externalId));
+
+        await _apps.AddRepositoryAsync(new Repository { Id = Guid.NewGuid().ToString("n"), AppId = appId, Name = "x", Provider = "github", ExternalId = externalId });
+
+        Assert.Single(await _discovered.GetCatalogAppsAsync("github", [externalId]));
+        Assert.True(await _discovered.IsInCatalogAsync("github", externalId));
+    }
+
+    [Fact]
     public async Task Repository_RoundTripsSiglaSiglaAppRoleAndSource()
     {
         var appId = await CreateAppAsync();
