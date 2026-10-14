@@ -237,6 +237,8 @@ export interface DiscoveredRepository {
   lastSeenAt: string;
   source: string;
   suggestion: Suggestion;
+  /** Preenchido quando o repositório já está no catálogo (só nas listagens `catalog` e `all`). */
+  catalogApp: { appId: string; appName: string } | null;
 }
 
 export interface CreateAppFromDiscoveryRequest {

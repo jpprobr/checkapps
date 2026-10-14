@@ -17,11 +17,33 @@ public class TriageService(
     IDiscoveredRepositoryRepository discovered, IAppRepository apps, ISquadRepository squads,
     AppService appService, ScanOptions options)
 {
+    /// <summary>
+    /// Os descobertos com a sugestão e, quando já estão no catálogo, o app em que estão. Por padrão só os
+    /// que aguardam decisão; <see cref="CatalogScope.Cataloged"/> e <see cref="CatalogScope.Any"/> trazem
+    /// também os que já viraram app (a tela "Repositórios" mostra todos, cada um com o seu estado).
+    /// </summary>
     public async Task<IReadOnlyList<DiscoveredItem>> ListAsync(
-        TriageStatus? status, string? sigla, CancellationToken cancellationToken = default)
+        TriageStatus? status, string? sigla, CatalogScope scope = CatalogScope.Pending,
+        CancellationToken cancellationToken = default)
     {
-        var repositories = await discovered.ListAsync(status, sigla, cancellationToken);
-        return repositories.Select(r => new DiscoveredItem(r, Suggest(r))).ToList();
+        var repositories = await discovered.ListAsync(status, sigla, scope, cancellationToken);
+
+        // Os que aguardam decisão, por definição, não estão no catálogo: nada a consultar.
+        var catalogByProvider = new Dictionary<string, IReadOnlyDictionary<string, CatalogApp>>();
+        if (scope != CatalogScope.Pending)
+        {
+            foreach (var group in repositories.GroupBy(r => r.Provider))
+            {
+                catalogByProvider[group.Key] = await discovered.GetCatalogAppsAsync(
+                    group.Key, group.Select(r => r.ExternalId).ToList(), cancellationToken);
+            }
+        }
+
+        return repositories
+            .Select(r => new DiscoveredItem(
+                r, Suggest(r),
+                catalogByProvider.TryGetValue(r.Provider, out var map) && map.TryGetValue(r.ExternalId, out var app) ? app : null))
+            .ToList();
     }
 
     /// <summary>Cria o App e vincula o repositório. Sequencial: app, depois repositório (ver spec 005, edge cases).</summary>
@@ -139,4 +161,5 @@ public class TriageService(
 }
 
 /// <summary>Um descoberto com a sugestão calculada na leitura (nunca armazenada).</summary>
-public record DiscoveredItem(DiscoveredRepository Repository, RepositorySuggestion Suggestion);
+/// <param name="CatalogApp">Preenchido quando o repositório já está no catálogo (só nas listagens que o incluem).</param>
+public record DiscoveredItem(DiscoveredRepository Repository, RepositorySuggestion Suggestion, CatalogApp? CatalogApp = null);

@@ -1,6 +1,7 @@
 using CheckApps.Api.Contracts;
 using CheckApps.Application;
 using CheckApps.Application.Discovery;
+using CheckApps.Application.Persistence;
 using CheckApps.Domain.Discovery;
 using Microsoft.AspNetCore.Mvc;
 
@@ -16,30 +17,39 @@ namespace CheckApps.Api.Controllers;
 [Route("api/discovered-repositories")]
 public class DiscoveredRepositoriesController(TriageService triageService) : ControllerBase
 {
-    /// <param name="status">new (padrão), ignored, other-squad ou all.</param>
+    /// <param name="status">
+    /// new (padrão), ignored e other-squad: só os que ainda aguardam decisão. catalog: só os que já estão no
+    /// catálogo. all: todos, inclusive os que já viraram app.
+    /// </param>
     [HttpGet]
     public async Task<ActionResult<IReadOnlyList<DiscoveredRepositoryDto>>> List(
         [FromQuery] string? status, [FromQuery] string? sigla, CancellationToken cancellationToken)
     {
         TriageStatus? filter;
+        CatalogScope scope;
         if (string.IsNullOrWhiteSpace(status))
         {
-            filter = TriageStatus.New;
+            (filter, scope) = (TriageStatus.New, CatalogScope.Pending);
         }
         else if (status == "all")
         {
-            filter = null;
+            (filter, scope) = (null, CatalogScope.Any);
+        }
+        else if (status == "catalog")
+        {
+            (filter, scope) = (null, CatalogScope.Cataloged);
         }
         else if (TriageCodes.TryParseStatus(status, out var parsed))
         {
-            filter = parsed;
+            (filter, scope) = (parsed, CatalogScope.Pending);
         }
         else
         {
-            return BadRequest($"Status desconhecido: \"{status}\". Use new, ignored, other-squad ou all.");
+            return BadRequest($"Status desconhecido: \"{status}\". Use new, catalog, ignored, other-squad ou all.");
         }
 
-        var items = await triageService.ListAsync(filter, string.IsNullOrWhiteSpace(sigla) ? null : sigla, cancellationToken);
+        var items = await triageService.ListAsync(
+            filter, string.IsNullOrWhiteSpace(sigla) ? null : sigla, scope, cancellationToken);
         return Ok(items.Select(i => i.ToDto()).ToList());
     }
 

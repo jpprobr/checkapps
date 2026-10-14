@@ -14,12 +14,12 @@ Estágio do roadmap: **Inventário + Health + Evolution concluídos**, mais **Ch
 - **Checagens** (`specs/003-checagens/`) e **navegação global** (shell, seletor de squad, `/` → última squad visitada).
 - **Leitor de GitHub, fase 1** (`specs/005-leitor-github-fase-1/`, ADR-010, guia `docs/leitor-github.md`):
   - ferramenta `tools/CheckApps.GitHubScan` — scan **por sigla** (validada por formato, limite de resultados), `--dry-run`, `--source fake|github`; o escopo é validado antes de pedir token;
-  - caixa de entrada **Descobertos** no menu: criar app (painel pré-preenchido, nada grava antes de confirmar), vincular a app existente (aviso se a sigla difere), de outra squad, ignorar, restaurar;
+  - tela **Repositórios** no menu (era "Descobertos"): todos os repositórios que passaram pelo scan, cada um com o estado dele — novo, no catálogo (link do app, sem ações), de outra squad, ignorado; filtro padrão "Novos" (a caixa de entrada). Ações: criar app (painel pré-preenchido, nada grava antes de confirmar), vincular a app existente (aviso se a sigla difere), de outra squad, ignorar, restaurar;
   - `Repository` ganhou `sigla`, `siglaApp` (único quando presente), `role` e `source`; aparecem no detalhe do app;
   - fonte `fake` com os casos difíceis; fonte real do GitHub (Search API + YAML da sigla-app) testada com HTTP falso **e lida uma vez de verdade** (ver abaixo).
-- **Scan pela tela** (`specs/006-scan-pela-tela/`): bloco **Buscar no GitHub** em Descobertos — siglas, *Pré-visualizar* (não grava) e *Escanear*; o CLI continua, e os dois executam o mesmo `ScanService` (composição única em `AddCheckAppsInfrastructure`, fonte por `Scan:Source`). **Desligado por padrão** (`Scan:Enabled`); a fonte expõe `ConfigurationProblem` em vez de lançar, então a API sobe sem credencial e a tela explica o que falta. Erros: 400 (escopo/limite), 409 (desligado, não configurado, já em andamento), 502 (falha do GitHub); um scan por vez.
+- **Scan pela tela** (`specs/006-scan-pela-tela/`): bloco **Buscar no GitHub** em Repositórios — siglas, *Pré-visualizar* (não grava) e *Escanear*; o CLI continua, e os dois executam o mesmo `ScanService` (composição única em `AddCheckAppsInfrastructure`, fonte por `Scan:Source`). **Desligado por padrão** (`Scan:Enabled`); a fonte expõe `ConfigurationProblem` em vez de lançar, então a API sobe sem credencial e a tela explica o que falta. Erros: 400 (escopo/limite), 409 (desligado, não configurado, já em andamento), 502 (falha do GitHub); um scan por vez.
 - **"Já no catálogo" no resultado do scan**: o item que já virou app aparece com a marca e o link do app (e o resumo traz a contagem); a tabela de baixo explica por que está vazia. Veio do primeiro uso real, em que o repositório escaneado já era um app e a tela parecia "não mudar".
-- **Testes**: 158 unitários + 38 de integração, verdes (inclui um teste de composição com a validação de DI do Development ligada). **Nenhum exige Docker, serviço externo ou rede.**
+- **Testes**: 162 unitários + 40 de integração, verdes (inclui um teste de composição com a validação de DI do Development ligada). **Nenhum exige Docker, serviço externo ou rede.**
 - **Ambiente local**: skill `run-local`; `README.md` com o passo a passo.
 
 ## O que está mockado / provisório
@@ -54,11 +54,12 @@ Os críticos estão em `AGENTS.md` e nas regras. Os que mais mordem hoje:
 
 ## Próximos passos (em ordem)
 
-1. **Usar o scan pela tela com o GitHub real** (usuário): configurar os segredos da API (`docs/leitor-github.md`, seção 5), reiniciar a API e escanear em **Descobertos → Buscar no GitHub**; depois, criar os demais repositórios de teste (arquivado, infra, outra sigla, um fora do acesso do token) para ver os casos que ainda só os testes cobrem.
-2. Revisão do usuário no glossário (Solução, Tipo de app).
-3. Candidatos de baixo custo: checagens e descobertos na massa de demonstração do seed; CRUD manual de Repository (campos de sigla, sigla-app, papel); decidir o que fazer com repositório que some do GitHub.
-4. Depois: fase 2 do leitor (dependências de biblioteca) — destrava "quais apps usam a biblioteca X" e a detecção automática de status das checagens; tags chave-valor; spec de Solução.
-5. Na migração para a máquina corporativa: `.github/copilot-instructions.md` e verificação do `.agents/skills/`; GitHub App no lugar do token pessoal (ADR-010).
-6. Antes de qualquer uso compartilhado: substituir ADR-007 por uma decisão de autenticação.
+1. **Usar o scan pela tela com o GitHub real** (usuário): configurar os segredos da API (`docs/leitor-github.md`, seção 5), reiniciar a API e escanear em **Repositórios → Buscar no GitHub**; depois, criar os demais repositórios de teste (arquivado, infra, outra sigla, um fora do acesso do token) para ver os casos que ainda só os testes cobrem.
+2. **Menu lateral recolhível, com ícones** (já combinado com o usuário; vira a spec 008, com o nome "Repositórios" já no menu): ícones em SVG embutido, sem biblioteca; seletor de squad no topo; recolhido só ícones, com `aria-label` e dica; estado lembrado no navegador; gaveta no celular.
+3. Revisão do usuário no glossário (Solução, Tipo de app).
+4. Candidatos de baixo custo: checagens e repositórios na massa de demonstração do seed; CRUD manual de Repository (campos de sigla, sigla-app, papel); decidir o que fazer com repositório que some do GitHub.
+5. Depois: fase 2 do leitor (dependências de biblioteca) — destrava "quais apps usam a biblioteca X" e a detecção automática de status das checagens; tags chave-valor; spec de Solução.
+6. Na migração para a máquina corporativa: `.github/copilot-instructions.md` e verificação do `.agents/skills/`; GitHub App no lugar do token pessoal (ADR-010).
+7. Antes de qualquer uso compartilhado: substituir ADR-007 por uma decisão de autenticação.
 
 Verificado em 2026-09-16: uma sessão nova do Claude Code, sem histórico, subiu o ambiente local só com `CLAUDE.md` → `AGENTS.md` → este arquivo → skill `run-local`. A skill e o fluxo mudaram desde então — vale repetir o teste.

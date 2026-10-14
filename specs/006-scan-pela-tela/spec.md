@@ -125,6 +125,8 @@ POST /api/discovered-repositories/scan          # { siglas: ["ab1","cd2"], dryRu
 
 ### Notas da implementação (2026-10-12)
 
+- **Nome da tela (2026-10-13)**: "Descobertos" passou a se chamar **Repositórios** (spec 007); o bloco "Buscar no GitHub" continua nela.
+
 - **Quando faltam token e convenção de nome, o erro da convenção vem primeiro** (antes, com a fonte construída no início, vinha o do token). A ordem de validação do escopo não mudou: sigla inválida continua sendo a primeira recusa, antes de qualquer configuração.
 - **`--source` do CLI vira um valor em memória de `Scan:Source`**, que vence a configuração; sem o argumento vale `Scan:Source` (padrão `github`). A linha de ajuda do CLI ganhou uma explicação disso — a única diferença na saída.
 - **Fonte sem credencial não manda cabeçalho de autorização** (nem tenta a rede): `DiscoverAsync` lança antes de qualquer requisição, e há teste disso.

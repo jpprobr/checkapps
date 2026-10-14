@@ -1,6 +1,6 @@
 # Leitor de GitHub — configurar e rodar
 
-O scan descobre os repositórios de uma ou mais **siglas** e os coloca numa caixa de entrada (menu **Descobertos**). Quem decide o destino de cada um é a pessoa: criar um app, vincular a um app existente, marcar como de outra squad ou ignorar. O scan **nunca cria App**.
+O scan descobre os repositórios de uma ou mais **siglas** e os coloca numa caixa de entrada (menu **Repositórios**, filtro **Novos**). Quem decide o destino de cada um é a pessoa: criar um app, vincular a um app existente, marcar como de outra squad ou ignorar. O scan **nunca cria App**.
 
 Decisões e motivos: `specs/005-leitor-github-fase-1/spec.md` e `.agents/architecture/decisions/adr-010-leitor-github.md`.
 
@@ -14,7 +14,7 @@ Para ver o fluxo inteiro sem rede nem token:
 dotnet run --project tools/CheckApps.GitHubScan -- --sigla ab1,cd2 --source fake
 ```
 
-Grava 8 repositórios fictícios com os casos difíceis (aplicação, infra, contrato, arquivado, sigla-app de outra sigla…). Depois, abra **Descobertos** no menu. Sem `Scan:NameTemplate` configurado, a fonte `fake` usa `fake-{sigla}-`.
+Grava 8 repositórios fictícios com os casos difíceis (aplicação, infra, contrato, arquivado, sigla-app de outra sigla…). Depois, abra **Repositórios** no menu. Sem `Scan:NameTemplate` configurado, a fonte `fake` usa `fake-{sigla}-`.
 
 ## 2. Token do GitHub
 
@@ -66,7 +66,7 @@ Rodar de novo é seguro: atualiza o que mudou e **não desfaz nenhuma decisão d
 
 ## 5. Escanear pela tela
 
-O mesmo scan pode ser disparado em **Descobertos → Buscar no GitHub**: informe as siglas (`ab1, cd2`) e use *Pré-visualizar* (mostra o que seria gravado, **sem gravar nada**) ou *Escanear*. A ferramenta de linha de comando continua funcionando; os dois executam o mesmo código.
+O mesmo scan pode ser disparado em **Repositórios → Buscar no GitHub**: informe as siglas (`ab1, cd2`) e use *Pré-visualizar* (mostra o que seria gravado, **sem gravar nada**) ou *Escanear*. A ferramenta de linha de comando continua funcionando; os dois executam o mesmo código.
 
 A tela vem **desligada**, e a API precisa da credencial. Os user-secrets da API são **separados** dos da ferramenta de linha de comando:
 
@@ -83,7 +83,9 @@ dotnet user-secrets set "Scan:NameTemplate" '<prefixo>-{sigla}-' --project src/C
 
 ### "Já no catálogo"
 
-Se um repositório já virou app, ele **não aparece na tabela de baixo** (ela só mostra o que ainda precisa de decisão), mas **aparece no resultado do scan** com a marca **já no catálogo** e o link do app. Para ele **voltar para a caixa** e refazer a triagem, remova o app (só é possível se o app ainda não tiver histórico de qualidade nem estiver em checagem; senão, inative-o).
+Se um repositório já virou app, ele **não aparece em "Novos"** (esse filtro só mostra o que ainda precisa de decisão), mas **continua na tela**: nos filtros **No catálogo** e **Todos**, com a etiqueta e o link do app e sem botões de triagem. Ele também aparece **no resultado do scan** com a marca **já no catálogo**. Para ele **voltar para "Novos"** e refazer a triagem, remova o app (só é possível se o app ainda não tiver histórico de qualidade nem estiver em checagem; senão, inative-o).
+
+A tela lista os repositórios que **passaram pelo scan**. Repositórios cadastrados direto em um app (ou pelo seed) ainda não aparecem aqui — isso depende do item "CRUD de Repository" do backlog.
 
 ## 6. Organização de teste
 
@@ -119,7 +121,7 @@ Esperado para `--sigla ab1`: 5 repositórios (o restrito não aparece); `app-leg
 | `encontraria N repositórios, acima do limite` | escopo amplo demais — use uma sigla mais específica (o limite é `Scan:MaxResults`) |
 | Repositório criado há pouco não aparece | a busca do GitHub demora a indexar; rode de novo depois |
 | `Sigla fora do formato esperado` | informe a sigla (ex.: `ab1`), não um trecho de nome |
-| Escaneei, o repositório aparece como "inalterado" e a tabela de baixo está vazia | ele já virou app — veja a marca "já no catálogo" no resultado; para triar de novo, remova o app |
+| Escaneei, o repositório aparece como "inalterado" e a tabela está vazia em "Novos" | ele já virou app — veja o filtro **No catálogo** e a marca "já no catálogo" no resultado; para triar de novo, remova o app |
 | "O scan pela API está desligado" | falta `Scan:Enabled = true` nos user-secrets **da API** (e reiniciar a API) |
 | "O scan não está pronto" na tela | falta `GitHub:Token`, `GitHub:Organization` ou `Scan:NameTemplate` nos user-secrets **da API**; a mensagem diz qual |
 | "Já há um scan em andamento" | outro scan está rodando; espere terminar |

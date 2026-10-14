@@ -161,6 +161,8 @@ POST /api/discovered-repositories/{id}/restore
 
 ### Notas da implementação (2026-10-12)
 
+- **Nome da tela (2026-10-13)**: o menu **Descobertos** passou a se chamar **Repositórios**, com todos os status e o filtro "No catálogo" (spec 007). O texto desta spec descreve a tela como foi entregue na época.
+
 - **`ScanService` ficava fora de `AddCheckAppsApplication`** (a fonte só a ferramenta registrava, e a validação de DI em Development quebraria a API); **superado pela spec 006**, que criou a composição única e fez a fonte expor `ConfigurationProblem` em vez de lançar no construtor.
 - **Sem `Scan:NameTemplate` a triagem funciona, sem sugestões** (papel nulo, confiança baixa); o scan recusa rodar. Com a fonte `fake` (padrão `fake-{sigla}-` desde a spec 006, na composição). A API lê `Scan:NameTemplate` de user-secrets próprios (`UserSecretsId` no `CheckApps.Api`).
 - **O escopo é validado antes de montar a fonte**: sigla vazia ou fora do formato é recusada sem pedir token nem consultar nada.

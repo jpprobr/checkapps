@@ -1,7 +1,7 @@
 <main class="page">
-  <h1>Repositórios descobertos</h1>
+  <h1>Repositórios</h1>
   <p class="subtitle">
-    O scan propõe, você decide. Nada vira app sem a sua confirmação.
+    Os repositórios que o scan encontra. O scan propõe, você decide: nada vira app sem a sua confirmação.
   </p>
 
   <section class="card scan-block">
@@ -64,7 +64,8 @@
             </p>
             @if (report.counts.inCatalog > 0) {
               <p class="subtitle small">
-                Repositório que já virou app não aparece na tabela abaixo: ela só mostra o que ainda precisa de uma decisão.
+                Repositório que já virou app fica no filtro <strong>No catálogo</strong>; por padrão a tabela abaixo
+                mostra só o que ainda precisa de uma decisão.
               </p>
             }
             @for (warning of report.warnings; track warning) {
@@ -126,6 +127,7 @@
   <div class="filters">
     <select aria-label="Status" [ngModel]="statusFilter()" (ngModelChange)="setStatus($event)">
       <option value="new">Novos</option>
+      <option value="catalog">No catálogo</option>
       <option value="other-squad">De outra squad</option>
       <option value="ignored">Ignorados</option>
       <option value="all">Todos</option>
@@ -137,6 +139,10 @@
       }
     </select>
   </div>
+
+  <p class="subtitle small scope-note">
+    Aqui estão os repositórios que passaram pelo scan. Repositórios cadastrados direto em um app ainda não aparecem.
+  </p>
 
   @if (actionError()) {
     <p class="error">{{ actionError() }}</p>
@@ -168,7 +174,10 @@
               }
               <span class="tag">{{ row.sigla.toUpperCase() }}</span>
               @if (row.archived) { <span class="tag">arquivado</span> }
-              @if (row.status !== 'new') {
+              @if (row.catalogApp) {
+                <span class="tag in-catalog">no catálogo</span>
+                <a [routerLink]="['/apps', row.catalogApp.appId]">{{ row.catalogApp.appName }}</a>
+              } @else if (row.status !== 'new') {
                 <span class="tag">{{ row.status === 'ignored' ? 'ignorado' : 'de outra squad' }}</span>
               }
             </td>
@@ -182,7 +191,9 @@
             <td>{{ row.pushedAt ? (row.pushedAt | date: 'dd/MM/yyyy' : 'UTC') : '—' }}</td>
             <td>
               <div class="row-actions">
-                @if (row.status === 'new') {
+                @if (row.catalogApp) {
+                  <!-- já no catálogo: não há decisão a tomar -->
+                } @else if (row.status === 'new') {
                   <button type="button" (click)="openCreate(row)">Criar app</button>
                   <button type="button" class="secondary" (click)="openLink(row)">Vincular a app…</button>
                   <button type="button" class="secondary" (click)="markOtherSquad(row)">De outra squad</button>
@@ -254,8 +265,8 @@
           <tr>
             <td colspan="5">
               @if (statusFilter() === 'new') {
-                <strong>Nenhum repositório novo.</strong> Os que já viraram app não aparecem aqui — o resultado do scan
-                mostra quais são. Use <strong>Buscar no GitHub</strong> acima, ou rode o scan no terminal:
+                <strong>Nenhum repositório novo.</strong> Os que já viraram app estão no filtro
+                <strong>No catálogo</strong>. Use <strong>Buscar no GitHub</strong> acima, ou rode o scan no terminal:
               } @else {
                 Nenhum repositório neste filtro. Use <strong>Buscar no GitHub</strong> acima, ou rode o scan no terminal:
               }

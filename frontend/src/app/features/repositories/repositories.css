@@ -118,3 +118,7 @@ code {
 .in-catalog + a {
   margin-left: 0.4rem;
 }
+
+.scope-note {
+  margin: 0.5rem 0;
+}

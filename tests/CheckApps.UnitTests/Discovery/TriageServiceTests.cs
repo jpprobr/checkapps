@@ -27,12 +27,13 @@ public class TriageServiceTests
     }
 
     private async Task<DiscoveredRepository> SeedAsync(
-        string externalId, string name, string sigla = "ab1", string? siglaApp = null, bool archived = false)
+        string externalId, string name, string sigla = "ab1", string? siglaApp = null, bool archived = false,
+        string provider = "github")
     {
         var repository = new DiscoveredRepository
         {
-            Id = DiscoveredRepository.IdFor("github", externalId),
-            Provider = "github",
+            Id = DiscoveredRepository.IdFor(provider, externalId),
+            Provider = provider,
             ExternalId = externalId,
             Name = name,
             Url = "https://example.invalid/" + name,
@@ -60,6 +61,67 @@ public class TriageServiceTests
         Assert.Equal("Pagamentos", app.Suggestion.Name);
         Assert.Equal(SuggestionConfidence.High, app.Suggestion.Confidence);
         Assert.Equal(RepositoryRoles.Infra, items.Single(i => i.Repository.ExternalId == "2").Suggestion.Role);
+    }
+
+    [Fact]
+    public async Task ListAsync_ByDefault_ExcludesThoseAlreadyInTheCatalog_AndCarriesNoCatalogApp()
+    {
+        await SeedAsync("1", "lab-ab1-app-pagamentos");
+        await SeedAsync("2", "lab-ab1-infra-fila");
+        await _sut.CreateAppAsync("github:1", "Pagamentos", "sq-1", null, null);
+
+        var items = await _sut.ListAsync(null, null);
+
+        var only = Assert.Single(items);
+        Assert.Equal("2", only.Repository.ExternalId);
+        Assert.Null(only.CatalogApp);
+    }
+
+    [Fact]
+    public async Task ListAsync_Cataloged_ReturnsOnlyThoseInTheCatalog_WithTheirApp()
+    {
+        await SeedAsync("1", "lab-ab1-app-pagamentos");
+        await SeedAsync("2", "lab-ab1-infra-fila");
+        await _sut.CreateAppAsync("github:1", "Pagamentos", "sq-1", null, null);
+
+        var item = Assert.Single(await _sut.ListAsync(null, null, CatalogScope.Cataloged));
+
+        Assert.Equal("1", item.Repository.ExternalId);
+        Assert.Equal("pagamentos", item.CatalogApp!.AppId);
+        Assert.Equal("Pagamentos", item.CatalogApp.AppName);
+    }
+
+    [Fact]
+    public async Task ListAsync_Any_ReturnsEverything_EachWithItsOwnState()
+    {
+        await SeedAsync("1", "lab-ab1-app-pagamentos");
+        await SeedAsync("2", "lab-ab1-infra-fila");
+        await SeedAsync("3", "lab-ab1-contrato-api-pagamentos");
+        await _sut.CreateAppAsync("github:1", "Pagamentos", "sq-1", null, null);
+        await _sut.IgnoreAsync("github:3");
+
+        var items = await _sut.ListAsync(null, null, CatalogScope.Any);
+
+        Assert.Equal(3, items.Count);
+        Assert.Equal("pagamentos", items.Single(i => i.Repository.ExternalId == "1").CatalogApp!.AppId);
+        Assert.Null(items.Single(i => i.Repository.ExternalId == "2").CatalogApp);
+        Assert.Equal(TriageStatus.Ignored, items.Single(i => i.Repository.ExternalId == "3").Repository.Status);
+        Assert.Null(items.Single(i => i.Repository.ExternalId == "3").CatalogApp);
+    }
+
+    [Fact]
+    public async Task ListAsync_Any_ResolvesTheAppPerProvider_ForTheSameExternalId()
+    {
+        // fake e github podem ter o mesmo id externo; só o do provedor vinculado está no catálogo
+        await SeedAsync("7", "lab-ab1-app-um", provider: "github");
+        await SeedAsync("7", "lab-ab1-app-um-fake", provider: "fake");
+        _apps.Add(new App { Id = "um", SquadId = "sq-1", Name = "Um" });
+        await _apps.AddRepositoryAsync(new Repository { Id = "r1", AppId = "um", Name = "x", Provider = "fake", ExternalId = "7" });
+
+        var items = await _sut.ListAsync(null, null, CatalogScope.Any);
+
+        Assert.Equal("Um", items.Single(i => i.Repository.Provider == "fake").CatalogApp!.AppName);
+        Assert.Null(items.Single(i => i.Repository.Provider == "github").CatalogApp);
     }
 
     [Fact]

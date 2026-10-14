@@ -15,12 +15,14 @@ public interface IDiscoveredRepositoryRepository
     Task<DiscoveredRepository?> GetAsync(string id, CancellationToken cancellationToken = default);
 
     /// <summary>
-    /// Descobertos que ainda **não** estão no catálogo (sem Repository com o mesmo provedor e id
-    /// externo), por sigla de nome e status; <c>null</c> em qualquer filtro significa "todos".
-    /// Ordenados por sigla e nome.
+    /// Descobertos por status e sigla (<c>null</c> em qualquer filtro significa "todos"), ordenados por
+    /// sigla e nome. <paramref name="scope"/> diz quais: por padrão, só os que ainda **não** estão no
+    /// catálogo (os que aguardam decisão). "No catálogo" é derivado — existe um Repository com o mesmo
+    /// provedor e id externo —, nunca um status armazenado.
     /// </summary>
     Task<IReadOnlyList<DiscoveredRepository>> ListAsync(
-        TriageStatus? status, string? sigla, CancellationToken cancellationToken = default);
+        TriageStatus? status, string? sigla, CatalogScope scope = CatalogScope.Pending,
+        CancellationToken cancellationToken = default);
 
     Task SetStatusAsync(string id, TriageStatus status, CancellationToken cancellationToken = default);
 
@@ -37,6 +39,19 @@ public interface IDiscoveredRepositoryRepository
 
     /// <summary>Alguma sigla-app já está em uso por um Repository? Ela identifica um único repositório.</summary>
     Task<bool> IsSiglaAppInUseAsync(string siglaApp, CancellationToken cancellationToken = default);
+}
+
+/// <summary>Quais descobertos a listagem devolve, quanto ao catálogo.</summary>
+public enum CatalogScope
+{
+    /// <summary>Só os que ainda não estão no catálogo — os que aguardam decisão (o comportamento original).</summary>
+    Pending,
+
+    /// <summary>Só os que já estão no catálogo.</summary>
+    Cataloged,
+
+    /// <summary>Todos, estejam ou não no catálogo.</summary>
+    Any
 }
 
 public enum UpsertOutcome

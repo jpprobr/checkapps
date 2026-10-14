@@ -8,7 +8,7 @@ import { AppList } from './features/app-list/app-list';
 import { CheckDetail } from './features/check-detail/check-detail';
 import { CheckForm } from './features/check-form/check-form';
 import { CheckList } from './features/check-list/check-list';
-import { Discovered } from './features/discovered/discovered';
+import { Repositories } from './features/repositories/repositories';
 import { SquadDashboard } from './features/squad-dashboard/squad-dashboard';
 import { SquadForm } from './features/squad-form/squad-form';
 import { SquadPicker } from './features/squad-picker/squad-picker';
@@ -31,7 +31,9 @@ export const routes: Routes = [
   { path: 'squads/:squadId/apps/new', component: AppForm },
   { path: 'apps/:appId/edit', component: AppForm },
   { path: 'apps/:appId', component: AppDetail },
-  { path: 'discovered', component: Discovered },
+  { path: 'repositories', component: Repositories },
+  // Nome antigo da tela ("Descobertos"): favoritos continuam funcionando.
+  { path: 'discovered', redirectTo: 'repositories', pathMatch: 'full' },
   { path: 'checks', component: CheckList },
   { path: 'checks/new', component: CheckForm },
   { path: 'checks/:checkId/edit', component: CheckForm },

@@ -71,7 +71,8 @@ public class DiscoveredRepositoryRepository(SqliteConnectionFactory connectionFa
     }
 
     public async Task<IReadOnlyList<DiscoveredRepository>> ListAsync(
-        TriageStatus? status, string? sigla, CancellationToken cancellationToken = default)
+        TriageStatus? status, string? sigla, CatalogScope scope = CatalogScope.Pending,
+        CancellationToken cancellationToken = default)
     {
         using var connection = connectionFactory.Create();
         var rows = await connection.QueryAsync<Row>(new CommandDefinition(
@@ -79,12 +80,21 @@ public class DiscoveredRepositoryRepository(SqliteConnectionFactory connectionFa
             SELECT {SelectColumns} FROM discovered_repositories d
             WHERE (@status IS NULL OR d.status = @status)
               AND (@sigla IS NULL OR d.sigla = @sigla)
-              AND NOT EXISTS (
-                  SELECT 1 FROM repositories r
-                  WHERE r.provider = d.provider AND r.external_id = d.external_id)
+              AND (@scope = 'any'
+                   OR (@scope = 'pending' AND NOT EXISTS (
+                           SELECT 1 FROM repositories r
+                           WHERE r.provider = d.provider AND r.external_id = d.external_id))
+                   OR (@scope = 'cataloged' AND EXISTS (
+                           SELECT 1 FROM repositories r
+                           WHERE r.provider = d.provider AND r.external_id = d.external_id)))
             ORDER BY d.sigla, d.name
             """,
-            new { status = status?.ToCode(), sigla = sigla?.Trim().ToLowerInvariant() },
+            new
+            {
+                status = status?.ToCode(),
+                sigla = sigla?.Trim().ToLowerInvariant(),
+                scope = scope.ToString().ToLowerInvariant()
+            },
             cancellationToken: cancellationToken));
         return rows.Select(r => r.ToEntity()).ToList();
     }

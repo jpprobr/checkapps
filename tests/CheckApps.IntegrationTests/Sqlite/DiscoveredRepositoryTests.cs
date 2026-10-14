@@ -115,6 +115,59 @@ public class DiscoveredRepositoryTests(SqliteFixture fixture) : IClassFixture<Sq
     }
 
     [Fact]
+    public async Task List_ByCatalogScope_PendingCatalogedAndAny_CombinedWithStatusAndSigla()
+    {
+        var sigla = Unique("k");
+        var pending = NewDiscovered(sigla, name: "lab-k-pendente");
+        var cataloged = NewDiscovered(sigla, name: "lab-k-catalogado");
+        var ignored = NewDiscovered(sigla, name: "lab-k-ignorado");
+        foreach (var r in new[] { pending, cataloged, ignored })
+        {
+            await _discovered.UpsertAsync(r);
+        }
+        await _discovered.SetStatusAsync(ignored.Id, TriageStatus.Ignored);
+        var appId = await CreateAppAsync();
+        await _apps.AddRepositoryAsync(new Repository
+        {
+            Id = Guid.NewGuid().ToString("n"), AppId = appId, Name = cataloged.Name,
+            Provider = cataloged.Provider, ExternalId = cataloged.ExternalId
+        });
+
+        var byDefault = await _discovered.ListAsync(status: null, sigla);
+        var explicitPending = await _discovered.ListAsync(status: null, sigla, CatalogScope.Pending);
+        var onlyCataloged = await _discovered.ListAsync(status: null, sigla, CatalogScope.Cataloged);
+        var any = await _discovered.ListAsync(status: null, sigla, CatalogScope.Any);
+        var anyIgnored = await _discovered.ListAsync(TriageStatus.Ignored, sigla, CatalogScope.Any);
+        var catalogedNew = await _discovered.ListAsync(TriageStatus.New, sigla, CatalogScope.Cataloged);
+
+        Assert.Equal(["lab-k-ignorado", "lab-k-pendente"], byDefault.Select(r => r.Name));   // o comportamento original
+        Assert.Equal(byDefault.Select(r => r.Id), explicitPending.Select(r => r.Id));
+        Assert.Equal(["lab-k-catalogado"], onlyCataloged.Select(r => r.Name));
+        Assert.Equal(["lab-k-catalogado", "lab-k-ignorado", "lab-k-pendente"], any.Select(r => r.Name));
+        Assert.Equal(["lab-k-ignorado"], anyIgnored.Select(r => r.Name));
+        Assert.Equal(["lab-k-catalogado"], catalogedNew.Select(r => r.Name));   // o status armazenado do catalogado continua "new"
+    }
+
+    [Fact]
+    public async Task List_WhenTheAppIsRemoved_TheRepositoryReturnsToPending()
+    {
+        var sigla = Unique("r");
+        var repo = NewDiscovered(sigla);
+        await _discovered.UpsertAsync(repo);
+        var appId = await CreateAppAsync();
+        await _apps.AddRepositoryAsync(new Repository
+        {
+            Id = Guid.NewGuid().ToString("n"), AppId = appId, Name = repo.Name, Provider = repo.Provider, ExternalId = repo.ExternalId
+        });
+        Assert.Empty(await _discovered.ListAsync(status: null, sigla));
+
+        await _apps.DeleteAllAsync(appId);   // os repositórios do app saem junto (cascata)
+
+        Assert.Single(await _discovered.ListAsync(status: null, sigla));
+        Assert.Empty(await _discovered.ListAsync(status: null, sigla, CatalogScope.Cataloged));
+    }
+
+    [Fact]
     public async Task GetCatalogApps_ReturnsTheAppAndItsName_OnlyForLinkedRepositories_InOneCall()
     {
         var appId = await CreateAppAsync();

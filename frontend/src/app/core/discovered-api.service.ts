@@ -17,7 +17,8 @@ import {
 export class DiscoveredApiService {
   private readonly http = inject(HttpClient);
 
-  list(status: TriageStatus | 'all'): Observable<DiscoveredRepository[]> {
+  /** `catalog`: só os que já estão no catálogo; `all`: todos; os demais: só os que aguardam decisão. */
+  list(status: TriageStatus | 'catalog' | 'all'): Observable<DiscoveredRepository[]> {
     return this.http.get<DiscoveredRepository[]>(`${API_BASE_URL}/discovered-repositories`, { params: { status } });
   }
 

@@ -316,11 +316,13 @@ public class FakeDiscoveredRepositoryRepository(FakeAppRepository apps) : IDisco
     public Task<DiscoveredRepository?> GetAsync(string id, CancellationToken ct = default) =>
         Task.FromResult(_items.GetValueOrDefault(id));
 
-    public Task<IReadOnlyList<DiscoveredRepository>> ListAsync(TriageStatus? status, string? sigla, CancellationToken ct = default) =>
+    public Task<IReadOnlyList<DiscoveredRepository>> ListAsync(
+        TriageStatus? status, string? sigla, CatalogScope scope = CatalogScope.Pending, CancellationToken ct = default) =>
         Task.FromResult<IReadOnlyList<DiscoveredRepository>>(_items.Values
             .Where(d => status is null || d.Status == status)
             .Where(d => sigla is null || d.Sigla == sigla.ToLowerInvariant())
-            .Where(d => !InCatalog(d.Provider, d.ExternalId))
+            .Where(d => scope == CatalogScope.Any
+                || (scope == CatalogScope.Pending) != InCatalog(d.Provider, d.ExternalId))
             .OrderBy(d => d.Sigla).ThenBy(d => d.Name)
             .ToList());
 

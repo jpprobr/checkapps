@@ -12,7 +12,8 @@ public static class DiscoveryDtoMapping
         return new DiscoveredRepositoryDto(
             r.Id, r.Provider, r.ExternalId, r.Name, r.Url, r.Sigla, r.SiglaApp, r.Archived, r.PushedAt,
             r.Status.ToCode(), r.FirstSeenAt, r.LastSeenAt, r.Source,
-            item.Suggestion.ToDto());
+            item.Suggestion.ToDto(),
+            item.CatalogApp is null ? null : new CatalogAppDto(item.CatalogApp.AppId, item.CatalogApp.AppName));
     }
 
     public static SuggestionDto ToDto(this RepositorySuggestion suggestion) => new(

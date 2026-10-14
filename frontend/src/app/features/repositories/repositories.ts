@@ -10,7 +10,8 @@ import { DiscoveredApiService } from '../../core/discovered-api.service';
 import { AppSummary, DiscoveredRepository, ScanOutcome, ScanReport, ScanStatus, TriageStatus } from '../../core/models';
 import { SquadsApiService } from '../../core/squads-api.service';
 
-type StatusFilter = TriageStatus | 'all';
+/** `catalog` e `all` são escopos da API; os demais são o status de triagem. */
+type StatusFilter = TriageStatus | 'catalog' | 'all';
 type PanelMode = 'create' | 'link';
 
 interface AppOption {
@@ -21,17 +22,19 @@ interface AppOption {
 const SIGLAS_STORAGE_KEY = 'checkapps.scanSiglas';
 
 /**
- * Caixa de entrada do leitor de GitHub (spec 005): o scan propõe, a pessoa decide. "Criar app"
- * abre um painel pré-preenchido e não grava nada até a confirmação. O bloco "Buscar no GitHub"
- * (spec 006) dispara o mesmo scan do CLI, quando a API o habilita.
+ * Repositórios que o scan encontra (spec 005, spec 007): o scan propõe, a pessoa decide. A tela mostra
+ * todos os conhecidos — novos, no catálogo (com o link do app), de outra squad e ignorados —, e o
+ * filtro padrão é "Novos", o que precisa de decisão. "Criar app" abre um painel pré-preenchido e não
+ * grava nada até a confirmação. O bloco "Buscar no GitHub" (spec 006) dispara o mesmo scan do CLI,
+ * quando a API o habilita.
  */
 @Component({
-  selector: 'app-discovered',
+  selector: 'app-repositories',
   imports: [RouterLink, DatePipe, FormsModule],
-  templateUrl: './discovered.html',
-  styleUrl: './discovered.css',
+  templateUrl: './repositories.html',
+  styleUrl: './repositories.css',
 })
-export class Discovered {
+export class Repositories {
   private readonly discoveredApi = inject(DiscoveredApiService);
   private readonly squadsApi = inject(SquadsApiService);
   protected readonly currentSquad = inject(CurrentSquadService);
