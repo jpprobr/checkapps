@@ -45,7 +45,7 @@ npx ng serve --port 4200 &
 timeout 120 bash -c 'until curl -sf http://localhost:4200 >/dev/null; do sleep 3; done' && echo "NG UP"
 ```
 
-Abrir `http://localhost:4200`. Num navegador sem histórico, `/` vai para `/squads`, que lista as duas squads; depois de visitar uma squad, `/` abre direto nela. Checagens ficam em `/checks` (menu do header).
+Abrir `http://localhost:4200`. Num navegador sem histórico, `/` vai para `/squads`, que lista as duas squads; depois de visitar uma squad, `/` abre direto nela. Checagens ficam em `/checks` (menu lateral).
 
 ## Reset dos dados (apagar tudo e voltar ao estado de demo)
 

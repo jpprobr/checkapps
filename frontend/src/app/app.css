@@ -1,50 +1,234 @@
-.shell {
+.layout {
   display: flex;
-  flex-wrap: wrap;
-  justify-content: space-between;
-  align-items: center;
+  min-height: 100vh;
+  --sidebar-width: 15rem;
+}
+
+.layout.collapsed {
+  --sidebar-width: 3.75rem;
+}
+
+.content {
+  flex: 1;
+  min-width: 0;
+}
+
+.sidebar {
+  position: sticky;
+  top: 0;
+  align-self: flex-start;
+  height: 100vh;
+  width: var(--sidebar-width);
+  flex: none;
+  box-sizing: border-box;
+  display: flex;
+  flex-direction: column;
   gap: 0.75rem;
-  padding: 0.6rem 1rem;
+  padding: 0.6rem 0.5rem;
   background: var(--surface-1);
-  border-bottom: 1px solid var(--border);
+  border-right: 1px solid var(--border);
+  overflow-y: auto;
 }
 
-.shell-nav {
+.sidebar-head {
   display: flex;
   align-items: center;
-  gap: 1.25rem;
+  justify-content: space-between;
+  gap: 0.25rem;
 }
 
-.shell-nav a {
-  color: var(--text-secondary);
-  text-decoration: none;
-  padding: 0.2rem 0;
-  border-bottom: 2px solid transparent;
-}
-
-.shell-nav a.active {
-  color: var(--text-primary);
-  border-bottom-color: var(--series-1);
-}
-
-.shell-nav .brand {
-  color: var(--text-primary);
-  font-weight: 700;
-}
-
-.squad-switcher {
+.brand {
   display: flex;
   align-items: center;
   gap: 0.5rem;
-  font-size: 0.9rem;
+  color: var(--text-primary);
+  font-weight: 700;
+  text-decoration: none;
+  padding: 0.35rem 0.5rem;
+  min-width: 0;
+}
+
+svg {
+  width: 1.25rem;
+  height: 1.25rem;
+  flex: none;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 1.8;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+.icon-button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0.35rem;
+  border: 1px solid transparent;
+  border-radius: 8px;
+  background: transparent;
+  color: var(--text-secondary);
+  cursor: pointer;
+}
+
+.icon-button:hover {
+  background: var(--page-plane);
+  color: var(--text-primary);
+}
+
+nav {
+  display: flex;
+  flex-direction: column;
+  gap: 0.15rem;
+}
+
+.nav-item {
+  display: flex;
+  align-items: center;
+  gap: 0.65rem;
+  padding: 0.5rem 0.6rem;
+  border: 0;
+  border-left: 3px solid transparent;
+  border-radius: 8px;
+  background: transparent;
+  color: var(--text-secondary);
+  font: inherit;
+  text-decoration: none;
+  cursor: pointer;
+  width: 100%;
+  box-sizing: border-box;
+}
+
+.nav-item:hover {
+  background: var(--page-plane);
+  color: var(--text-primary);
+}
+
+/* Ativo: fundo + barra lateral + peso, nunca só cor. */
+.nav-item.active {
+  background: var(--page-plane);
+  color: var(--text-primary);
+  border-left-color: var(--series-1);
+  font-weight: 600;
+}
+
+.squad-switcher label {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+  padding: 0 0.25rem;
+  font-size: 0.85rem;
   color: var(--text-secondary);
 }
 
 .squad-switcher select {
-  padding: 0.3rem 0.5rem;
+  padding: 0.35rem 0.5rem;
   border: 1px solid var(--baseline);
   border-radius: 8px;
   background: var(--surface-1);
   color: var(--text-primary);
-  max-width: 16rem;
+  width: 100%;
+  text-overflow: ellipsis;
+}
+
+/* Recolhido: só ícones. */
+.squad-icon {
+  display: none;
+}
+
+.collapsed .squad-icon {
+  display: flex;
+}
+
+.collapsed .squad-switcher label {
+  display: none;
+}
+
+.collapsed .label {
+  display: none;
+}
+
+.collapsed .sidebar-head {
+  flex-direction: column;
+}
+
+.collapsed .brand,
+.collapsed .nav-item {
+  justify-content: center;
+}
+
+.collapsed .nav-item {
+  padding-left: 0.4rem;
+  padding-right: 0.4rem;
+}
+
+.topbar,
+.backdrop {
+  display: none;
+}
+
+/* Celular: o menu vira gaveta. */
+@media (max-width: 768px) {
+  .topbar {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0.4rem 0.75rem;
+    background: var(--surface-1);
+    border-bottom: 1px solid var(--border);
+  }
+
+  .layout,
+  .layout.collapsed {
+    --sidebar-width: 16rem;
+  }
+
+  .sidebar {
+    position: fixed;
+    z-index: 20;
+    left: 0;
+    transform: translateX(-100%);
+    transition: transform 0.2s ease;
+  }
+
+  .sidebar.open {
+    transform: none;
+  }
+
+  .backdrop {
+    display: block;
+    position: fixed;
+    inset: 0;
+    z-index: 10;
+    background: rgb(0 0 0 / 0.45);
+  }
+
+  /* Na gaveta o modo recolhido não se aplica. */
+  .collapsed .label {
+    display: inline;
+  }
+
+  .collapse-toggle,
+  .collapsed .squad-icon {
+    display: none;
+  }
+
+  .collapsed .squad-switcher label {
+    display: flex;
+  }
+
+  .collapsed .sidebar-head {
+    flex-direction: row;
+  }
+
+  .collapsed .brand,
+  .collapsed .nav-item {
+    justify-content: flex-start;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .sidebar {
+    transition: none;
+  }
 }
