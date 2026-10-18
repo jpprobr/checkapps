@@ -1,6 +1,6 @@
 # Checklist — Spec 010: Cadastrados na tela Repositórios
 
-Status: **implementada** em 2026-10-18. Resta confirmação do usuário na tela.
+Status: **implementada** em 2026-10-18. Confirmada pelo usuário na tela em 2026-10-18.
 
 ## Qualidade da spec (antes de codar)
 
@@ -23,7 +23,7 @@ Status: **implementada** em 2026-10-18. Resta confirmação do usuário na tela.
 - [x] `dotnet test` verde (168 unitários + 42 de integração), sem rede
 - [x] `curl /api/repositories/catalog` com a massa do seed
 - [x] Navegador: Todos, Novos (vazio), No catálogo e Gerenciar, sem erros de console
-- [ ] Confirmação do usuário na tela
+- [x] Confirmação do usuário na tela (2026-10-18)
 
 ## Encerramento
 
