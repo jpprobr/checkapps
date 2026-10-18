@@ -49,6 +49,8 @@ export class Repositories {
 
   protected readonly statusFilter = signal<StatusFilter>('all');
   protected readonly siglaFilter = signal('');
+  /** `''` = todas; `'none'` = sem squad (ainda não viraram app); ou o id de uma squad. Só consulta (spec 011). */
+  protected readonly squadFilter = signal('');
 
   protected readonly roles = ['aplicacao', 'infra', 'contrato', 'secrets'];
 
@@ -79,14 +81,35 @@ export class Repositories {
 
   protected readonly siglas = computed(() => [...new Set([...this.rows().map((r) => r.sigla), ...this.catalogRows().map((r) => r.sigla ?? '')].filter((s) => s))].sort());
 
+  /** Squads presentes nas linhas carregadas — a squad de um repositório é a do app dele. */
+  protected readonly squadOptions = computed(() => {
+    const byId = new Map<string, string>();
+    for (const r of this.rows()) {
+      if (r.catalogApp?.squadId) {
+        byId.set(r.catalogApp.squadId, r.catalogApp.squadName ?? r.catalogApp.squadId);
+      }
+    }
+    for (const r of this.catalogRows()) {
+      if (r.squadId) {
+        byId.set(r.squadId, r.squadName ?? r.squadId);
+      }
+    }
+    return [...byId].map(([id, name]) => ({ id, name })).sort((a, b) => a.name.localeCompare(b.name));
+  });
+
+  private matchesSquad(squadId: string | null | undefined): boolean {
+    const filter = this.squadFilter();
+    return !filter || (filter === 'none' ? !squadId : squadId === filter);
+  }
+
   protected readonly visibleRows = computed(() => {
     const sigla = this.siglaFilter();
-    return this.rows().filter((r) => !sigla || r.sigla === sigla);
+    return this.rows().filter((r) => (!sigla || r.sigla === sigla) && this.matchesSquad(r.catalogApp?.squadId));
   });
 
   protected readonly visibleCatalogRows = computed(() => {
     const sigla = this.siglaFilter();
-    return this.catalogRows().filter((r) => !sigla || r.sigla === sigla);
+    return this.catalogRows().filter((r) => (!sigla || r.sigla === sigla) && this.matchesSquad(r.squadId));
   });
 
   /** Siglas digitadas, separadas por vírgula ou espaço; a API valida o formato e recusa o resto. */
@@ -105,6 +128,7 @@ export class Repositories {
   protected setStatus(status: StatusFilter): void {
     this.statusFilter.set(status);
     this.siglaFilter.set('');
+    this.squadFilter.set('');
     this.closePanel();
     this.reload();
   }

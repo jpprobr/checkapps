@@ -109,8 +109,8 @@ public class ScanService(
     }
 }
 
-/// <summary>O app em que um repositório já está no catálogo (um Repository com o mesmo provedor e id externo).</summary>
-public record CatalogApp(string AppId, string AppName);
+/// <summary>O app (e a squad dele) em que um repositório já está no catálogo (um Repository com o mesmo provedor e id externo).</summary>
+public record CatalogApp(string AppId, string AppName, string? SquadId = null, string? SquadName = null);
 
 /// <param name="CatalogApp">Preenchido quando o repositório já virou app — e por isso não aparece na caixa de entrada.</param>
 public record ScanItem(

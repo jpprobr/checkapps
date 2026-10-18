@@ -65,6 +65,8 @@ export interface RepositoryInfo {
 export interface CatalogRepository extends RepositoryInfo {
   appId: string;
   appName: string;
+  squadId: string | null;
+  squadName: string | null;
 }
 
 export interface UpsertRepositoryRequest {
@@ -254,7 +256,7 @@ export interface DiscoveredRepository {
   source: string;
   suggestion: Suggestion;
   /** Preenchido quando o repositório já está no catálogo (só nas listagens `catalog` e `all`). */
-  catalogApp: { appId: string; appName: string } | null;
+  catalogApp: { appId: string; appName: string; squadId: string | null; squadName: string | null } | null;
 }
 
 export interface CreateAppFromDiscoveryRequest {
@@ -292,7 +294,7 @@ export interface ScanItem {
   outcome: ScanOutcome;
   suggestion: Suggestion;
   /** Preenchido quando o repositório já virou app — e por isso não está na caixa de entrada. */
-  catalogApp: { appId: string; appName: string } | null;
+  catalogApp: { appId: string; appName: string; squadId: string | null; squadName: string | null } | null;
 }
 
 export interface ScanReport {

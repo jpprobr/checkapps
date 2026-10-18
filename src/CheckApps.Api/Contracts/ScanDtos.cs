@@ -10,7 +10,7 @@ public record ScanRequest(IReadOnlyList<string>? Siglas, bool DryRun);
 /// <param name="InCatalog">Itens do resultado que já viraram app; sobrepõe-se às demais contagens, não as soma.</param>
 public record ScanCountsDto(int New, int Updated, int Unchanged, int InCatalog);
 
-public record CatalogAppDto(string AppId, string AppName);
+public record CatalogAppDto(string AppId, string AppName, string? SquadId = null, string? SquadName = null);
 
 public record ScanItemDto(
     string Id, string Name, string? Url, string Sigla, string? SiglaApp, bool Archived, DateTimeOffset? PushedAt,

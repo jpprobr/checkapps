@@ -1,6 +1,6 @@
 # STATE.md — estado atual do projeto
 
-> Reescrito (não anexado) ao fim de cada sessão de trabalho. Se este arquivo estiver desatualizado em relação ao `git log`, o git está certo. Última atualização: **2026-10-18**, ao concluir a spec 010 (cadastrados na tela Repositórios), sobre as specs 008 (menu lateral) e 009 (CRUD manual de Repository). **A spec 010 está no working tree, ainda sem commit** (commits só quando o usuário pedir).
+> Reescrito (não anexado) ao fim de cada sessão de trabalho. Se este arquivo estiver desatualizado em relação ao `git log`, o git está certo. Última atualização: **2026-10-18**, ao concluir a spec 011 (squad na tela Repositórios), sobre as specs 008 a 010. Specs 008 a 011 commitadas.
 
 ## Onde estamos
 
@@ -15,6 +15,7 @@ Estágio do roadmap: **Inventário + Health + Evolution concluídos**, mais **Ch
 - **Menu lateral** (`specs/008-menu-lateral/`): `SidebarService` + `app.html`/`app.css`. Marca, seletor de squad no topo, Squads / Repositórios / Checagens com ícones SVG embutidos; recolhível (só ícones, `aria-label` + `title`, estado em `localStorage` `checkapps.sidebarCollapsed`; clicar no ícone da squad expande); gaveta em ≤ 768 px (fecha ao navegar, no fundo e com Esc). Ativo por fundo + barra + `aria-current`.
 - **CRUD manual de Repository** (`specs/009-crud-repository/`): `POST/PUT/DELETE /api/apps/{appId}/repositories[/{id}]` (404 app/repo, 400 sem nome, 409 sigla-app duplicada; criação com `source = MANUAL`; edição preserva `source` e `externalId`); UI na **edição do app** (seção Repositórios: tabela com Editar/Remover + formulário). Lógica no `AppService`; persistência nova em `AppRepository` (`GetRepositoryAsync`, `DeleteRepositoryAsync`, `IsSiglaAppInUseAsync(siglaApp, exceptId)`). Sem mudança de schema.
 - **Cadastrados na tela Repositórios** (`specs/010-catalogo-na-tela-repositorios/`): nos filtros Todos e No catálogo a tela também lista os repositórios do catálogo sem descoberto correspondente (manuais e seed) — `GET /api/repositories/catalog`, `AppRepository.ListCatalogOnlyRepositoriesAsync` — e toda linha "no catálogo" tem o atalho **Gerenciar** → edição do app. O filtro padrão da tela é **Todos**.
+- **Squad na tela Repositórios** (`specs/011-squad-na-tela-repositorios/`): coluna e filtro **Squad**, só para exibição/consulta. A squad continua derivada (Squad → App → Repository, sem `squad_id` em `repositories`); `catalogApp` e `GET /api/repositories/catalog` trazem `squadId`/`squadName`; quem não virou app aparece como "sem squad". Guardar a squad de "de outra squad" ficou de fora (exigiria coluna nova na caixa de entrada).
 - **Leitor de GitHub, fase 1** (`specs/005-leitor-github-fase-1/`, ADR-010, guia `docs/leitor-github.md`):
   - ferramenta `tools/CheckApps.GitHubScan` — scan **por sigla** (validada por formato, limite de resultados), `--dry-run`, `--source fake|github`; o escopo é validado antes de pedir token;
   - tela **Repositórios** no menu: todos os repositórios que passaram pelo scan, cada um com o estado dele — novo, no catálogo (link do app, sem ações), de outra squad, ignorado; filtro padrão "Todos" ("Novos" é a caixa de entrada). Ações: criar app (painel pré-preenchido), vincular a app existente (aviso se a sigla difere), de outra squad, ignorar, restaurar;
@@ -59,7 +60,7 @@ Os críticos estão em `AGENTS.md` e nas regras. Os que mais mordem hoje:
 
 ## Próximos passos (em ordem)
 
-1. **Confirmar na tela** (usuário) o CRUD de repositório (spec 009) e os cadastrados na tela Repositórios (spec 010); **commitar** a spec 010.
+1. **Confirmado na tela** pelo usuário: coluna e filtro de squad (spec 011).
 2. **Usar o scan pela tela com o GitHub real** (usuário): segredos da API (`docs/leitor-github.md`, seção 5), reiniciar a API e escanear em **Repositórios → Buscar no GitHub**; depois criar os repositórios de teste que faltam (arquivado, infra, outra sigla, fora do acesso do token).
 3. Repetir os roteiros Playwright das specs 001–007 contra o novo shell.
 4. Revisão do usuário no glossário (Solução, Tipo de app).

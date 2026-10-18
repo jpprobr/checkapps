@@ -20,6 +20,6 @@ public class CatalogRepositoriesController(AppService appService) : ControllerBa
         return Ok(items.Select(i => new CatalogRepositoryDto(
             i.Repository.Id, i.Repository.Name, i.Repository.Provider, i.Repository.Url, i.Repository.Status,
             i.Repository.Sigla, i.Repository.SiglaApp, i.Repository.Role, i.Repository.Source,
-            i.AppId, i.AppName)).ToList());
+            i.AppId, i.AppName, i.SquadId, i.SquadName)).ToList());
     }
 }

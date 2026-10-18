@@ -176,6 +176,8 @@ public class DiscoveredRepositoryTests(SqliteFixture fixture) : IClassFixture<Sq
         Assert.Equal("lab-c-manual", item.Repository.Name);
         Assert.Equal(appId, item.AppId);
         Assert.False(string.IsNullOrEmpty(item.AppName));
+        Assert.Equal("Squad Teste", item.SquadName);
+        Assert.Equal((await _apps.GetAsync(appId))!.SquadId, item.SquadId);
         Assert.Contains(await _apps.ListCatalogOnlyRepositoriesAsync(null), i => i.Repository.Name == "lab-c-outra-sigla");
     }
 
@@ -215,6 +217,8 @@ public class DiscoveredRepositoryTests(SqliteFixture fixture) : IClassFixture<Sq
         Assert.Equal(2, map.Count);
         Assert.Equal(appId, map[linked].AppId);
         Assert.Equal("App Teste", map[linked].AppName);
+        Assert.Equal("Squad Teste", map[linked].SquadName);
+        Assert.Equal((await _apps.GetAsync(appId))!.SquadId, map[linked].SquadId);
         Assert.Equal(appId, map[otherLinked].AppId);
         Assert.False(map.ContainsKey(notLinked));
     }

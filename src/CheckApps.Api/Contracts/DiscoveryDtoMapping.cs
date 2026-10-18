@@ -13,7 +13,7 @@ public static class DiscoveryDtoMapping
             r.Id, r.Provider, r.ExternalId, r.Name, r.Url, r.Sigla, r.SiglaApp, r.Archived, r.PushedAt,
             r.Status.ToCode(), r.FirstSeenAt, r.LastSeenAt, r.Source,
             item.Suggestion.ToDto(),
-            item.CatalogApp is null ? null : new CatalogAppDto(item.CatalogApp.AppId, item.CatalogApp.AppName));
+            item.CatalogApp is null ? null : new CatalogAppDto(item.CatalogApp.AppId, item.CatalogApp.AppName, item.CatalogApp.SquadId, item.CatalogApp.SquadName));
     }
 
     public static SuggestionDto ToDto(this RepositorySuggestion suggestion) => new(
@@ -27,7 +27,7 @@ public static class DiscoveryDtoMapping
         report.Items.Select(i => new ScanItemDto(
             i.Repository.Id, i.Repository.Name, i.Repository.Url, i.Repository.Sigla, i.Repository.SiglaApp,
             i.Repository.Archived, i.Repository.PushedAt, i.Outcome.ToCode(), i.Suggestion.ToDto(),
-            i.CatalogApp is null ? null : new CatalogAppDto(i.CatalogApp.AppId, i.CatalogApp.AppName))).ToList(),
+            i.CatalogApp is null ? null : new CatalogAppDto(i.CatalogApp.AppId, i.CatalogApp.AppName, i.CatalogApp.SquadId, i.CatalogApp.SquadName))).ToList(),
         report.Warnings);
 
     private static string ToCode(this UpsertOutcome outcome) => outcome switch

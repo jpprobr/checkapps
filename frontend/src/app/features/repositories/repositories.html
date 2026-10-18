@@ -138,6 +138,13 @@
         <option [value]="sigla">{{ sigla.toUpperCase() }}</option>
       }
     </select>
+    <select aria-label="Squad" [ngModel]="squadFilter()" (ngModelChange)="squadFilter.set($event)">
+      <option value="">Todas as squads</option>
+      <option value="none">Sem squad</option>
+      @for (squad of squadOptions(); track squad.id) {
+        <option [value]="squad.id">{{ squad.name }}</option>
+      }
+    </select>
   </div>
 
   <p class="subtitle small scope-note">
@@ -157,6 +164,7 @@
       <thead>
         <tr>
           <th>Repositório</th>
+          <th>Squad</th>
           <th>Sigla-app</th>
           <th>Sugestão</th>
           <th>Último push</th>
@@ -181,6 +189,7 @@
                 <span class="tag">{{ row.status === 'ignored' ? 'ignorado' : 'de outra squad' }}</span>
               }
             </td>
+            <td>{{ row.catalogApp?.squadName ?? 'sem squad' }}</td>
             <td>{{ row.siglaApp ?? '—' }}</td>
             <td>
               {{ row.suggestion.role ?? 'papel não identificado' }}
@@ -208,7 +217,7 @@
 
           @if (panelFor() === row.id) {
             <tr class="panel-row">
-              <td colspan="5">
+              <td colspan="6">
                 <form class="card form panel" (ngSubmit)="panelMode() === 'create' ? confirmCreate(row) : confirmLink(row)">
                   @if (panelMode() === 'create') {
                     <h2>Criar app a partir de {{ row.name }}</h2>
@@ -278,6 +287,7 @@
               <a [routerLink]="['/apps', item.appId]">{{ item.appName }}</a>
               <span class="tag">{{ item.source === 'MANUAL' ? 'cadastrado à mão' : item.source === 'GITHUB_SCAN' ? 'scan' : 'seed' }}</span>
             </td>
+            <td>{{ item.squadName ?? 'sem squad' }}</td>
             <td>{{ item.siglaApp ?? '—' }}</td>
             <td>{{ item.role ?? 'papel não informado' }}</td>
             <td>—</td>
@@ -291,7 +301,7 @@
 
         @if (visibleRows().length === 0 && visibleCatalogRows().length === 0) {
           <tr>
-            <td colspan="5">
+            <td colspan="6">
               @if (statusFilter() === 'new') {
                 <strong>Nenhum repositório novo.</strong> Os que já viraram app estão no filtro
                 <strong>No catálogo</strong>. Use <strong>Buscar no GitHub</strong> acima, ou rode o scan no terminal:

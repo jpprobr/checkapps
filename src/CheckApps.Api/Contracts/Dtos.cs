@@ -43,7 +43,8 @@ public record RepositoryDto(
 
 public record CatalogRepositoryDto(
     string Id, string Name, string? Provider, string? Url, string? Status,
-    string? Sigla, string? SiglaApp, string? Role, string? Source, string AppId, string AppName);
+    string? Sigla, string? SiglaApp, string? Role, string? Source, string AppId, string AppName,
+    string? SquadId, string? SquadName);
 
 public record UpsertRepositoryRequest(
     string? Name, string? Provider, string? Url, string? Status, string? Sigla, string? SiglaApp, string? Role);

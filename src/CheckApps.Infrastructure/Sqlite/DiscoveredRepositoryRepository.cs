@@ -124,11 +124,13 @@ public class DiscoveredRepositoryRepository(SqliteConnectionFactory connectionFa
         }
 
         using var connection = connectionFactory.Create();
-        var rows = await connection.QueryAsync<(string ExternalId, string AppId, string AppName)>(new CommandDefinition(
+        var rows = await connection.QueryAsync<(string ExternalId, string AppId, string AppName, string? SquadId, string? SquadName)>(new CommandDefinition(
             """
-            SELECT r.external_id AS ExternalId, a.id AS AppId, a.name AS AppName
+            SELECT r.external_id AS ExternalId, a.id AS AppId, a.name AS AppName,
+                   s.id AS SquadId, s.name AS SquadName
             FROM repositories r
             JOIN apps a ON a.id = r.app_id
+            LEFT JOIN squads s ON s.id = a.squad_id
             WHERE r.provider = @provider AND r.external_id IN @externalIds
             ORDER BY a.id
             """,
@@ -137,7 +139,7 @@ public class DiscoveredRepositoryRepository(SqliteConnectionFactory connectionFa
         // (provider, external_id) não é único em repositories; se houver mais de um app, vale o primeiro por id.
         return rows
             .GroupBy(r => r.ExternalId)
-            .ToDictionary(g => g.Key, g => new CatalogApp(g.First().AppId, g.First().AppName));
+            .ToDictionary(g => g.Key, g => new CatalogApp(g.First().AppId, g.First().AppName, g.First().SquadId, g.First().SquadName));
     }
 
     public async Task<bool> IsSiglaAppInUseAsync(string siglaApp, CancellationToken cancellationToken = default)

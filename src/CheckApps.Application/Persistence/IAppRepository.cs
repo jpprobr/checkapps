@@ -48,5 +48,5 @@ public interface IAppRepository
     Task DeleteLinkAsync(string appId, string linkId, CancellationToken cancellationToken = default);
 }
 
-/// <summary>Um repositório do catálogo com o app a que pertence.</summary>
-public record CatalogRepository(Repository Repository, string AppId, string AppName);
+/// <summary>Um repositório do catálogo com o app (e a squad do app) a que pertence.</summary>
+public record CatalogRepository(Repository Repository, string AppId, string AppName, string? SquadId = null, string? SquadName = null);
