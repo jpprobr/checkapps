@@ -1,6 +1,6 @@
 # Checklist — Spec 009: CRUD manual de Repository
 
-Status: **implementada** em 2026-10-17. Resta confirmação do usuário na tela.
+Status: **implementada** em 2026-10-17. Confirmada pelo usuário na tela em 2026-10-18.
 
 ## Qualidade da spec (antes de codar)
 
@@ -30,4 +30,4 @@ Status: **implementada** em 2026-10-17. Resta confirmação do usuário na tela.
 - [x] `Status` atualizado para `Implementada`
 - [x] `.agents/project/STATE.md` reescrito
 - [x] `.agents/product/backlog.md` atualizado
-- [ ] Confirmação do usuário na tela
+- [x] Confirmação do usuário na tela (2026-10-18)

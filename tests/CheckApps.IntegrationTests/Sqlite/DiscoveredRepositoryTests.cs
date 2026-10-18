@@ -149,6 +149,37 @@ public class DiscoveredRepositoryTests(SqliteFixture fixture) : IClassFixture<Sq
     }
 
     [Fact]
+    public async Task ListCatalogOnly_ReturnsManualRepositories_ButNotTheOnesTheInboxAlreadyShows()
+    {
+        var sigla = Unique("c");
+        var scanned = NewDiscovered(sigla, name: "lab-c-scan");
+        await _discovered.UpsertAsync(scanned);
+        var appId = await CreateAppAsync();
+        await _apps.AddRepositoryAsync(new Repository
+        {
+            Id = Guid.NewGuid().ToString("n"), AppId = appId, Name = scanned.Name, Sigla = sigla,
+            Provider = scanned.Provider, ExternalId = scanned.ExternalId, Source = RepositorySources.GithubScan
+        });
+        await _apps.AddRepositoryAsync(new Repository
+        {
+            Id = Guid.NewGuid().ToString("n"), AppId = appId, Name = "lab-c-manual", Sigla = sigla,
+            Source = RepositorySources.Manual
+        });
+        await _apps.AddRepositoryAsync(new Repository
+        {
+            Id = Guid.NewGuid().ToString("n"), AppId = appId, Name = "lab-c-outra-sigla", Sigla = Unique("x")
+        });
+
+        var items = await _apps.ListCatalogOnlyRepositoriesAsync(sigla);
+
+        var item = Assert.Single(items);   // o do scan sai (já está na caixa de entrada); o de outra sigla é filtrado
+        Assert.Equal("lab-c-manual", item.Repository.Name);
+        Assert.Equal(appId, item.AppId);
+        Assert.False(string.IsNullOrEmpty(item.AppName));
+        Assert.Contains(await _apps.ListCatalogOnlyRepositoriesAsync(null), i => i.Repository.Name == "lab-c-outra-sigla");
+    }
+
+    [Fact]
     public async Task List_WhenTheAppIsRemoved_TheRepositoryReturnsToPending()
     {
         var sigla = Unique("r");

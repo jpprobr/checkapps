@@ -25,6 +25,13 @@ public interface IAppRepository
 
     Task AddRepositoryAsync(Repository repository, CancellationToken cancellationToken = default);
 
+    /// <summary>
+    /// Repositórios do catálogo que **não** têm descoberto correspondente (mesmo provedor e id externo): os
+    /// cadastrados à mão e os do seed. Os que vieram do scan já aparecem pela caixa de entrada.
+    /// </summary>
+    Task<IReadOnlyList<CatalogRepository>> ListCatalogOnlyRepositoriesAsync(
+        string? sigla, CancellationToken cancellationToken = default);
+
     Task<Repository?> GetRepositoryAsync(string appId, string repositoryId, CancellationToken cancellationToken = default);
 
     Task DeleteRepositoryAsync(string appId, string repositoryId, CancellationToken cancellationToken = default);
@@ -40,3 +47,6 @@ public interface IAppRepository
 
     Task DeleteLinkAsync(string appId, string linkId, CancellationToken cancellationToken = default);
 }
+
+/// <summary>Um repositório do catálogo com o app a que pertence.</summary>
+public record CatalogRepository(Repository Repository, string AppId, string AppName);

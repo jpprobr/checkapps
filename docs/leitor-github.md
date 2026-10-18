@@ -85,7 +85,7 @@ dotnet user-secrets set "Scan:NameTemplate" '<prefixo>-{sigla}-' --project src/C
 
 Se um repositório já virou app, ele **não aparece em "Novos"** (esse filtro só mostra o que ainda precisa de decisão), mas **continua na tela**: nos filtros **No catálogo** e **Todos**, com a etiqueta e o link do app e sem botões de triagem. Ele também aparece **no resultado do scan** com a marca **já no catálogo**. Para ele **voltar para "Novos"** e refazer a triagem, remova o app (só é possível se o app ainda não tiver histórico de qualidade nem estiver em checagem; senão, inative-o).
 
-A tela lista os repositórios que **passaram pelo scan**. Repositórios cadastrados direto em um app (ou pelo seed) ainda não aparecem aqui — isso depende do item "CRUD de Repository" do backlog.
+A tela lista os repositórios que **passaram pelo scan** e, nos filtros **Todos** e **No catálogo**, também os já cadastrados nos apps (à mão ou pelo seed), cada um com o atalho **Gerenciar** para a edição do app (spec 010).
 
 ## 6. Organização de teste
 

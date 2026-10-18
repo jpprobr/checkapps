@@ -8,7 +8,7 @@
 
 O menu passa a se chamar **"Repositórios"** e a tela mostra **todos os repositórios conhecidos**, cada um com o seu status — *novo*, *no catálogo* (com link para o app), *de outra squad*, *ignorado*. O filtro padrão é **"Todos"** (alterado em 2026-10-18; era "Novos", o que precisa de decisão, que segue como filtro). O bloco "Buscar no GitHub" não muda.
 
-**Limite aceito**: "conhecidos" são os que **passaram pelo scan**. Repositórios cadastrados à mão ou pelo seed só entram com o item "CRUD de Repository" do backlog — e a tela diz isso.
+**Limite aceito** (superado pela spec 010, 2026-10-18): "conhecidos" eram os que **passaram pelo scan**; hoje a tela também lista os cadastrados à mão e os do seed, nos filtros Todos e No catálogo.
 
 **Não faz parte**: o menu lateral com ícones (spec seguinte); listar repositórios cadastrados à mão ou pelo seed; desvincular um repositório pela tela (hoje se remove o app); renomear o recurso da API (`discovered-repositories` continua sendo o que é: repositórios descobertos pelo scan).
 

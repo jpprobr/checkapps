@@ -1,6 +1,6 @@
 # STATE.md — estado atual do projeto
 
-> Reescrito (não anexado) ao fim de cada sessão de trabalho. Se este arquivo estiver desatualizado em relação ao `git log`, o git está certo. Última atualização: **2026-10-17**, ao concluir as specs 008 (menu lateral) e 009 (CRUD manual de Repository), sobre a spec 007 (menu Repositórios). **As specs 008 e 009 estão no working tree, ainda sem commit** (commits só quando o usuário pedir).
+> Reescrito (não anexado) ao fim de cada sessão de trabalho. Se este arquivo estiver desatualizado em relação ao `git log`, o git está certo. Última atualização: **2026-10-18**, ao concluir a spec 010 (cadastrados na tela Repositórios), sobre as specs 008 (menu lateral) e 009 (CRUD manual de Repository). **A spec 010 está no working tree, ainda sem commit** (commits só quando o usuário pedir).
 
 ## Onde estamos
 
@@ -14,6 +14,7 @@ Estágio do roadmap: **Inventário + Health + Evolution concluídos**, mais **Ch
 - **Checagens** (`specs/003-checagens/`) e **navegação global** (`/` → última squad visitada).
 - **Menu lateral** (`specs/008-menu-lateral/`): `SidebarService` + `app.html`/`app.css`. Marca, seletor de squad no topo, Squads / Repositórios / Checagens com ícones SVG embutidos; recolhível (só ícones, `aria-label` + `title`, estado em `localStorage` `checkapps.sidebarCollapsed`; clicar no ícone da squad expande); gaveta em ≤ 768 px (fecha ao navegar, no fundo e com Esc). Ativo por fundo + barra + `aria-current`.
 - **CRUD manual de Repository** (`specs/009-crud-repository/`): `POST/PUT/DELETE /api/apps/{appId}/repositories[/{id}]` (404 app/repo, 400 sem nome, 409 sigla-app duplicada; criação com `source = MANUAL`; edição preserva `source` e `externalId`); UI na **edição do app** (seção Repositórios: tabela com Editar/Remover + formulário). Lógica no `AppService`; persistência nova em `AppRepository` (`GetRepositoryAsync`, `DeleteRepositoryAsync`, `IsSiglaAppInUseAsync(siglaApp, exceptId)`). Sem mudança de schema.
+- **Cadastrados na tela Repositórios** (`specs/010-catalogo-na-tela-repositorios/`): nos filtros Todos e No catálogo a tela também lista os repositórios do catálogo sem descoberto correspondente (manuais e seed) — `GET /api/repositories/catalog`, `AppRepository.ListCatalogOnlyRepositoriesAsync` — e toda linha "no catálogo" tem o atalho **Gerenciar** → edição do app. O filtro padrão da tela é **Todos**.
 - **Leitor de GitHub, fase 1** (`specs/005-leitor-github-fase-1/`, ADR-010, guia `docs/leitor-github.md`):
   - ferramenta `tools/CheckApps.GitHubScan` — scan **por sigla** (validada por formato, limite de resultados), `--dry-run`, `--source fake|github`; o escopo é validado antes de pedir token;
   - tela **Repositórios** no menu: todos os repositórios que passaram pelo scan, cada um com o estado dele — novo, no catálogo (link do app, sem ações), de outra squad, ignorado; filtro padrão "Todos" ("Novos" é a caixa de entrada). Ações: criar app (painel pré-preenchido), vincular a app existente (aviso se a sigla difere), de outra squad, ignorar, restaurar;
@@ -21,7 +22,7 @@ Estágio do roadmap: **Inventário + Health + Evolution concluídos**, mais **Ch
   - fonte `fake` com os casos difíceis; fonte real do GitHub (Search API + YAML da sigla-app) testada com HTTP falso **e lida uma vez de verdade**.
 - **Scan pela tela** (`specs/006-scan-pela-tela/`): bloco **Buscar no GitHub** em Repositórios — siglas, *Pré-visualizar* e *Escanear*; mesmo `ScanService` do CLI. **Desligado por padrão** (`Scan:Enabled`); erros 400/409/502; um scan por vez.
 - **Menu "Repositórios"** (`specs/007-menu-repositorios/`) e "já no catálogo" no resultado do scan.
-- **Testes**: 168 unitários + 41 de integração, verdes. **Nenhum exige Docker, serviço externo ou rede.**
+- **Testes**: 168 unitários + 42 de integração, verdes. **Nenhum exige Docker, serviço externo ou rede.**
 - **Ambiente local**: skill `run-local`; `README.md` com o passo a passo. Verificado nesta sessão: seed, API em `:5232`, Angular em `:4200`, `curl` nos três endpoints novos e um roteiro Playwright (menu desktop/recolhido/recarregar/celular + CRUD completo, sem erros de console além do 409 esperado).
 
 ## O que está mockado / provisório
@@ -41,7 +42,7 @@ Estágio do roadmap: **Inventário + Health + Evolution concluídos**, mais **Ch
 - **Formato real do YAML da sigla-app** e caminho do arquivo: hoje `config.yaml` com a chave `siglaApp` na raiz, configuráveis.
 - **Exceção futura**: repositório compartilhado entre squads — não tratado.
 - Repositório que **some do GitHub** continua na caixa (só `last_seen_at` envelhece) — comportamento não decidido.
-- **CRUD de Repository — o que ficou de fora** (backlog): "repositório ativo" único por app, a tela Repositórios listar os cadastrados à mão/seed, reconhecimento por URL no scan (hoje um repositório manual sem `external_id` e depois achado pelo scan aparece como *novo*). Sigla-app é comparada com diferença de maiúsculas (`AB1` ≠ `ab1`) — a criação manual não normaliza.
+- **CRUD de Repository — o que ficou de fora** (backlog): "repositório ativo" único por app, reconhecimento por URL no scan (hoje um repositório manual sem `external_id` e depois achado pelo scan aparece como *novo*). Sigla-app é comparada com diferença de maiúsculas (`AB1` ≠ `ab1`) — a criação manual não normaliza.
 - `.github/copilot-instructions.md` ainda não existe; confirmar na máquina corporativa se Devin/Copilot varrem `.agents/skills/` (ADR-008).
 
 ## Gotchas para a próxima sessão
@@ -58,11 +59,11 @@ Os críticos estão em `AGENTS.md` e nas regras. Os que mais mordem hoje:
 
 ## Próximos passos (em ordem)
 
-1. **Confirmar na tela** (usuário) o menu lateral e o CRUD de repositório; **commitar** as specs 008 e 009 se estiver de acordo.
+1. **Confirmar na tela** (usuário) o CRUD de repositório (spec 009) e os cadastrados na tela Repositórios (spec 010); **commitar** a spec 010.
 2. **Usar o scan pela tela com o GitHub real** (usuário): segredos da API (`docs/leitor-github.md`, seção 5), reiniciar a API e escanear em **Repositórios → Buscar no GitHub**; depois criar os repositórios de teste que faltam (arquivado, infra, outra sigla, fora do acesso do token).
 3. Repetir os roteiros Playwright das specs 001–007 contra o novo shell.
 4. Revisão do usuário no glossário (Solução, Tipo de app).
-5. Candidatos de baixo custo: o que sobrou do CRUD de Repository (ativo único, listar manuais em Repositórios, reconhecimento por URL), CRUD de SonarProject, checagens e repositórios na massa de demonstração do seed, decidir o que fazer com repositório que some do GitHub.
+5. Candidatos de baixo custo: o que sobrou do CRUD de Repository (ativo único, reconhecimento por URL), CRUD de SonarProject, checagens e repositórios na massa de demonstração do seed, decidir o que fazer com repositório que some do GitHub.
 6. Depois: fase 2 do leitor (dependências de biblioteca); tags chave-valor; spec de Solução.
 7. Na migração para a máquina corporativa: `.github/copilot-instructions.md`, verificação do `.agents/skills/`; GitHub App no lugar do token pessoal (ADR-010).
 8. Antes de qualquer uso compartilhado: substituir ADR-007 por uma decisão de autenticação.

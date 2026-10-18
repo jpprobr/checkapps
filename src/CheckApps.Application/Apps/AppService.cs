@@ -18,6 +18,10 @@ public class AppService(
     public Task<IReadOnlyList<Repository>> ListRepositoriesAsync(string appId, CancellationToken cancellationToken = default) =>
         apps.GetRepositoriesAsync(appId, cancellationToken);
 
+    public Task<IReadOnlyList<CatalogRepository>> ListCatalogRepositoriesAsync(
+        string? sigla, CancellationToken cancellationToken = default) =>
+        apps.ListCatalogOnlyRepositoriesAsync(string.IsNullOrWhiteSpace(sigla) ? null : sigla, cancellationToken);
+
     public async Task<Repository> CreateRepositoryAsync(
         string appId, RepositoryInput input, CancellationToken cancellationToken = default)
     {

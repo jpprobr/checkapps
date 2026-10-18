@@ -61,6 +61,12 @@ export interface RepositoryInfo {
   source: string | null;
 }
 
+/** Repositório do catálogo sem descoberto correspondente: cadastrado à mão ou pelo seed (spec 010). */
+export interface CatalogRepository extends RepositoryInfo {
+  appId: string;
+  appName: string;
+}
+
 export interface UpsertRepositoryRequest {
   name: string;
   provider: string | null;

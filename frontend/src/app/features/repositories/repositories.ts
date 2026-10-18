@@ -2,12 +2,12 @@ import { DatePipe } from '@angular/common';
 import { Component, computed, inject, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { RouterLink } from '@angular/router';
-import { forkJoin } from 'rxjs';
+import { forkJoin, of } from 'rxjs';
 
 import { AppsApiService } from '../../core/apps-api.service';
 import { CurrentSquadService } from '../../core/current-squad.service';
 import { DiscoveredApiService } from '../../core/discovered-api.service';
-import { AppSummary, DiscoveredRepository, ScanOutcome, ScanReport, ScanStatus, TriageStatus } from '../../core/models';
+import { AppSummary, CatalogRepository, DiscoveredRepository, ScanOutcome, ScanReport, ScanStatus, TriageStatus } from '../../core/models';
 import { SquadsApiService } from '../../core/squads-api.service';
 
 /** `catalog` e `all` são escopos da API; os demais são o status de triagem. */
@@ -40,6 +40,8 @@ export class Repositories {
   protected readonly currentSquad = inject(CurrentSquadService);
 
   protected readonly rows = signal<DiscoveredRepository[]>([]);
+  /** Cadastrados à mão ou pelo seed — só nos filtros Todos e No catálogo (spec 010). */
+  protected readonly catalogRows = signal<CatalogRepository[]>([]);
   protected readonly loading = signal(true);
   protected readonly error = signal(false);
   protected readonly actionError = signal<string | null>(null);
@@ -75,11 +77,16 @@ export class Repositories {
     unchanged: 'inalterado',
   };
 
-  protected readonly siglas = computed(() => [...new Set(this.rows().map((r) => r.sigla))].sort());
+  protected readonly siglas = computed(() => [...new Set([...this.rows().map((r) => r.sigla), ...this.catalogRows().map((r) => r.sigla ?? '')].filter((s) => s))].sort());
 
   protected readonly visibleRows = computed(() => {
     const sigla = this.siglaFilter();
     return this.rows().filter((r) => !sigla || r.sigla === sigla);
+  });
+
+  protected readonly visibleCatalogRows = computed(() => {
+    const sigla = this.siglaFilter();
+    return this.catalogRows().filter((r) => !sigla || r.sigla === sigla);
   });
 
   /** Siglas digitadas, separadas por vírgula ou espaço; a API valida o formato e recusa o resto. */
@@ -237,9 +244,12 @@ export class Repositories {
 
   private reload(): void {
     this.loading.set(true);
-    this.discoveredApi.list(this.statusFilter()).subscribe({
-      next: (rows) => {
+    const filter = this.statusFilter();
+    const catalogOnly$ = filter === 'all' || filter === 'catalog' ? this.discoveredApi.listCatalogOnly() : of([]);
+    forkJoin([this.discoveredApi.list(filter), catalogOnly$]).subscribe({
+      next: ([rows, catalogRows]) => {
         this.rows.set(rows);
+        this.catalogRows.set(catalogRows);
         this.error.set(false);
         this.loading.set(false);
       },

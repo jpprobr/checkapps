@@ -164,6 +164,30 @@ public class AppRepository(SqliteConnectionFactory connectionFactory) : IAppRepo
             repository, cancellationToken: cancellationToken));
     }
 
+    public async Task<IReadOnlyList<CatalogRepository>> ListCatalogOnlyRepositoriesAsync(
+        string? sigla, CancellationToken cancellationToken = default)
+    {
+        using var connection = connectionFactory.Create();
+        var rows = await connection.QueryAsync<Repository, string, string, CatalogRepository>(new CommandDefinition(
+            """
+            SELECT r.id AS Id, r.app_id AS AppId, r.name AS Name, r.provider AS Provider, r.url AS Url,
+                   r.external_id AS ExternalId, r.status AS Status,
+                   r.sigla AS Sigla, r.sigla_app AS SiglaApp, r.role AS Role, r.source AS Source,
+                   a.id AS CatalogAppId, a.name AS CatalogAppName
+            FROM repositories r
+            JOIN apps a ON a.id = r.app_id
+            WHERE (@sigla IS NULL OR r.sigla = @sigla)
+              AND NOT EXISTS (
+                  SELECT 1 FROM discovered_repositories d
+                  WHERE d.provider = r.provider AND d.external_id = r.external_id)
+            ORDER BY a.name, r.name
+            """,
+            new { sigla = sigla?.Trim().ToLowerInvariant() }, cancellationToken: cancellationToken),
+            (repository, appId, appName) => new CatalogRepository(repository, appId, appName),
+            splitOn: "CatalogAppId,CatalogAppName");
+        return rows.ToList();
+    }
+
     public async Task<Repository?> GetRepositoryAsync(
         string appId, string repositoryId, CancellationToken cancellationToken = default)
     {

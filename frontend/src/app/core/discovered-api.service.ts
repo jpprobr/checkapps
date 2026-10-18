@@ -5,6 +5,7 @@ import { Observable } from 'rxjs';
 import { API_BASE_URL } from './api-config';
 import {
   AppDetail,
+  CatalogRepository,
   CreateAppFromDiscoveryRequest,
   DiscoveredRepository,
   LinkDiscoveryRequest,
@@ -20,6 +21,11 @@ export class DiscoveredApiService {
   /** `catalog`: só os que já estão no catálogo; `all`: todos; os demais: só os que aguardam decisão. */
   list(status: TriageStatus | 'catalog' | 'all'): Observable<DiscoveredRepository[]> {
     return this.http.get<DiscoveredRepository[]>(`${API_BASE_URL}/discovered-repositories`, { params: { status } });
+  }
+
+  /** Repositórios do catálogo que a caixa de entrada não mostra (cadastrados à mão e do seed). */
+  listCatalogOnly(): Observable<CatalogRepository[]> {
+    return this.http.get<CatalogRepository[]>(`${API_BASE_URL}/repositories/catalog`);
   }
 
   createApp(id: string, request: CreateAppFromDiscoveryRequest): Observable<AppDetail> {

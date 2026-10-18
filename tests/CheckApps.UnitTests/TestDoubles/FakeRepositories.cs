@@ -120,6 +120,12 @@ public class FakeAppRepository : IAppRepository
         return Task.CompletedTask;
     }
 
+    public Task<IReadOnlyList<CatalogRepository>> ListCatalogOnlyRepositoriesAsync(string? sigla, CancellationToken ct = default) =>
+        Task.FromResult<IReadOnlyList<CatalogRepository>>(_repositories
+            .Where(r => sigla is null || r.Sigla == sigla.ToLowerInvariant())
+            .Select(r => new CatalogRepository(r, r.AppId, _apps.GetValueOrDefault(r.AppId)?.Name ?? r.AppId))
+            .ToList());
+
     public Task<Repository?> GetRepositoryAsync(string appId, string repositoryId, CancellationToken ct = default) =>
         Task.FromResult(_repositories.FirstOrDefault(r => r.AppId == appId && r.Id == repositoryId));
 

@@ -141,7 +141,7 @@
   </div>
 
   <p class="subtitle small scope-note">
-    Aqui estão os repositórios que passaram pelo scan. Repositórios cadastrados direto em um app ainda não aparecem.
+    Aqui estão os repositórios que passaram pelo scan e os já cadastrados nos apps (à mão ou pelo seed).
   </p>
 
   @if (actionError()) {
@@ -192,7 +192,8 @@
             <td>
               <div class="row-actions">
                 @if (row.catalogApp) {
-                  <!-- já no catálogo: não há decisão a tomar -->
+                  <!-- já no catálogo: não há decisão a tomar; o atalho leva à edição do app -->
+                  <a [routerLink]="['/apps', row.catalogApp.appId, 'edit']" class="button-secondary">Gerenciar</a>
                 } @else if (row.status === 'new') {
                   <button type="button" (click)="openCreate(row)">Criar app</button>
                   <button type="button" class="secondary" (click)="openLink(row)">Vincular a app…</button>
@@ -261,7 +262,34 @@
               </td>
             </tr>
           }
-        } @empty {
+        }
+
+        @for (item of visibleCatalogRows(); track item.id) {
+          <tr>
+            <td>
+              @if (item.url) {
+                <a [href]="item.url" target="_blank" rel="noopener">{{ item.name }}</a>
+              } @else {
+                {{ item.name }}
+              }
+              @if (item.sigla) { <span class="tag">{{ item.sigla.toUpperCase() }}</span> }
+              @if (item.status === 'archived') { <span class="tag">arquivado</span> }
+              <span class="tag in-catalog">no catálogo</span>
+              <a [routerLink]="['/apps', item.appId]">{{ item.appName }}</a>
+              <span class="tag">{{ item.source === 'MANUAL' ? 'cadastrado à mão' : item.source === 'GITHUB_SCAN' ? 'scan' : 'seed' }}</span>
+            </td>
+            <td>{{ item.siglaApp ?? '—' }}</td>
+            <td>{{ item.role ?? 'papel não informado' }}</td>
+            <td>—</td>
+            <td>
+              <div class="row-actions">
+                <a [routerLink]="['/apps', item.appId, 'edit']" class="button-secondary">Gerenciar</a>
+              </div>
+            </td>
+          </tr>
+        }
+
+        @if (visibleRows().length === 0 && visibleCatalogRows().length === 0) {
           <tr>
             <td colspan="5">
               @if (statusFilter() === 'new') {
