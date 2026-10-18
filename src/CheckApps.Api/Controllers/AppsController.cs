@@ -85,16 +85,30 @@ public class AppsController(AppService appService, QualitySnapshotService snapsh
     public async Task<ActionResult<AppLinkDto>> AddLink(
         string appId, [FromBody] UpsertAppLinkRequest request, CancellationToken cancellationToken)
     {
-        var link = await appService.AddLinkAsync(appId, request.Description, request.Uri, cancellationToken);
-        return CreatedAtAction(nameof(ListLinks), new { appId }, link.ToDto());
+        try
+        {
+            var link = await appService.AddLinkAsync(appId, request.Description, request.Uri, cancellationToken);
+            return CreatedAtAction(nameof(ListLinks), new { appId }, link.ToDto());
+        }
+        catch (KeyNotFoundException ex)
+        {
+            return NotFound(ex.Message);
+        }
     }
 
     [HttpPut("{appId}/links/{linkId}")]
     public async Task<ActionResult<AppLinkDto>> UpdateLink(
         string appId, string linkId, [FromBody] UpsertAppLinkRequest request, CancellationToken cancellationToken)
     {
-        var link = await appService.UpdateLinkAsync(appId, linkId, request.Description, request.Uri, cancellationToken);
-        return Ok(link.ToDto());
+        try
+        {
+            var link = await appService.UpdateLinkAsync(appId, linkId, request.Description, request.Uri, cancellationToken);
+            return Ok(link.ToDto());
+        }
+        catch (KeyNotFoundException ex)
+        {
+            return NotFound(ex.Message);
+        }
     }
 
     [HttpDelete("{appId}/links/{linkId}")]

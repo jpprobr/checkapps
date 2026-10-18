@@ -134,4 +134,13 @@ public class AppServiceTests
         await service.DeleteLinkAsync("app-1", link.Id);
         Assert.Empty(await service.ListLinksAsync("app-1"));
     }
+
+    [Fact]
+    public async Task AddAndUpdateLink_ThrowKeyNotFound_WhenAppDoesNotExist()
+    {
+        var service = new AppService(new FakeAppRepository(), new FakeSquadRepository(), new FakeQualitySnapshotRepository(), new FakeCheckRepository());
+
+        await Assert.ThrowsAsync<KeyNotFoundException>(() => service.AddLinkAsync("nope", "Wiki", "https://wiki.example.com"));
+        await Assert.ThrowsAsync<KeyNotFoundException>(() => service.UpdateLinkAsync("nope", "l1", "Wiki", "https://wiki.example.com"));
+    }
 }

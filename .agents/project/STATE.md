@@ -23,7 +23,7 @@ Estágio do roadmap: **Inventário + Health + Evolution concluídos**, mais **Ch
   - fonte `fake` com os casos difíceis; fonte real do GitHub (Search API + YAML da sigla-app) testada com HTTP falso **e lida uma vez de verdade**.
 - **Scan pela tela** (`specs/006-scan-pela-tela/`): bloco **Buscar no GitHub** em Repositórios — siglas, *Pré-visualizar* e *Escanear*; mesmo `ScanService` do CLI. **Desligado por padrão** (`Scan:Enabled`); erros 400/409/502; um scan por vez.
 - **Menu "Repositórios"** (`specs/007-menu-repositorios/`) e "já no catálogo" no resultado do scan.
-- **Testes**: 168 unitários + 42 de integração, verdes. **Nenhum exige Docker, serviço externo ou rede.**
+- **Testes**: 169 unitários + 42 de integração, verdes. **Nenhum exige Docker, serviço externo ou rede.**
 - **Ambiente local**: skill `run-local`; `README.md` com o passo a passo. Verificado nesta sessão: seed, API em `:5232`, Angular em `:4200`, `curl` nos três endpoints novos e um roteiro Playwright (menu desktop/recolhido/recarregar/celular + CRUD completo, sem erros de console além do 409 esperado).
 
 ## O que está mockado / provisório
@@ -34,7 +34,7 @@ Estágio do roadmap: **Inventário + Health + Evolution concluídos**, mais **Ch
 - **Sem autenticação** (ADR-007): "minha squad" é a última visitada (navegador); autor de checagem é texto livre. **O endpoint de scan usa o token configurado e qualquer pessoa que abra o sistema pode dispará-lo** — por isso vem desligado; autenticação é pré-requisito de uso compartilhado.
 - **Sem deploy, sem CI.** Litestream e ECS documentados como alvo (spec 004, ADR-009), não implementados.
 - **O seed não cria checagens nem descobertos** — o scan `--source fake` cria os descobertos de demonstração.
-- **Pendente de verificação nas specs 008/009**: os roteiros Playwright das specs 001–007 não foram repetidos contra o novo shell (seletores de menu mudaram de header para `aside`); confirmação do usuário na tela.
+- **Roteiro de regressão no novo shell (2026-10-18, banco isolado `e2e.db`)**: 001–011 repetidas no navegador — squads, apps, links, checagens, triagem, filtros, CRUD de repositório, menu recolhido e gaveta — sem regressão e sem erros de console. **Bug antigo achado e corrigido (spec 002, não era regressão)**: `POST`/`PUT` de link com app inexistente devolvia 500 (violação de FK); agora `AppService` checa o app (`EnsureAppExistsAsync`) e a API devolve 404. O scan pela tela **não** foi disparado (a API desta máquina tem `Scan:Enabled` ligado com fonte `github`).
 
 ## Decisões pendentes / perguntas abertas
 

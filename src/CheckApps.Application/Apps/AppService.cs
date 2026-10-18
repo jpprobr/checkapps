@@ -25,10 +25,7 @@ public class AppService(
     public async Task<Repository> CreateRepositoryAsync(
         string appId, RepositoryInput input, CancellationToken cancellationToken = default)
     {
-        if (await apps.GetAsync(appId, cancellationToken) is null)
-        {
-            throw new KeyNotFoundException($"App '{appId}' não encontrado.");
-        }
+        await EnsureAppExistsAsync(appId, cancellationToken);
 
         var repository = new Repository
         {
@@ -161,6 +158,7 @@ public class AppService(
     public async Task<AppLink> AddLinkAsync(
         string appId, string description, string uri, CancellationToken cancellationToken = default)
     {
+        await EnsureAppExistsAsync(appId, cancellationToken);
         var link = new AppLink { Id = Guid.NewGuid().ToString("n"), AppId = appId, Description = description, Uri = uri };
         await apps.SaveLinkAsync(link, cancellationToken);
         return link;
@@ -169,6 +167,7 @@ public class AppService(
     public async Task<AppLink> UpdateLinkAsync(
         string appId, string linkId, string description, string uri, CancellationToken cancellationToken = default)
     {
+        await EnsureAppExistsAsync(appId, cancellationToken);
         var link = new AppLink { Id = linkId, AppId = appId, Description = description, Uri = uri };
         await apps.SaveLinkAsync(link, cancellationToken);
         return link;
@@ -176,6 +175,14 @@ public class AppService(
 
     public Task DeleteLinkAsync(string appId, string linkId, CancellationToken cancellationToken = default) =>
         apps.DeleteLinkAsync(appId, linkId, cancellationToken);
+
+    private async Task EnsureAppExistsAsync(string appId, CancellationToken cancellationToken)
+    {
+        if (await apps.GetAsync(appId, cancellationToken) is null)
+        {
+            throw new KeyNotFoundException($"App '{appId}' não encontrado.");
+        }
+    }
 
     private static string RequireName(string? name) =>
         string.IsNullOrWhiteSpace(name) ? throw new ArgumentException("O nome do repositório é obrigatório.") : name.Trim();
