@@ -25,6 +25,13 @@ public interface IAppRepository
 
     Task AddRepositoryAsync(Repository repository, CancellationToken cancellationToken = default);
 
+    Task<Repository?> GetRepositoryAsync(string appId, string repositoryId, CancellationToken cancellationToken = default);
+
+    Task DeleteRepositoryAsync(string appId, string repositoryId, CancellationToken cancellationToken = default);
+
+    /// <summary>Algum repositório que não <paramref name="exceptRepositoryId"/> já usa essa sigla-app?</summary>
+    Task<bool> IsSiglaAppInUseAsync(string siglaApp, string? exceptRepositoryId, CancellationToken cancellationToken = default);
+
     Task AddSonarProjectAsync(SonarProject sonarProject, CancellationToken cancellationToken = default);
 
     Task<IReadOnlyList<AppLink>> GetLinksAsync(string appId, CancellationToken cancellationToken = default);

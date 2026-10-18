@@ -99,6 +99,97 @@
           <button type="button" (click)="addLink()">+ Adicionar link</button>
         </div>
       </section>
+
+      <section class="card links-section">
+        <h2>Repositórios</h2>
+
+        @if (repoError()) {
+          <p class="error">{{ repoError() }}</p>
+        }
+
+        @if (repositories().length > 0) {
+          <table>
+            <thead>
+              <tr>
+                <th>Nome</th>
+                <th>Sigla-app</th>
+                <th>Papel</th>
+                <th>Origem</th>
+                <th></th>
+              </tr>
+            </thead>
+            <tbody>
+              @for (repo of repositories(); track repo.id) {
+                <tr>
+                  <td>
+                    @if (repo.url) {
+                      <a [href]="repo.url" target="_blank" rel="noopener">{{ repo.name }}</a>
+                    } @else {
+                      {{ repo.name }}
+                    }
+                  </td>
+                  <td>{{ repo.siglaApp ?? '—' }}</td>
+                  <td>{{ repo.role ?? '—' }}</td>
+                  <td>{{ repo.source === 'MANUAL' ? 'manual' : repo.source === 'GITHUB_SCAN' ? 'scan' : '—' }}</td>
+                  <td class="row-actions">
+                    <button type="button" class="secondary" (click)="editRepository(repo)">Editar</button>
+                    <button type="button" class="danger" (click)="removeRepository(repo)">Remover</button>
+                  </td>
+                </tr>
+              }
+            </tbody>
+          </table>
+        } @else {
+          <p class="subtitle">Nenhum repositório neste app.</p>
+        }
+
+        <div class="form add-link-form">
+          <h3>{{ editingRepoId() ? 'Editar repositório' : 'Novo repositório' }}</h3>
+          <label>
+            Nome *
+            <input type="text" [ngModel]="repoDraft().name" (ngModelChange)="setDraft('name', $event)" name="repoName" />
+          </label>
+          <label>
+            Provedor
+            <input type="text" placeholder="github" [ngModel]="repoDraft().provider" (ngModelChange)="setDraft('provider', $event)" name="repoProvider" />
+          </label>
+          <label>
+            URL
+            <input type="url" [ngModel]="repoDraft().url" (ngModelChange)="setDraft('url', $event)" name="repoUrl" />
+          </label>
+          <label>
+            Sigla
+            <input type="text" [ngModel]="repoDraft().sigla" (ngModelChange)="setDraft('sigla', $event)" name="repoSigla" />
+          </label>
+          <label>
+            Sigla-app
+            <input type="text" [ngModel]="repoDraft().siglaApp" (ngModelChange)="setDraft('siglaApp', $event)" name="repoSiglaApp" />
+          </label>
+          <label>
+            Papel
+            <input type="text" list="repo-roles" placeholder="aplicacao, infra, contrato, secrets" [ngModel]="repoDraft().role" (ngModelChange)="setDraft('role', $event)" name="repoRole" />
+            <datalist id="repo-roles">
+              <option value="aplicacao"></option>
+              <option value="infra"></option>
+              <option value="contrato"></option>
+              <option value="secrets"></option>
+            </datalist>
+          </label>
+          <label>
+            Situação
+            <select [ngModel]="repoDraft().status" (ngModelChange)="setDraft('status', $event)" name="repoStatus">
+              <option value="active">Ativo</option>
+              <option value="archived">Arquivado</option>
+            </select>
+          </label>
+          <div class="form-actions">
+            <button type="button" (click)="saveRepository()">{{ editingRepoId() ? 'Salvar repositório' : '+ Adicionar repositório' }}</button>
+            @if (editingRepoId()) {
+              <button type="button" class="secondary" (click)="cancelRepositoryEdit()">Cancelar edição</button>
+            }
+          </div>
+        </div>
+      </section>
     }
   }
 </main>

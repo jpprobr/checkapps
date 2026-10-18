@@ -164,6 +164,38 @@ public class AppRepository(SqliteConnectionFactory connectionFactory) : IAppRepo
             repository, cancellationToken: cancellationToken));
     }
 
+    public async Task<Repository?> GetRepositoryAsync(
+        string appId, string repositoryId, CancellationToken cancellationToken = default)
+    {
+        using var connection = connectionFactory.Create();
+        return await connection.QuerySingleOrDefaultAsync<Repository>(new CommandDefinition(
+            """
+            SELECT id AS Id, app_id AS AppId, name AS Name, provider AS Provider, url AS Url,
+                   external_id AS ExternalId, status AS Status,
+                   sigla AS Sigla, sigla_app AS SiglaApp, role AS Role, source AS Source
+            FROM repositories WHERE app_id = @appId AND id = @repositoryId
+            """,
+            new { appId, repositoryId }, cancellationToken: cancellationToken));
+    }
+
+    public async Task DeleteRepositoryAsync(string appId, string repositoryId, CancellationToken cancellationToken = default)
+    {
+        using var connection = connectionFactory.Create();
+        await connection.ExecuteAsync(new CommandDefinition(
+            "DELETE FROM repositories WHERE app_id = @appId AND id = @repositoryId",
+            new { appId, repositoryId }, cancellationToken: cancellationToken));
+    }
+
+    public async Task<bool> IsSiglaAppInUseAsync(
+        string siglaApp, string? exceptRepositoryId, CancellationToken cancellationToken = default)
+    {
+        using var connection = connectionFactory.Create();
+        return await connection.ExecuteScalarAsync<bool>(new CommandDefinition(
+            "SELECT EXISTS (SELECT 1 FROM repositories WHERE sigla_app = @siglaApp AND id <> @exceptRepositoryId)",
+            new { siglaApp, exceptRepositoryId = exceptRepositoryId ?? string.Empty },
+            cancellationToken: cancellationToken));
+    }
+
     public async Task AddSonarProjectAsync(SonarProject sonarProject, CancellationToken cancellationToken = default)
     {
         using var connection = connectionFactory.Create();

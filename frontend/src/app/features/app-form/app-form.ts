@@ -4,7 +4,21 @@ import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 
 import { AppsApiService } from '../../core/apps-api.service';
 import { SquadsApiService } from '../../core/squads-api.service';
-import { AppLink, Squad } from '../../core/models';
+import { AppLink, RepositoryInfo, Squad } from '../../core/models';
+
+interface RepositoryDraft {
+  name: string;
+  provider: string;
+  url: string;
+  sigla: string;
+  siglaApp: string;
+  role: string;
+  status: string;
+}
+
+function emptyDraft(): RepositoryDraft {
+  return { name: '', provider: '', url: '', sigla: '', siglaApp: '', role: '', status: 'active' };
+}
 
 @Component({
   selector: 'app-app-form',
@@ -37,6 +51,12 @@ export class AppForm {
   protected readonly newLinkUri = signal('');
   protected readonly linkError = signal<string | null>(null);
 
+  protected readonly repositories = signal<RepositoryInfo[]>([]);
+  protected readonly repoDraft = signal<RepositoryDraft>(emptyDraft());
+  /** Id do repositório em edição; null = formulário de novo repositório. */
+  protected readonly editingRepoId = signal<string | null>(null);
+  protected readonly repoError = signal<string | null>(null);
+
   constructor() {
     this.squadsApi.list().subscribe((squads) => this.squads.set(squads));
 
@@ -57,7 +77,84 @@ export class AppForm {
         },
       });
       this.reloadLinks();
+      this.reloadRepositories();
     }
+  }
+
+  private reloadRepositories(): void {
+    this.appsApi.listRepositories(this.appId!).subscribe((repos) => this.repositories.set(repos));
+  }
+
+  protected setDraft(field: keyof RepositoryDraft, value: string): void {
+    this.repoDraft.update((d) => ({ ...d, [field]: value }));
+  }
+
+  protected editRepository(repo: RepositoryInfo): void {
+    this.editingRepoId.set(repo.id);
+    this.repoError.set(null);
+    this.repoDraft.set({
+      name: repo.name,
+      provider: repo.provider ?? '',
+      url: repo.url ?? '',
+      sigla: repo.sigla ?? '',
+      siglaApp: repo.siglaApp ?? '',
+      role: repo.role ?? '',
+      status: repo.status ?? 'active',
+    });
+  }
+
+  protected cancelRepositoryEdit(): void {
+    this.editingRepoId.set(null);
+    this.repoError.set(null);
+    this.repoDraft.set(emptyDraft());
+  }
+
+  protected saveRepository(): void {
+    const d = this.repoDraft();
+    if (!d.name.trim()) {
+      this.repoError.set('O nome do repositório é obrigatório.');
+      return;
+    }
+
+    const blankToNull = (v: string) => v.trim() || null;
+    const request = {
+      name: d.name.trim(),
+      provider: blankToNull(d.provider),
+      url: blankToNull(d.url),
+      status: blankToNull(d.status),
+      sigla: blankToNull(d.sigla),
+      siglaApp: blankToNull(d.siglaApp),
+      role: blankToNull(d.role),
+    };
+    const editingId = this.editingRepoId();
+    const request$ = editingId
+      ? this.appsApi.updateRepository(this.appId!, editingId, request)
+      : this.appsApi.addRepository(this.appId!, request);
+
+    request$.subscribe({
+      next: () => {
+        this.cancelRepositoryEdit();
+        this.reloadRepositories();
+      },
+      error: (err) =>
+        this.repoError.set(typeof err?.error === 'string' ? err.error : 'Não foi possível salvar o repositório.'),
+    });
+  }
+
+  protected removeRepository(repo: RepositoryInfo): void {
+    if (!confirm(`Remover o repositório "${repo.name}" deste app?`)) {
+      return;
+    }
+    this.appsApi.deleteRepository(this.appId!, repo.id).subscribe({
+      next: () => {
+        if (this.editingRepoId() === repo.id) {
+          this.cancelRepositoryEdit();
+        }
+        this.reloadRepositories();
+      },
+      error: (err) =>
+        this.repoError.set(typeof err?.error === 'string' ? err.error : 'Não foi possível remover o repositório.'),
+    });
   }
 
   private reloadLinks(): void {

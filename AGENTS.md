@@ -16,7 +16,7 @@ dotnet run --project tools/CheckApps.GitHubScan -- --sigla ab1,cd2 --source fake
 dotnet run --project src/CheckApps.Api --urls http://localhost:5232
 cd frontend && npm install && npm start               # Angular em :4200
 
-dotnet test                                           # 202 testes; nenhum exige Docker, serviço externo ou rede
+dotnet test                                           # 209 testes; nenhum exige Docker, serviço externo ou rede
 ```
 
 Persistência é SQLite em arquivo (`%LOCALAPPDATA%\CheckApps\checkapps.db`). Não há banco para subir.
@@ -36,7 +36,7 @@ A skill `run-local` (`.agents/skills/run-local/`) encapsula essa sequência com 
 | Propor um access pattern, GSI ou desnormalização nova | `.agents/architecture/data-model/access-patterns.md` (registro vivo com o fit de cada padrão) e os gatilhos do ADR-002 |
 | Mudar algo estrutural (stack, modelo, padrões) | `.agents/architecture/decisions/` — ADRs numerados; se a decisão já existe, respeite-a ou proponha um novo ADR |
 | Entender por que uma decisão passada foi revista | `.agents/architecture/retrospectives/` — avaliações de experimentos concluídos (histórico, não vivo) |
-| Mexer no leitor de GitHub (scan, caixa de entrada, triagem, scan pela tela) | `specs/005-leitor-github-fase-1/`, `specs/006-scan-pela-tela/`, `specs/007-menu-repositorios/`, ADR-010 e `docs/leitor-github.md` — **token e nome da organização nunca entram no Git** |
+| Mexer no leitor de GitHub (scan, caixa de entrada, triagem, scan pela tela) | `specs/005-leitor-github-fase-1/`, `specs/006-scan-pela-tela/`, `specs/007-menu-repositorios/`, `specs/009-crud-repository/`, ADR-010 e `docs/leitor-github.md` — **token e nome da organização nunca entram no Git** |
 | Implementar uma feature | A spec correspondente em `specs/NNN-*/spec.md` e seu `checklist.md` |
 | Criar uma feature nova | Copie `specs/_template/` para `specs/NNN-nome/` e preencha antes de codar |
 | Subir o ambiente local | Skill `run-local` em `.agents/skills/run-local/SKILL.md` |

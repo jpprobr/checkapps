@@ -1,4 +1,5 @@
 using CheckApps.Domain;
+using CheckApps.Domain.Discovery;
 using CheckApps.Domain.QualityAssessment;
 using CheckApps.Infrastructure.Sqlite;
 
@@ -91,6 +92,33 @@ public class ManagementTests(SqliteFixture fixture) : IClassFixture<SqliteFixtur
 
         await _apps.DeleteLinkAsync(appId, linkId);
         Assert.Empty(await _apps.GetLinksAsync(appId));
+    }
+
+    [Fact]
+    public async Task Repositories_CanBeReadAndDeleted_AndSiglaAppUniquenessExcludesSelf()
+    {
+        var squadId = $"sq-{Guid.NewGuid():N}";
+        var appId = $"app-{Guid.NewGuid():N}";
+        var repoId = Guid.NewGuid().ToString("n");
+        var siglaApp = $"S{Guid.NewGuid():N}";
+        await _squads.SaveAsync(new Squad { Id = squadId, Name = "Squad Teste" });
+        await _apps.SaveAsync(new App { Id = appId, SquadId = squadId, Name = "App Teste" });
+        await _apps.AddRepositoryAsync(new Repository
+        {
+            Id = repoId, AppId = appId, Name = "repo", Source = RepositorySources.Manual, SiglaApp = siglaApp,
+        });
+
+        var stored = await _apps.GetRepositoryAsync(appId, repoId);
+        Assert.Equal(siglaApp, stored!.SiglaApp);
+        Assert.Null(await _apps.GetRepositoryAsync("outro-app", repoId));
+        Assert.True(await _apps.IsSiglaAppInUseAsync(siglaApp, null));
+        Assert.True(await _apps.IsSiglaAppInUseAsync(siglaApp, "outro-id"));
+        Assert.False(await _apps.IsSiglaAppInUseAsync(siglaApp, repoId));
+
+        await _apps.DeleteRepositoryAsync(appId, repoId);
+
+        Assert.Null(await _apps.GetRepositoryAsync(appId, repoId));
+        Assert.False(await _apps.IsSiglaAppInUseAsync(siglaApp, null));
     }
 
     [Fact]

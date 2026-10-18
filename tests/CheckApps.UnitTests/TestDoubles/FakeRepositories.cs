@@ -119,6 +119,18 @@ public class FakeAppRepository : IAppRepository
         _links.Remove(linkId);
         return Task.CompletedTask;
     }
+
+    public Task<Repository?> GetRepositoryAsync(string appId, string repositoryId, CancellationToken ct = default) =>
+        Task.FromResult(_repositories.FirstOrDefault(r => r.AppId == appId && r.Id == repositoryId));
+
+    public Task DeleteRepositoryAsync(string appId, string repositoryId, CancellationToken ct = default)
+    {
+        _repositories.RemoveAll(r => r.AppId == appId && r.Id == repositoryId);
+        return Task.CompletedTask;
+    }
+
+    public Task<bool> IsSiglaAppInUseAsync(string siglaApp, string? exceptRepositoryId, CancellationToken ct = default) =>
+        Task.FromResult(_repositories.Any(r => r.SiglaApp == siglaApp && r.Id != exceptRepositoryId));
 }
 
 public class FakeQualitySnapshotRepository : IQualitySnapshotRepository

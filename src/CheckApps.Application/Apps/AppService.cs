@@ -1,8 +1,13 @@
 using CheckApps.Application.Persistence;
 using CheckApps.Domain;
+using CheckApps.Domain.Discovery;
 using Repository = CheckApps.Domain.Repository;
 
 namespace CheckApps.Application.Apps;
+
+/// <summary>Campos editáveis de um repositório cadastrado à mão.</summary>
+public record RepositoryInput(
+    string? Name, string? Provider, string? Url, string? Status, string? Sigla, string? SiglaApp, string? Role);
 
 public class AppService(
     IAppRepository apps, ISquadRepository squads, IQualitySnapshotRepository snapshots, ICheckRepository checks)
@@ -12,6 +17,49 @@ public class AppService(
 
     public Task<IReadOnlyList<Repository>> ListRepositoriesAsync(string appId, CancellationToken cancellationToken = default) =>
         apps.GetRepositoriesAsync(appId, cancellationToken);
+
+    public async Task<Repository> CreateRepositoryAsync(
+        string appId, RepositoryInput input, CancellationToken cancellationToken = default)
+    {
+        if (await apps.GetAsync(appId, cancellationToken) is null)
+        {
+            throw new KeyNotFoundException($"App '{appId}' não encontrado.");
+        }
+
+        var repository = new Repository
+        {
+            Id = Guid.NewGuid().ToString("n"),
+            AppId = appId,
+            Name = RequireName(input.Name),
+            Source = RepositorySources.Manual,
+        };
+        Apply(repository, input);
+        await EnsureSiglaAppFreeAsync(repository, cancellationToken);
+        await apps.AddRepositoryAsync(repository, cancellationToken);
+        return repository;
+    }
+
+    public async Task<Repository> UpdateRepositoryAsync(
+        string appId, string repositoryId, RepositoryInput input, CancellationToken cancellationToken = default)
+    {
+        var repository = await apps.GetRepositoryAsync(appId, repositoryId, cancellationToken)
+            ?? throw new KeyNotFoundException($"Repositório '{repositoryId}' não encontrado no app '{appId}'.");
+        repository.Name = RequireName(input.Name);
+        Apply(repository, input);
+        await EnsureSiglaAppFreeAsync(repository, cancellationToken);
+        await apps.AddRepositoryAsync(repository, cancellationToken);
+        return repository;
+    }
+
+    public async Task DeleteRepositoryAsync(string appId, string repositoryId, CancellationToken cancellationToken = default)
+    {
+        if (await apps.GetRepositoryAsync(appId, repositoryId, cancellationToken) is null)
+        {
+            throw new KeyNotFoundException($"Repositório '{repositoryId}' não encontrado no app '{appId}'.");
+        }
+
+        await apps.DeleteRepositoryAsync(appId, repositoryId, cancellationToken);
+    }
 
     public Task<IReadOnlyList<SonarProject>> ListSonarProjectsAsync(string appId, CancellationToken cancellationToken = default) =>
         apps.GetSonarProjectsAsync(appId, cancellationToken);
@@ -124,6 +172,31 @@ public class AppService(
 
     public Task DeleteLinkAsync(string appId, string linkId, CancellationToken cancellationToken = default) =>
         apps.DeleteLinkAsync(appId, linkId, cancellationToken);
+
+    private static string RequireName(string? name) =>
+        string.IsNullOrWhiteSpace(name) ? throw new ArgumentException("O nome do repositório é obrigatório.") : name.Trim();
+
+    /// <summary>Copia os campos editáveis. <c>Source</c> e <c>ExternalId</c> nunca mudam por aqui.</summary>
+    private static void Apply(Repository repository, RepositoryInput input)
+    {
+        repository.Provider = Clean(input.Provider);
+        repository.Url = Clean(input.Url);
+        repository.Status = Clean(input.Status) ?? "active";
+        repository.Sigla = Clean(input.Sigla);
+        repository.SiglaApp = Clean(input.SiglaApp);
+        repository.Role = Clean(input.Role);
+    }
+
+    private static string? Clean(string? value) => string.IsNullOrWhiteSpace(value) ? null : value.Trim();
+
+    private async Task EnsureSiglaAppFreeAsync(Repository repository, CancellationToken cancellationToken)
+    {
+        if (repository.SiglaApp is not null
+            && await apps.IsSiglaAppInUseAsync(repository.SiglaApp, repository.Id, cancellationToken))
+        {
+            throw new DomainConflictException($"A sigla-app '{repository.SiglaApp}' já pertence a outro repositório do catálogo.");
+        }
+    }
 
     private async Task EnsureSquadExistsAsync(string squadId, CancellationToken cancellationToken)
     {

@@ -7,8 +7,8 @@ Leia antes de editar código Angular. Só o que é específico deste projeto.
 - **Standalone components, sem NgModules.** Angular 20; nomes de arquivo sem sufixo `.component` (`app-list.ts`, classe `AppList`) — é a convenção padrão da CLI 20, mantenha.
 - **Sem state management externo.** Signals (`signal`, `computed`) + serviços injetados com `inject()`. Estado de tela vive no componente; chamadas HTTP nos serviços em `core/`.
 - **Gere componentes com `ng g component features/<nome> --skip-tests`.** Não há suíte de testes Angular no projeto (decisão consciente: o foco de testes é backend); não deixe `.spec.ts` gerados a esmo.
-- **Shell em `app.html`**: marca → `/`, seções `Squads` | `Checagens` e seletor de squad no header. A lista de squads fica em **`/squads`**; `/` redireciona para a última squad visitada (ou `/squads`). Links de "voltar para squads" apontam para `/squads`, nunca para `/`.
-- **`CurrentSquadService`** é a squad em contexto (signal + `localStorage` com try/catch). Telas de squad e de app chamam `set(squadId)`; quem remove squad chama `clear`; quem cria ou altera squad chama `refresh()` para o seletor do header refletir. Breadcrumbs usam `squadName()` — nunca "Dashboard".
+- **Shell em `app.html`**: menu lateral (`SidebarService`): marca → `/`, seletor de squad no topo e seções `Squads` | `Repositórios` | `Checagens` com ícone SVG embutido; recolhível (só ícones, `aria-label` + `title`, estado em `localStorage`) e gaveta em ≤ 768 px. Estado ativo sempre por fundo + barra, nunca só cor. A lista de squads fica em **`/squads`**; `/` redireciona para a última squad visitada (ou `/squads`). Links de "voltar para squads" apontam para `/squads`, nunca para `/`.
+- **`CurrentSquadService`** é a squad em contexto (signal + `localStorage` com try/catch). Telas de squad e de app chamam `set(squadId)`; quem remove squad chama `clear`; quem cria ou altera squad chama `refresh()` para o seletor do menu refletir. Breadcrumbs usam `squadName()` — nunca "Dashboard".
 - **`ParamAwareReuseStrategy`** (em `app.config.ts`) recria o componente quando só o parâmetro da rota muda. As telas leem o parâmetro do snapshot no construtor; sem essa estratégia, trocar de squad pelo seletor mostraria os dados da squad anterior.
 - **Listagens existentes são a superfície de gerenciamento.** Botões de criar/editar/inativar/remover ficam em `squad-picker` e `app-list`. Não crie uma "área admin" paralela.
 
@@ -39,4 +39,5 @@ Leia antes de editar código Angular. Só o que é específico deste projeto.
 
 - Angular CLI **20**, não 22 — o Node da máquina (22.17) não roda a 22. Não faça `ng update` para 22 sem atualizar o Node antes.
 - `npx ng build` para checar erros de compilação; `ng serve` recompila sozinho ao salvar.
-- **Playwright: escope seletores de texto a `main`** (`main >> text=…`, `main select`). O seletor de squad do header tem um `<option>` com o nome de cada squad, e `text=Squad X` sem escopo casa com ele.
+- **Playwright e a gaveta do celular**: com o menu recolhido fora da tela (`translateX(-100%)`), `isVisible()` continua `true`; meça `boundingBox().x` (negativo = fechada) e espere a transição de 0,2 s antes de medir aberta.
+- **Playwright: escope seletores de texto a `main`** (`main >> text=…`, `main select`). O seletor de squad do menu lateral tem um `<option>` com o nome de cada squad, e `text=Squad X` sem escopo casa com ele.

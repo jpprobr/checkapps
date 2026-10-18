@@ -41,6 +41,9 @@ public record RepositoryDto(
     string Id, string Name, string? Provider, string? Url, string? Status,
     string? Sigla, string? SiglaApp, string? Role, string? Source);
 
+public record UpsertRepositoryRequest(
+    string? Name, string? Provider, string? Url, string? Status, string? Sigla, string? SiglaApp, string? Role);
+
 public record SonarProjectDto(string Id, string ProjectKey, string? Name, string? Url, string? Status, string Source);
 
 public record CurrentQualityDto(

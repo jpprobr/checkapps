@@ -61,6 +61,16 @@ export interface RepositoryInfo {
   source: string | null;
 }
 
+export interface UpsertRepositoryRequest {
+  name: string;
+  provider: string | null;
+  url: string | null;
+  status: string | null;
+  sigla: string | null;
+  siglaApp: string | null;
+  role: string | null;
+}
+
 export interface SonarProjectInfo {
   id: string;
   projectKey: string;

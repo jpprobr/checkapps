@@ -14,6 +14,7 @@ import {
   SonarProjectInfo,
   UpdateAppRequest,
   UpsertAppLinkRequest,
+  UpsertRepositoryRequest,
 } from './models';
 
 @Injectable({ providedIn: 'root' })
@@ -50,6 +51,18 @@ export class AppsApiService {
 
   delete(appId: string): Observable<void> {
     return this.http.delete<void>(`${API_BASE_URL}/apps/${appId}`);
+  }
+
+  addRepository(appId: string, request: UpsertRepositoryRequest): Observable<RepositoryInfo> {
+    return this.http.post<RepositoryInfo>(`${API_BASE_URL}/apps/${appId}/repositories`, request);
+  }
+
+  updateRepository(appId: string, repositoryId: string, request: UpsertRepositoryRequest): Observable<RepositoryInfo> {
+    return this.http.put<RepositoryInfo>(`${API_BASE_URL}/apps/${appId}/repositories/${repositoryId}`, request);
+  }
+
+  deleteRepository(appId: string, repositoryId: string): Observable<void> {
+    return this.http.delete<void>(`${API_BASE_URL}/apps/${appId}/repositories/${repositoryId}`);
   }
 
   listLinks(appId: string): Observable<AppLink[]> {

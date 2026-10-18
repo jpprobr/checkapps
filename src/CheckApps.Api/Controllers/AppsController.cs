@@ -118,6 +118,55 @@ public class AppsController(AppService appService, QualitySnapshotService snapsh
         return Ok(repositories.Select(r => r.ToDto()).ToList());
     }
 
+    [HttpPost("{appId}/repositories")]
+    public Task<IActionResult> CreateRepository(
+        string appId, [FromBody] UpsertRepositoryRequest request, CancellationToken cancellationToken) =>
+        HandleRepository(async () =>
+        {
+            var repository = await appService.CreateRepositoryAsync(appId, ToInput(request), cancellationToken);
+            return CreatedAtAction(nameof(ListRepositories), new { appId }, repository.ToDto());
+        });
+
+    [HttpPut("{appId}/repositories/{repositoryId}")]
+    public Task<IActionResult> UpdateRepository(
+        string appId, string repositoryId, [FromBody] UpsertRepositoryRequest request, CancellationToken cancellationToken) =>
+        HandleRepository(async () =>
+        {
+            var repository = await appService.UpdateRepositoryAsync(appId, repositoryId, ToInput(request), cancellationToken);
+            return Ok(repository.ToDto());
+        });
+
+    [HttpDelete("{appId}/repositories/{repositoryId}")]
+    public Task<IActionResult> DeleteRepository(string appId, string repositoryId, CancellationToken cancellationToken) =>
+        HandleRepository(async () =>
+        {
+            await appService.DeleteRepositoryAsync(appId, repositoryId, cancellationToken);
+            return NoContent();
+        });
+
+    private static RepositoryInput ToInput(UpsertRepositoryRequest r) =>
+        new(r.Name, r.Provider, r.Url, r.Status, r.Sigla, r.SiglaApp, r.Role);
+
+    private static async Task<IActionResult> HandleRepository(Func<Task<IActionResult>> action)
+    {
+        try
+        {
+            return await action();
+        }
+        catch (KeyNotFoundException ex)
+        {
+            return new NotFoundObjectResult(ex.Message);
+        }
+        catch (ArgumentException ex)
+        {
+            return new BadRequestObjectResult(ex.Message);
+        }
+        catch (DomainConflictException ex)
+        {
+            return new ConflictObjectResult(ex.Message);
+        }
+    }
+
     [HttpGet("{appId}/sonar-projects")]
     public async Task<ActionResult<IReadOnlyList<SonarProjectDto>>> ListSonarProjects(string appId, CancellationToken cancellationToken)
     {
