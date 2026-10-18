@@ -120,6 +120,7 @@
 
     <section class="card">
       <h2>Repositórios</h2>
+      <p class="subtitle"><a [routerLink]="['/apps', appId, 'edit']">Adicionar, editar ou remover repositórios</a></p>
       @if (repositories().length === 0) {
         <p class="subtitle">Nenhum repositório cadastrado.</p>
       } @else {

@@ -6,7 +6,7 @@
 
 ## Escopo e fronteira
 
-O menu passa a se chamar **"Repositórios"** e a tela mostra **todos os repositórios conhecidos**, cada um com o seu status — *novo*, *no catálogo* (com link para o app), *de outra squad*, *ignorado*. O filtro padrão continua **"Novos"** (o que precisa de decisão). O bloco "Buscar no GitHub" não muda.
+O menu passa a se chamar **"Repositórios"** e a tela mostra **todos os repositórios conhecidos**, cada um com o seu status — *novo*, *no catálogo* (com link para o app), *de outra squad*, *ignorado*. O filtro padrão é **"Todos"** (alterado em 2026-10-18; era "Novos", o que precisa de decisão, que segue como filtro). O bloco "Buscar no GitHub" não muda.
 
 **Limite aceito**: "conhecidos" são os que **passaram pelo scan**. Repositórios cadastrados à mão ou pelo seed só entram com o item "CRUD de Repository" do backlog — e a tela diz isso.
 
@@ -56,7 +56,7 @@ O menu e o título da tela se chamam "Repositórios".
 
 - **FR-001**: `GET /api/discovered-repositories` DEVE aceitar `status` = `new` (padrão), `ignored`, `other-squad`, `catalog` ou `all`. `new`, `ignored` e `other-squad` DEVEM listar só os que ainda aguardam decisão (como antes); `catalog` DEVE listar só os que já estão no catálogo; `all` DEVE listar **todos**, inclusive os catalogados. Valor desconhecido → 400.
 - **FR-002**: Cada item DEVE trazer `catalogApp` (`appId` e `appName`) quando o repositório está no catálogo, e nulo caso contrário, calculado em lote.
-- **FR-003**: A tela DEVE oferecer os filtros *Novos*, *No catálogo*, *De outra squad*, *Ignorados* e *Todos*, com "Novos" como padrão, além do filtro por sigla.
+- **FR-003**: A tela DEVE oferecer os filtros *Novos*, *No catálogo*, *De outra squad*, *Ignorados* e *Todos*, com "Todos" como padrão, além do filtro por sigla.
 - **FR-004**: Uma linha no catálogo DEVE mostrar a etiqueta "no catálogo" e o link do app, e NÃO DEVE oferecer ações de triagem. Linhas ignoradas ou de outra squad mantêm "Restaurar"; as novas mantêm as quatro ações.
 - **FR-005**: O menu e o título DEVEM se chamar "Repositórios"; a rota é `/repositories`, e `/discovered` DEVE redirecionar para ela.
 - **FR-006**: A tela DEVE dizer que lista os repositórios que passaram pelo scan, e o estado vazio de "Novos" DEVE apontar o filtro "No catálogo".

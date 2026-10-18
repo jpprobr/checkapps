@@ -126,11 +126,11 @@
 
   <div class="filters">
     <select aria-label="Status" [ngModel]="statusFilter()" (ngModelChange)="setStatus($event)">
+      <option value="all">Todos</option>
       <option value="new">Novos</option>
       <option value="catalog">No catálogo</option>
       <option value="other-squad">De outra squad</option>
       <option value="ignored">Ignorados</option>
-      <option value="all">Todos</option>
     </select>
     <select aria-label="Sigla" [ngModel]="siglaFilter()" (ngModelChange)="siglaFilter.set($event)">
       <option value="">Todas as siglas</option>

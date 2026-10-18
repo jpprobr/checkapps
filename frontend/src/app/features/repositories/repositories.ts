@@ -24,7 +24,7 @@ const SIGLAS_STORAGE_KEY = 'checkapps.scanSiglas';
 /**
  * Repositórios que o scan encontra (spec 005, spec 007): o scan propõe, a pessoa decide. A tela mostra
  * todos os conhecidos — novos, no catálogo (com o link do app), de outra squad e ignorados —, e o
- * filtro padrão é "Novos", o que precisa de decisão. "Criar app" abre um painel pré-preenchido e não
+ * filtro padrão é "Todos"; "Novos" é a caixa de entrada, o que precisa de decisão. "Criar app" abre um painel pré-preenchido e não
  * grava nada até a confirmação. O bloco "Buscar no GitHub" (spec 006) dispara o mesmo scan do CLI,
  * quando a API o habilita.
  */
@@ -45,7 +45,7 @@ export class Repositories {
   protected readonly actionError = signal<string | null>(null);
   protected readonly notice = signal<{ text: string; appId?: string; warnings: string[] } | null>(null);
 
-  protected readonly statusFilter = signal<StatusFilter>('new');
+  protected readonly statusFilter = signal<StatusFilter>('all');
   protected readonly siglaFilter = signal('');
 
   protected readonly roles = ['aplicacao', 'infra', 'contrato', 'secrets'];
@@ -124,7 +124,7 @@ export class Repositories {
         this.scanning.set(false);
         this.scanReport.set(report);
         if (!report.dryRun) {
-          this.statusFilter.set('new');
+          this.statusFilter.set('all');
           this.siglaFilter.set('');
           this.reload();
         }
