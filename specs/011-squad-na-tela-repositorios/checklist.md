@@ -23,7 +23,7 @@ Status: **implementada** em 2026-10-18. Confirmada pelo usuário na tela em 2026
 - [x] `dotnet test` verde (168 unitários + 42 de integração), sem rede
 - [x] `curl` mostra `squadId`/`squadName` nos dois endpoints
 - [x] Navegador: coluna, filtro por squad, "Sem squad" e zerar ao trocar status, sem erros de console
-- [ ] "Sem squad" com itens: a massa atual não tem repositório pendente; conferir com o scan `--source fake` (só a lista vazia foi vista)
+- [x] "Sem squad" com itens: conferido pelo usuário com o scan `--source fake` (2026-10-18)
 - [x] Confirmação do usuário na tela (2026-10-18)
 
 ## Encerramento
