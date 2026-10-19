@@ -283,4 +283,55 @@ public class TriageServiceTests
         await _sut.CreateAppAsync("github:1", "X", "sq-1", null, null);
         await Assert.ThrowsAsync<DomainConflictException>(() => _sut.IgnoreAsync("github:1"));
     }
+
+    [Fact]
+    public async Task LinkAsync_DemotesTheActiveRepositoryOfTheSameRole_AndWarns()
+    {
+        _apps.Add(new App { Id = "pagamentos", SquadId = "sq-1", Name = "Pagamentos" });
+        await _apps.AddRepositoryAsync(new Repository
+        {
+            Id = "r-0", AppId = "pagamentos", Name = "app-antigo", Sigla = "ab1", Role = RepositoryRoles.Application, Status = "active"
+        });
+        await _apps.AddRepositoryAsync(new Repository
+        {
+            Id = "r-1", AppId = "pagamentos", Name = "infra-fila", Sigla = "ab1", Role = RepositoryRoles.Infra, Status = "active"
+        });
+        await SeedAsync("1", "lab-ab1-app-novo");
+
+        var warnings = await _sut.LinkAsync("github:1", "pagamentos", role: null);
+
+        Assert.Contains(warnings, w => w.Contains("app-antigo") && w.Contains("legacy"));
+        var repositories = await _apps.GetRepositoriesAsync("pagamentos");
+        Assert.Equal("legacy", repositories.Single(r => r.Id == "r-0").Status);
+        Assert.Equal("active", repositories.Single(r => r.Id == "r-1").Status);
+        Assert.Equal("active", repositories.Single(r => r.ExternalId == "1").Status);
+    }
+
+    [Fact]
+    public async Task LinkAsync_StoresTheSiglaAppUppercase()
+    {
+        _apps.Add(new App { Id = "pagamentos", SquadId = "sq-1", Name = "Pagamentos" });
+        await SeedAsync("1", "lab-ab1-app-x", siglaApp: "ab1-0001");
+
+        await _sut.LinkAsync("github:1", "pagamentos", role: null);
+
+        Assert.Equal("AB1-0001", (await _apps.GetRepositoriesAsync("pagamentos")).Single().SiglaApp);
+    }
+
+    [Fact]
+    public async Task ListAndTriage_TreatARepositoryRegisteredByHandWithTheSameUrlAsInTheCatalog()
+    {
+        _apps.Add(new App { Id = "pagamentos", SquadId = "sq-1", Name = "Pagamentos" });
+        var discovered = await SeedAsync("1", "lab-ab1-app-x");
+        await _apps.AddRepositoryAsync(new Repository
+        {
+            Id = "manual-1", AppId = "pagamentos", Name = "x", Url = discovered.Url!.ToUpperInvariant() + "/", Source = RepositorySources.Manual
+        });
+
+        var items = await _sut.ListAsync(status: null, sigla: null, CatalogScope.Any);
+
+        Assert.Equal("pagamentos", items.Single().CatalogApp!.AppId);
+        Assert.Empty(await _sut.ListAsync(TriageStatus.New, null));   // não aparece como "novo"
+        await Assert.ThrowsAsync<DomainConflictException>(() => _sut.LinkAsync("github:1", "pagamentos", role: null));
+    }
 }

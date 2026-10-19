@@ -5,6 +5,7 @@ import { Observable } from 'rxjs';
 import { API_BASE_URL } from './api-config';
 import {
   AppDetail,
+  ActivateRepositoryResult,
   AppLink,
   AppSummary,
   CreateAppRequest,
@@ -59,6 +60,10 @@ export class AppsApiService {
 
   updateRepository(appId: string, repositoryId: string, request: UpsertRepositoryRequest): Observable<RepositoryInfo> {
     return this.http.put<RepositoryInfo>(`${API_BASE_URL}/apps/${appId}/repositories/${repositoryId}`, request);
+  }
+
+  activateRepository(appId: string, repositoryId: string): Observable<ActivateRepositoryResult> {
+    return this.http.post<ActivateRepositoryResult>(`${API_BASE_URL}/apps/${appId}/repositories/${repositoryId}/activate`, {});
   }
 
   deleteRepository(appId: string, repositoryId: string): Observable<void> {

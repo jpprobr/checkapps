@@ -87,10 +87,9 @@ public class ScanService(
 
         // "Já no catálogo" é uma informação a mais, não um quarto resultado: o outcome continua descrevendo
         // os dados observados. Uma consulta em lote para o resultado inteiro, no scan real e na simulação.
-        var catalog = await discovered.GetCatalogAppsAsync(
-            source.Provider, items.Select(i => i.Repository.ExternalId).ToList(), cancellationToken);
+        var catalog = await discovered.GetCatalogAppsAsync(items.Select(i => i.Repository).ToList(), cancellationToken);
         var marked = items
-            .Select(i => catalog.TryGetValue(i.Repository.ExternalId, out var app) ? i with { CatalogApp = app } : i)
+            .Select(i => catalog.TryGetValue(i.Repository.Id, out var app) ? i with { CatalogApp = app } : i)
             .ToList();
 
         return new ScanReport(dryRun, marked, warnings);

@@ -87,4 +87,83 @@ public class AppServiceRepositoryTests
         Assert.Empty(await _service.ListRepositoriesAsync("app-1"));
         await Assert.ThrowsAsync<KeyNotFoundException>(() => _service.DeleteRepositoryAsync("app-1", repo.Id));
     }
+
+    private static RepositoryInput Active(string name, string? role, string? status = "active") =>
+        new(name, "github", null, status, null, null, role);
+
+    [Fact]
+    public async Task Create_AsActive_DemotesOnlyTheOtherActiveOfTheSameRole()
+    {
+        var infra = await _service.CreateRepositoryAsync("app-1", Active("infra-1", "infra"));
+        var app1 = await _service.CreateRepositoryAsync("app-1", Active("app-1", "aplicacao"));
+
+        var app2 = await _service.CreateRepositoryAsync("app-1", Active("app-2", "aplicacao"));
+
+        var all = await _service.ListRepositoriesAsync("app-1");
+        Assert.Equal("legacy", all.Single(r => r.Id == app1.Id).Status);
+        Assert.Equal("active", all.Single(r => r.Id == app2.Id).Status);
+        Assert.Equal("active", all.Single(r => r.Id == infra.Id).Status);   // outro papel: continua ativo
+    }
+
+    [Fact]
+    public async Task Create_ForAnotherApp_OrAsLegacyOrArchived_DemotesNobody()
+    {
+        var first = await _service.CreateRepositoryAsync("app-1", Active("a", "aplicacao"));
+        await _service.CreateRepositoryAsync("app-2", Active("b", "aplicacao"));
+        await _service.CreateRepositoryAsync("app-1", Active("c", "aplicacao", status: "legacy"));
+        await _service.CreateRepositoryAsync("app-1", Active("d", "aplicacao", status: "archived"));
+
+        Assert.Equal("active", (await _service.ListRepositoriesAsync("app-1")).Single(r => r.Id == first.Id).Status);
+    }
+
+    [Fact]
+    public async Task NoRole_IsOneGroupOnly_AndRoleComparisonIgnoresCase()
+    {
+        var a = await _service.CreateRepositoryAsync("app-1", Active("a", null));
+        var b = await _service.CreateRepositoryAsync("app-1", Active("b", null));
+        var c = await _service.CreateRepositoryAsync("app-1", Active("c", "Infra"));
+        var d = await _service.CreateRepositoryAsync("app-1", Active("d", "infra"));
+
+        var all = await _service.ListRepositoriesAsync("app-1");
+        Assert.Equal("legacy", all.Single(r => r.Id == a.Id).Status);
+        Assert.Equal("active", all.Single(r => r.Id == b.Id).Status);
+        Assert.Equal("legacy", all.Single(r => r.Id == c.Id).Status);
+        Assert.Equal("active", all.Single(r => r.Id == d.Id).Status);
+    }
+
+    [Fact]
+    public async Task Activate_SwapsTheActiveOfTheGroup_AndReportsWhoWasDemoted()
+    {
+        var oldRepo = await _service.CreateRepositoryAsync("app-1", Active("velho", "aplicacao"));
+        var newRepo = await _service.CreateRepositoryAsync("app-1", Active("novo", "aplicacao", status: "legacy"));
+
+        var result = await _service.ActivateRepositoryAsync("app-1", newRepo.Id);
+
+        Assert.Equal("active", result.Repository.Status);
+        Assert.Equal(["velho"], result.Demoted);
+        Assert.Equal("legacy", (await _service.ListRepositoriesAsync("app-1")).Single(r => r.Id == oldRepo.Id).Status);
+        await Assert.ThrowsAsync<KeyNotFoundException>(() => _service.ActivateRepositoryAsync("app-1", "nope"));
+    }
+
+    [Fact]
+    public async Task Update_ToActive_DemotesTheOtherOfTheSameRole()
+    {
+        var a = await _service.CreateRepositoryAsync("app-1", Active("a", "contrato"));
+        var b = await _service.CreateRepositoryAsync("app-1", Active("b", "contrato", status: "legacy"));
+
+        await _service.UpdateRepositoryAsync("app-1", b.Id, Active("b", "contrato"));
+
+        Assert.Equal("legacy", (await _service.ListRepositoriesAsync("app-1")).Single(r => r.Id == a.Id).Status);
+    }
+
+    [Fact]
+    public async Task SiglaApp_IsStoredUppercase_SiglaLowercase_AndConflictsIgnoreCase()
+    {
+        var repo = await _service.CreateRepositoryAsync("app-1", new("a", null, null, null, "AB1", "ab1-0001", null));
+
+        Assert.Equal("AB1-0001", repo.SiglaApp);
+        Assert.Equal("ab1", repo.Sigla);
+        await Assert.ThrowsAsync<DomainConflictException>(
+            () => _service.CreateRepositoryAsync("app-2", new("b", null, null, null, null, "Ab1-0001", null)));
+    }
 }

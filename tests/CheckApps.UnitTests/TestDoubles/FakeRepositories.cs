@@ -122,7 +122,7 @@ public class FakeAppRepository : IAppRepository
 
     public Task<IReadOnlyList<CatalogRepository>> ListCatalogOnlyRepositoriesAsync(string? sigla, CancellationToken ct = default) =>
         Task.FromResult<IReadOnlyList<CatalogRepository>>(_repositories
-            .Where(r => sigla is null || r.Sigla == sigla.ToLowerInvariant())
+            .Where(r => sigla is null || string.Equals(r.Sigla, sigla, StringComparison.OrdinalIgnoreCase))
             .Select(r => new CatalogRepository(r, r.AppId, _apps.GetValueOrDefault(r.AppId)?.Name ?? r.AppId))
             .ToList());
 
@@ -136,7 +136,8 @@ public class FakeAppRepository : IAppRepository
     }
 
     public Task<bool> IsSiglaAppInUseAsync(string siglaApp, string? exceptRepositoryId, CancellationToken ct = default) =>
-        Task.FromResult(_repositories.Any(r => r.SiglaApp == siglaApp && r.Id != exceptRepositoryId));
+        Task.FromResult(_repositories.Any(r =>
+            string.Equals(r.SiglaApp, siglaApp, StringComparison.OrdinalIgnoreCase) && r.Id != exceptRepositoryId));
 }
 
 public class FakeQualitySnapshotRepository : IQualitySnapshotRepository
@@ -340,7 +341,7 @@ public class FakeDiscoveredRepositoryRepository(FakeAppRepository apps) : IDisco
             .Where(d => status is null || d.Status == status)
             .Where(d => sigla is null || d.Sigla == sigla.ToLowerInvariant())
             .Where(d => scope == CatalogScope.Any
-                || (scope == CatalogScope.Pending) != InCatalog(d.Provider, d.ExternalId))
+                || (scope == CatalogScope.Pending) != InCatalog(d))
             .OrderBy(d => d.Sigla).ThenBy(d => d.Name)
             .ToList());
 
@@ -350,21 +351,32 @@ public class FakeDiscoveredRepositoryRepository(FakeAppRepository apps) : IDisco
         return Task.CompletedTask;
     }
 
-    public Task<bool> IsInCatalogAsync(string provider, string externalId, CancellationToken ct = default) =>
-        Task.FromResult(InCatalog(provider, externalId));
+    public Task<bool> IsInCatalogAsync(DiscoveredRepository repository, CancellationToken ct = default) =>
+        Task.FromResult(InCatalog(repository));
 
     public Task<IReadOnlyDictionary<string, CatalogApp>> GetCatalogAppsAsync(
-        string provider, IReadOnlyCollection<string> externalIds, CancellationToken ct = default) =>
-        Task.FromResult<IReadOnlyDictionary<string, CatalogApp>>(apps.AllRepositories
-            .Where(r => r.Provider == provider && r.ExternalId is not null && externalIds.Contains(r.ExternalId))
-            .GroupBy(r => r.ExternalId!)
-            .ToDictionary(g => g.Key, g => new CatalogApp(g.First().AppId, apps.Find(g.First().AppId)?.Name ?? g.First().AppId)));
+        IReadOnlyCollection<DiscoveredRepository> repositories, CancellationToken ct = default)
+    {
+        var result = new Dictionary<string, CatalogApp>();
+        foreach (var d in repositories)
+        {
+            var match = apps.AllRepositories.OrderBy(r => r.AppId).FirstOrDefault(r => Matches(r, d));
+            if (match is not null)
+            {
+                result[d.Id] = new CatalogApp(match.AppId, apps.Find(match.AppId)?.Name ?? match.AppId);
+            }
+        }
+
+        return Task.FromResult<IReadOnlyDictionary<string, CatalogApp>>(result);
+    }
 
     public Task<bool> IsSiglaAppInUseAsync(string siglaApp, CancellationToken ct = default) =>
-        Task.FromResult(apps.AllRepositories.Any(r => r.SiglaApp == siglaApp));
+        Task.FromResult(apps.AllRepositories.Any(r => string.Equals(r.SiglaApp, siglaApp, StringComparison.OrdinalIgnoreCase)));
 
-    private bool InCatalog(string provider, string externalId) =>
-        apps.AllRepositories.Any(r => r.Provider == provider && r.ExternalId == externalId);
+    private bool InCatalog(DiscoveredRepository d) => apps.AllRepositories.Any(r => Matches(r, d));
+
+    private static bool Matches(Repository r, DiscoveredRepository d) =>
+        (r.Provider == d.Provider && r.ExternalId == d.ExternalId) || RepositoryUrl.Same(r.Url, d.Url);
 
     private static DiscoveredRepository Clone(DiscoveredRepository r) => new()
     {

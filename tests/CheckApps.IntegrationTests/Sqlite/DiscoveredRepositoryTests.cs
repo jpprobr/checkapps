@@ -97,7 +97,7 @@ public class DiscoveredRepositoryTests(SqliteFixture fixture) : IClassFixture<Sq
         var sigla = Unique("c");
         var repo = NewDiscovered(sigla);
         await _discovered.UpsertAsync(repo);
-        Assert.False(await _discovered.IsInCatalogAsync(repo.Provider, repo.ExternalId));
+        Assert.False(await _discovered.IsInCatalogAsync(repo));
         Assert.Single(await _discovered.ListAsync(status: null, sigla));
 
         var appId = await CreateAppAsync();
@@ -110,7 +110,7 @@ public class DiscoveredRepositoryTests(SqliteFixture fixture) : IClassFixture<Sq
             ExternalId = repo.ExternalId
         });
 
-        Assert.True(await _discovered.IsInCatalogAsync(repo.Provider, repo.ExternalId));
+        Assert.True(await _discovered.IsInCatalogAsync(repo));
         Assert.Empty(await _discovered.ListAsync(status: null, sigla));
     }
 
@@ -212,21 +212,25 @@ public class DiscoveredRepositoryTests(SqliteFixture fixture) : IClassFixture<Sq
         // mesmo id externo em OUTRO provedor não conta como "no catálogo" deste
         await _apps.AddRepositoryAsync(new Repository { Id = Guid.NewGuid().ToString("n"), AppId = appId, Name = "c", Provider = "outro", ExternalId = notLinked });
 
-        var map = await _discovered.GetCatalogAppsAsync("github", [linked, otherLinked, notLinked]);
+        var dLinked = NewDiscovered("m", externalId: linked);
+        var dOtherLinked = NewDiscovered("m", externalId: otherLinked);
+        var dNotLinked = NewDiscovered("m", externalId: notLinked);
+
+        var map = await _discovered.GetCatalogAppsAsync([dLinked, dOtherLinked, dNotLinked]);
 
         Assert.Equal(2, map.Count);
-        Assert.Equal(appId, map[linked].AppId);
-        Assert.Equal("App Teste", map[linked].AppName);
-        Assert.Equal("Squad Teste", map[linked].SquadName);
-        Assert.Equal((await _apps.GetAsync(appId))!.SquadId, map[linked].SquadId);
-        Assert.Equal(appId, map[otherLinked].AppId);
-        Assert.False(map.ContainsKey(notLinked));
+        Assert.Equal(appId, map[dLinked.Id].AppId);
+        Assert.Equal("App Teste", map[dLinked.Id].AppName);
+        Assert.Equal("Squad Teste", map[dLinked.Id].SquadName);
+        Assert.Equal((await _apps.GetAsync(appId))!.SquadId, map[dLinked.Id].SquadId);
+        Assert.Equal(appId, map[dOtherLinked.Id].AppId);
+        Assert.False(map.ContainsKey(dNotLinked.Id));
     }
 
     [Fact]
     public async Task GetCatalogApps_WithNoIds_IsEmpty_WithoutQuerying()
     {
-        var map = await _discovered.GetCatalogAppsAsync("github", []);
+        var map = await _discovered.GetCatalogAppsAsync([]);
 
         Assert.Empty(map);
     }
@@ -236,13 +240,72 @@ public class DiscoveredRepositoryTests(SqliteFixture fixture) : IClassFixture<Sq
     {
         var appId = await CreateAppAsync();
         var externalId = Guid.NewGuid().ToString("n");
-        Assert.Empty(await _discovered.GetCatalogAppsAsync("github", [externalId]));
-        Assert.False(await _discovered.IsInCatalogAsync("github", externalId));
+        var discovered = NewDiscovered("m", externalId: externalId);
+        Assert.Empty(await _discovered.GetCatalogAppsAsync([discovered]));
+        Assert.False(await _discovered.IsInCatalogAsync(discovered));
 
         await _apps.AddRepositoryAsync(new Repository { Id = Guid.NewGuid().ToString("n"), AppId = appId, Name = "x", Provider = "github", ExternalId = externalId });
 
-        Assert.Single(await _discovered.GetCatalogAppsAsync("github", [externalId]));
-        Assert.True(await _discovered.IsInCatalogAsync("github", externalId));
+        Assert.Single(await _discovered.GetCatalogAppsAsync([discovered]));
+        Assert.True(await _discovered.IsInCatalogAsync(discovered));
+    }
+
+    [Fact]
+    public async Task CatalogMatch_ByUrl_IgnoresCaseAndTrailingSlash_InEveryQuery()
+    {
+        var sigla = Unique("u");
+        var repo = NewDiscovered(sigla, url: "https://github.com/Org/Repo-X");
+        await _discovered.UpsertAsync(repo);
+        var appId = await CreateAppAsync();
+        // cadastro manual: sem provedor nem id externo, só a URL
+        await _apps.AddRepositoryAsync(new Repository
+        {
+            Id = Guid.NewGuid().ToString("n"), AppId = appId, Name = "manual", Sigla = sigla,
+            Url = " https://github.com/org/repo-x/ ", Source = RepositorySources.Manual
+        });
+
+        Assert.True(await _discovered.IsInCatalogAsync(repo));
+        Assert.Empty(await _discovered.ListAsync(status: null, sigla));                                   // sai de "pendentes"
+        Assert.Single(await _discovered.ListAsync(status: null, sigla, CatalogScope.Cataloged));         // e entra em "no catálogo"
+        var map = await _discovered.GetCatalogAppsAsync([repo]);
+        Assert.Equal(appId, map[repo.Id].AppId);
+        // o cadastro manual não aparece duas vezes: o descoberto já o representa
+        Assert.DoesNotContain(await _apps.ListCatalogOnlyRepositoriesAsync(sigla), i => i.Repository.Name == "manual");
+    }
+
+    [Fact]
+    public async Task CatalogMatch_ByUrl_DoesNotMatchDifferentUrls_OrEmptyOnes()
+    {
+        var sigla = Unique("v");
+        var repo = NewDiscovered(sigla, url: "https://github.com/org/um");
+        await _discovered.UpsertAsync(repo);
+        var appId = await CreateAppAsync();
+        await _apps.AddRepositoryAsync(new Repository
+        {
+            Id = Guid.NewGuid().ToString("n"), AppId = appId, Name = "outro", Sigla = sigla, Url = "https://github.com/org/dois"
+        });
+        await _apps.AddRepositoryAsync(new Repository
+        {
+            Id = Guid.NewGuid().ToString("n"), AppId = appId, Name = "sem-url", Sigla = sigla, Url = "  "
+        });
+
+        Assert.False(await _discovered.IsInCatalogAsync(repo));
+        Assert.Single(await _discovered.ListAsync(status: null, sigla));
+        Assert.Empty(await _discovered.GetCatalogAppsAsync([repo]));
+    }
+
+    [Fact]
+    public async Task IsSiglaAppInUse_IgnoresCase_ForBothRepositories()
+    {
+        var appId = await CreateAppAsync();
+        var siglaApp = $"ab{Guid.NewGuid():N}"[..8];
+        await _apps.AddRepositoryAsync(new Repository
+        {
+            Id = Guid.NewGuid().ToString("n"), AppId = appId, Name = "x", SiglaApp = siglaApp.ToUpperInvariant()
+        });
+
+        Assert.True(await _discovered.IsSiglaAppInUseAsync(siglaApp.ToLowerInvariant()));
+        Assert.True(await _apps.IsSiglaAppInUseAsync(siglaApp.ToLowerInvariant(), null));
     }
 
     [Fact]
@@ -304,16 +367,17 @@ public class DiscoveredRepositoryTests(SqliteFixture fixture) : IClassFixture<Sq
         SiglaApp = siglaApp
     };
 
-    private static DiscoveredRepository NewDiscovered(string sigla, string? name = null)
+    private static DiscoveredRepository NewDiscovered(
+        string sigla, string? name = null, string? externalId = null, string? url = null)
     {
-        var externalId = Guid.NewGuid().ToString("n");
+        externalId ??= Guid.NewGuid().ToString("n");
         return new DiscoveredRepository
         {
             Id = DiscoveredRepository.IdFor("github", externalId),
             Provider = "github",
             ExternalId = externalId,
             Name = name ?? $"lab-{sigla}-app-x",
-            Url = "https://example.invalid/x",
+            Url = url ?? $"https://example.invalid/{externalId}",
             Sigla = sigla,
             FirstSeenAt = T0,
             LastSeenAt = T0,

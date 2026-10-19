@@ -26,16 +26,20 @@ public interface IDiscoveredRepositoryRepository
 
     Task SetStatusAsync(string id, TriageStatus status, CancellationToken cancellationToken = default);
 
-    /// <summary>Existe um Repository com esse provedor e id externo? É o que define "já está no catálogo".</summary>
-    Task<bool> IsInCatalogAsync(string provider, string externalId, CancellationToken cancellationToken = default);
+    /// <summary>
+    /// O repositório já está no catálogo? Sim se existe um Repository com o mesmo provedor e id externo **ou** a mesma
+    /// URL (spec 012: um cadastro manual, sem id externo, também conta). É o que define "já está no catálogo".
+    /// </summary>
+    Task<bool> IsInCatalogAsync(DiscoveredRepository repository, CancellationToken cancellationToken = default);
 
     /// <summary>
-    /// Dos ids externos informados, quais já estão no catálogo e em qual app — numa única consulta, para o
-    /// resultado do scan poder dizer "já no catálogo" sem uma ida ao banco por repositório. Quem não está
-    /// no catálogo simplesmente não aparece no mapa.
+    /// Dos descobertos informados, quais já estão no catálogo e em qual app (e squad) — numa única consulta, para o
+    /// resultado do scan poder dizer "já no catálogo" sem uma ida ao banco por repositório. A chave do mapa é o
+    /// <see cref="DiscoveredRepository.Id"/>; quem não está no catálogo simplesmente não aparece. Mesma regra de
+    /// <see cref="IsInCatalogAsync"/>: provedor + id externo primeiro, depois a URL.
     /// </summary>
     Task<IReadOnlyDictionary<string, CatalogApp>> GetCatalogAppsAsync(
-        string provider, IReadOnlyCollection<string> externalIds, CancellationToken cancellationToken = default);
+        IReadOnlyCollection<DiscoveredRepository> repositories, CancellationToken cancellationToken = default);
 
     /// <summary>Alguma sigla-app já está em uso por um Repository? Ela identifica um único repositório.</summary>
     Task<bool> IsSiglaAppInUseAsync(string siglaApp, CancellationToken cancellationToken = default);

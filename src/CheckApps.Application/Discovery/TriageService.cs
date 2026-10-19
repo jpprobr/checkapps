@@ -29,20 +29,12 @@ public class TriageService(
         var repositories = await discovered.ListAsync(status, sigla, scope, cancellationToken);
 
         // Os que aguardam decisão, por definição, não estão no catálogo: nada a consultar.
-        var catalogByProvider = new Dictionary<string, IReadOnlyDictionary<string, CatalogApp>>();
-        if (scope != CatalogScope.Pending)
-        {
-            foreach (var group in repositories.GroupBy(r => r.Provider))
-            {
-                catalogByProvider[group.Key] = await discovered.GetCatalogAppsAsync(
-                    group.Key, group.Select(r => r.ExternalId).ToList(), cancellationToken);
-            }
-        }
+        var catalog = scope == CatalogScope.Pending
+            ? new Dictionary<string, CatalogApp>()
+            : await discovered.GetCatalogAppsAsync(repositories, cancellationToken);
 
         return repositories
-            .Select(r => new DiscoveredItem(
-                r, Suggest(r),
-                catalogByProvider.TryGetValue(r.Provider, out var map) && map.TryGetValue(r.ExternalId, out var app) ? app : null))
+            .Select(r => new DiscoveredItem(r, Suggest(r), catalog.TryGetValue(r.Id, out var app) ? app : null))
             .ToList();
     }
 
@@ -98,7 +90,13 @@ public class TriageService(
                 $"O app '{appId}' já tem repositórios na sigla {string.Join(", ", otherSiglas)}; este é da sigla '{repository.Sigla}'. Os repositórios de um app costumam ficar na mesma sigla.");
         }
 
-        await apps.AddRepositoryAsync(ToRepository(appId, repository, role ?? Suggest(repository).Role), cancellationToken);
+        var linked = ToRepository(appId, repository, role ?? Suggest(repository).Role);
+        foreach (var name in await appService.DemoteOtherActiveAsync(linked, cancellationToken))
+        {
+            warnings.Add($"O repositório '{name}' do app '{appId}' passou a legacy: o ativo de cada papel é um só.");
+        }
+
+        await apps.AddRepositoryAsync(linked, cancellationToken);
         return warnings;
     }
 
@@ -124,7 +122,7 @@ public class TriageService(
 
     private async Task EnsureNotInCatalogAsync(DiscoveredRepository repository, CancellationToken cancellationToken)
     {
-        if (await discovered.IsInCatalogAsync(repository.Provider, repository.ExternalId, cancellationToken))
+        if (await discovered.IsInCatalogAsync(repository, cancellationToken))
         {
             throw new DomainConflictException($"O repositório '{repository.Name}' já está no catálogo.");
         }
@@ -152,9 +150,9 @@ public class TriageService(
         Provider = repository.Provider,
         Url = repository.Url,
         ExternalId = repository.ExternalId,
-        Status = repository.Archived ? "archived" : "active",
+        Status = repository.Archived ? RepositoryStatuses.Archived : RepositoryStatuses.Active,
         Sigla = repository.Sigla,
-        SiglaApp = repository.SiglaApp,
+        SiglaApp = SiglaAppConvention.Normalize(repository.SiglaApp),
         Role = string.IsNullOrWhiteSpace(role) ? null : role.Trim(),
         Source = repository.Source
     };

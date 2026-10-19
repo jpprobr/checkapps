@@ -79,7 +79,7 @@ export class Repositories {
     unchanged: 'inalterado',
   };
 
-  protected readonly siglas = computed(() => [...new Set([...this.rows().map((r) => r.sigla), ...this.catalogRows().map((r) => r.sigla ?? '')].filter((s) => s))].sort());
+  protected readonly siglas = computed(() => [...new Set([...this.rows().map((r) => r.sigla), ...this.catalogRows().map((r) => r.sigla ?? '')].map((s) => s.toLowerCase()).filter((s) => s))].sort());
 
   /** Squads presentes nas linhas carregadas — a squad de um repositório é a do app dele. */
   protected readonly squadOptions = computed(() => {
@@ -104,12 +104,12 @@ export class Repositories {
 
   protected readonly visibleRows = computed(() => {
     const sigla = this.siglaFilter();
-    return this.rows().filter((r) => (!sigla || r.sigla === sigla) && this.matchesSquad(r.catalogApp?.squadId));
+    return this.rows().filter((r) => (!sigla || (r.sigla ?? '').toLowerCase() === sigla) && this.matchesSquad(r.catalogApp?.squadId));
   });
 
   protected readonly visibleCatalogRows = computed(() => {
     const sigla = this.siglaFilter();
-    return this.catalogRows().filter((r) => (!sigla || r.sigla === sigla) && this.matchesSquad(r.squadId));
+    return this.catalogRows().filter((r) => (!sigla || (r.sigla ?? '').toLowerCase() === sigla) && this.matchesSquad(r.squadId));
   });
 
   /** Siglas digitadas, separadas por vírgula ou espaço; a API valida o formato e recusa o resto. */

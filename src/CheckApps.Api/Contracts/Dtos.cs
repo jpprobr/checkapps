@@ -46,6 +46,8 @@ public record CatalogRepositoryDto(
     string? Sigla, string? SiglaApp, string? Role, string? Source, string AppId, string AppName,
     string? SquadId, string? SquadName);
 
+public record ActivateRepositoryResultDto(RepositoryDto Repository, IReadOnlyList<string> Demoted);
+
 public record UpsertRepositoryRequest(
     string? Name, string? Provider, string? Url, string? Status, string? Sigla, string? SiglaApp, string? Role);
 

@@ -169,7 +169,7 @@ public class AppRepository(SqliteConnectionFactory connectionFactory) : IAppRepo
     {
         using var connection = connectionFactory.Create();
         var rows = await connection.QueryAsync<Repository, string, string, string?, string?, CatalogRepository>(new CommandDefinition(
-            """
+            $"""
             SELECT r.id AS Id, r.app_id AS AppId, r.name AS Name, r.provider AS Provider, r.url AS Url,
                    r.external_id AS ExternalId, r.status AS Status,
                    r.sigla AS Sigla, r.sigla_app AS SiglaApp, r.role AS Role, r.source AS Source,
@@ -178,10 +178,9 @@ public class AppRepository(SqliteConnectionFactory connectionFactory) : IAppRepo
             FROM repositories r
             JOIN apps a ON a.id = r.app_id
             LEFT JOIN squads s ON s.id = a.squad_id
-            WHERE (@sigla IS NULL OR r.sigla = @sigla)
+            WHERE (@sigla IS NULL OR lower(r.sigla) = @sigla)
               AND NOT EXISTS (
-                  SELECT 1 FROM discovered_repositories d
-                  WHERE d.provider = r.provider AND d.external_id = r.external_id)
+                  SELECT 1 FROM discovered_repositories d WHERE {CatalogMatchSql.Condition})
             ORDER BY a.name, r.name
             """,
             new { sigla = sigla?.Trim().ToLowerInvariant() }, cancellationToken: cancellationToken),
@@ -218,7 +217,7 @@ public class AppRepository(SqliteConnectionFactory connectionFactory) : IAppRepo
     {
         using var connection = connectionFactory.Create();
         return await connection.ExecuteScalarAsync<bool>(new CommandDefinition(
-            "SELECT EXISTS (SELECT 1 FROM repositories WHERE sigla_app = @siglaApp AND id <> @exceptRepositoryId)",
+            "SELECT EXISTS (SELECT 1 FROM repositories WHERE upper(sigla_app) = upper(@siglaApp) AND id <> @exceptRepositoryId)",
             new { siglaApp, exceptRepositoryId = exceptRepositoryId ?? string.Empty },
             cancellationToken: cancellationToken));
     }

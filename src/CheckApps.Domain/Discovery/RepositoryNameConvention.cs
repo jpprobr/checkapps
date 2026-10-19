@@ -97,6 +97,10 @@ public sealed record RepositorySuggestion(string? Role, string Name, SuggestionC
 /// <summary>A sigla é o trecho inicial da sigla-app (<c>AB1</c> em <c>AB1-0001</c>) — certo numa squad, provável na organização.</summary>
 public static class SiglaAppConvention
 {
+    /// <summary>A forma gravada da sigla-app (spec 012): sem espaços nas pontas e em MAIÚSCULAS (<c>ab1-0001</c> → <c>AB1-0001</c>).</summary>
+    public static string? Normalize(string? siglaApp) =>
+        string.IsNullOrWhiteSpace(siglaApp) ? null : siglaApp.Trim().ToUpperInvariant();
+
     public static string? SiglaOf(string? siglaApp)
     {
         if (string.IsNullOrWhiteSpace(siglaApp))

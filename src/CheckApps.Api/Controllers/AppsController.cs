@@ -150,6 +150,14 @@ public class AppsController(AppService appService, QualitySnapshotService snapsh
             return Ok(repository.ToDto());
         });
 
+    [HttpPost("{appId}/repositories/{repositoryId}/activate")]
+    public Task<IActionResult> ActivateRepository(string appId, string repositoryId, CancellationToken cancellationToken) =>
+        HandleRepository(async () =>
+        {
+            var result = await appService.ActivateRepositoryAsync(appId, repositoryId, cancellationToken);
+            return Ok(new ActivateRepositoryResultDto(result.Repository.ToDto(), result.Demoted));
+        });
+
     [HttpDelete("{appId}/repositories/{repositoryId}")]
     public Task<IActionResult> DeleteRepository(string appId, string repositoryId, CancellationToken cancellationToken) =>
         HandleRepository(async () =>

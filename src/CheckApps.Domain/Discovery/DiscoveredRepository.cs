@@ -74,6 +74,14 @@ public static class TriageCodes
     }
 }
 
+/// <summary>Valores de <see cref="Repository.Status"/>. Texto livre no banco; estes são os que o sistema escreve.</summary>
+public static class RepositoryStatuses
+{
+    public const string Active = "active";
+    public const string Legacy = "legacy";
+    public const string Archived = "archived";
+}
+
 /// <summary>Valores de <see cref="Repository.Source"/>.</summary>
 public static class RepositorySources
 {

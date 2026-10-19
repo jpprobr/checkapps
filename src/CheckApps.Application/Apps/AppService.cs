@@ -5,6 +5,9 @@ using Repository = CheckApps.Domain.Repository;
 
 namespace CheckApps.Application.Apps;
 
+/// <summary>O resultado de marcar um repositório como ativo: ele e os que passaram a <c>legacy</c>.</summary>
+public record ActivationResult(Repository Repository, IReadOnlyList<string> Demoted);
+
 /// <summary>Campos editáveis de um repositório cadastrado à mão.</summary>
 public record RepositoryInput(
     string? Name, string? Provider, string? Url, string? Status, string? Sigla, string? SiglaApp, string? Role);
@@ -36,6 +39,7 @@ public class AppService(
         };
         Apply(repository, input);
         await EnsureSiglaAppFreeAsync(repository, cancellationToken);
+        await DemoteOtherActiveAsync(repository, cancellationToken);
         await apps.AddRepositoryAsync(repository, cancellationToken);
         return repository;
     }
@@ -48,8 +52,55 @@ public class AppService(
         repository.Name = RequireName(input.Name);
         Apply(repository, input);
         await EnsureSiglaAppFreeAsync(repository, cancellationToken);
+        await DemoteOtherActiveAsync(repository, cancellationToken);
         await apps.AddRepositoryAsync(repository, cancellationToken);
         return repository;
+    }
+
+    /// <summary>
+    /// Marca o repositório como ativo; o outro ativo do mesmo papel no app vira <c>legacy</c> (spec 012). Devolve os
+    /// nomes dos que foram rebaixados, para a tela avisar.
+    /// </summary>
+    public async Task<ActivationResult> ActivateRepositoryAsync(
+        string appId, string repositoryId, CancellationToken cancellationToken = default)
+    {
+        var repository = await apps.GetRepositoryAsync(appId, repositoryId, cancellationToken)
+            ?? throw new KeyNotFoundException($"Repositório '{repositoryId}' não encontrado no app '{appId}'.");
+        repository.Status = RepositoryStatuses.Active;
+        var demoted = await DemoteOtherActiveAsync(repository, cancellationToken);
+        await apps.AddRepositoryAsync(repository, cancellationToken);
+        return new ActivationResult(repository, demoted);
+    }
+
+    /// <summary>
+    /// Regra do repositório ativo (spec 012): no máximo um ativo por papel dentro do app — o papel ausente é um grupo
+    /// só. Se <paramref name="repository"/> é ativo, os demais ativos do grupo viram <c>legacy</c>; devolve os nomes.
+    /// Usada também pela triagem ao vincular um descoberto a um app.
+    /// </summary>
+    public async Task<IReadOnlyList<string>> DemoteOtherActiveAsync(
+        Repository repository, CancellationToken cancellationToken = default)
+    {
+        if (!string.Equals(repository.Status, RepositoryStatuses.Active, StringComparison.OrdinalIgnoreCase))
+        {
+            return [];
+        }
+
+        var demoted = new List<string>();
+        foreach (var other in await apps.GetRepositoriesAsync(repository.AppId, cancellationToken))
+        {
+            if (other.Id == repository.Id
+                || !string.Equals(other.Status, RepositoryStatuses.Active, StringComparison.OrdinalIgnoreCase)
+                || !string.Equals(other.Role ?? string.Empty, repository.Role ?? string.Empty, StringComparison.OrdinalIgnoreCase))
+            {
+                continue;
+            }
+
+            other.Status = RepositoryStatuses.Legacy;
+            await apps.AddRepositoryAsync(other, cancellationToken);
+            demoted.Add(other.Name);
+        }
+
+        return demoted;
     }
 
     public async Task DeleteRepositoryAsync(string appId, string repositoryId, CancellationToken cancellationToken = default)
@@ -192,9 +243,9 @@ public class AppService(
     {
         repository.Provider = Clean(input.Provider);
         repository.Url = Clean(input.Url);
-        repository.Status = Clean(input.Status) ?? "active";
-        repository.Sigla = Clean(input.Sigla);
-        repository.SiglaApp = Clean(input.SiglaApp);
+        repository.Status = Clean(input.Status)?.ToLowerInvariant() ?? RepositoryStatuses.Active;
+        repository.Sigla = Clean(input.Sigla)?.ToLowerInvariant();
+        repository.SiglaApp = SiglaAppConvention.Normalize(input.SiglaApp);
         repository.Role = Clean(input.Role);
     }
 

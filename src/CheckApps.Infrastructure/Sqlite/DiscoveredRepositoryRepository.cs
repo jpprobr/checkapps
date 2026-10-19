@@ -82,11 +82,9 @@ public class DiscoveredRepositoryRepository(SqliteConnectionFactory connectionFa
               AND (@sigla IS NULL OR d.sigla = @sigla)
               AND (@scope = 'any'
                    OR (@scope = 'pending' AND NOT EXISTS (
-                           SELECT 1 FROM repositories r
-                           WHERE r.provider = d.provider AND r.external_id = d.external_id))
+                           SELECT 1 FROM repositories r WHERE {CatalogMatchSql.Condition}))
                    OR (@scope = 'cataloged' AND EXISTS (
-                           SELECT 1 FROM repositories r
-                           WHERE r.provider = d.provider AND r.external_id = d.external_id)))
+                           SELECT 1 FROM repositories r WHERE {CatalogMatchSql.Condition})))
             ORDER BY d.sigla, d.name
             """,
             new
@@ -107,46 +105,71 @@ public class DiscoveredRepositoryRepository(SqliteConnectionFactory connectionFa
             new { id, status = status.ToCode() }, cancellationToken: cancellationToken));
     }
 
-    public async Task<bool> IsInCatalogAsync(string provider, string externalId, CancellationToken cancellationToken = default)
+    public async Task<bool> IsInCatalogAsync(DiscoveredRepository repository, CancellationToken cancellationToken = default)
     {
         using var connection = connectionFactory.Create();
         return await connection.ExecuteScalarAsync<bool>(new CommandDefinition(
-            "SELECT EXISTS (SELECT 1 FROM repositories WHERE provider = @provider AND external_id = @externalId)",
-            new { provider, externalId }, cancellationToken: cancellationToken));
+            $"""
+            SELECT EXISTS (
+                SELECT 1 FROM repositories r
+                JOIN (SELECT @provider AS provider, @externalId AS external_id, @url AS url) d ON 1 = 1
+                WHERE {CatalogMatchSql.Condition})
+            """,
+            new { provider = repository.Provider, externalId = repository.ExternalId, url = repository.Url },
+            cancellationToken: cancellationToken));
     }
 
     public async Task<IReadOnlyDictionary<string, CatalogApp>> GetCatalogAppsAsync(
-        string provider, IReadOnlyCollection<string> externalIds, CancellationToken cancellationToken = default)
+        IReadOnlyCollection<DiscoveredRepository> repositories, CancellationToken cancellationToken = default)
     {
-        if (externalIds.Count == 0)
+        if (repositories.Count == 0)
         {
             return new Dictionary<string, CatalogApp>();
         }
 
+        var externalIds = repositories.Select(r => r.ExternalId).Distinct().ToList();
+        var urls = repositories.Select(r => RepositoryUrl.Normalize(r.Url)).OfType<string>().Distinct().ToList();
+
         using var connection = connectionFactory.Create();
-        var rows = await connection.QueryAsync<(string ExternalId, string AppId, string AppName, string? SquadId, string? SquadName)>(new CommandDefinition(
+        var rows = (await connection.QueryAsync<CatalogRow>(new CommandDefinition(
             """
-            SELECT r.external_id AS ExternalId, a.id AS AppId, a.name AS AppName,
-                   s.id AS SquadId, s.name AS SquadName
+            SELECT r.provider AS Provider, r.external_id AS ExternalId, r.url AS Url,
+                   a.id AS AppId, a.name AS AppName, s.id AS SquadId, s.name AS SquadName
             FROM repositories r
             JOIN apps a ON a.id = r.app_id
             LEFT JOIN squads s ON s.id = a.squad_id
-            WHERE r.provider = @provider AND r.external_id IN @externalIds
+            WHERE r.external_id IN @externalIds
+               OR (r.url IS NOT NULL AND lower(rtrim(trim(r.url), '/')) IN @urls)
             ORDER BY a.id
             """,
-            new { provider, externalIds }, cancellationToken: cancellationToken));
+            new { externalIds, urls }, cancellationToken: cancellationToken))).ToList();
 
-        // (provider, external_id) não é único em repositories; se houver mais de um app, vale o primeiro por id.
-        return rows
-            .GroupBy(r => r.ExternalId)
-            .ToDictionary(g => g.Key, g => new CatalogApp(g.First().AppId, g.First().AppName, g.First().SquadId, g.First().SquadName));
+        // Por (provider, external_id) primeiro, depois por URL. Nenhum dos dois é único em repositories;
+        // se houver mais de um app, vale o primeiro por id.
+        var result = new Dictionary<string, CatalogApp>();
+        foreach (var repository in repositories)
+        {
+            var url = RepositoryUrl.Normalize(repository.Url);
+            var match =
+                rows.FirstOrDefault(r => r.Provider == repository.Provider && r.ExternalId == repository.ExternalId)
+                ?? (url is null ? null : rows.FirstOrDefault(r => RepositoryUrl.Normalize(r.Url) == url));
+            if (match is not null)
+            {
+                result[repository.Id] = new CatalogApp(match.AppId, match.AppName, match.SquadId, match.SquadName);
+            }
+        }
+
+        return result;
     }
+
+    private sealed record CatalogRow(
+        string? Provider, string? ExternalId, string? Url, string AppId, string AppName, string? SquadId, string? SquadName);
 
     public async Task<bool> IsSiglaAppInUseAsync(string siglaApp, CancellationToken cancellationToken = default)
     {
         using var connection = connectionFactory.Create();
         return await connection.ExecuteScalarAsync<bool>(new CommandDefinition(
-            "SELECT EXISTS (SELECT 1 FROM repositories WHERE sigla_app = @siglaApp)",
+            "SELECT EXISTS (SELECT 1 FROM repositories WHERE upper(sigla_app) = upper(@siglaApp))",
             new { siglaApp }, cancellationToken: cancellationToken));
     }
 

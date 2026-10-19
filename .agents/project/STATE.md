@@ -1,6 +1,6 @@
 # STATE.md — estado atual do projeto
 
-> Reescrito (não anexado) ao fim de cada sessão de trabalho. Se este arquivo estiver desatualizado em relação ao `git log`, o git está certo. Última atualização: **2026-10-18**, ao concluir a spec 011 (squad na tela Repositórios), sobre as specs 008 a 010. Specs 008 a 011 commitadas.
+> Reescrito (não anexado) ao fim de cada sessão de trabalho. Se este arquivo estiver desatualizado em relação ao `git log`, o git está certo. Última atualização: **2026-10-19**, ao concluir a spec 012 (URL, ativo único e siglas normalizadas), sobre as specs 008 a 011. **A spec 012 está implementada e commitada, falta a confirmação do usuário na tela.**
 
 ## Onde estamos
 
@@ -16,6 +16,7 @@ Estágio do roadmap: **Inventário + Health + Evolution concluídos**, mais **Ch
 - **CRUD manual de Repository** (`specs/009-crud-repository/`): `POST/PUT/DELETE /api/apps/{appId}/repositories[/{id}]` (404 app/repo, 400 sem nome, 409 sigla-app duplicada; criação com `source = MANUAL`; edição preserva `source` e `externalId`); UI na **edição do app** (seção Repositórios: tabela com Editar/Remover + formulário). Lógica no `AppService`; persistência nova em `AppRepository` (`GetRepositoryAsync`, `DeleteRepositoryAsync`, `IsSiglaAppInUseAsync(siglaApp, exceptId)`). Sem mudança de schema.
 - **Cadastrados na tela Repositórios** (`specs/010-catalogo-na-tela-repositorios/`): nos filtros Todos e No catálogo a tela também lista os repositórios do catálogo sem descoberto correspondente (manuais e seed) — `GET /api/repositories/catalog`, `AppRepository.ListCatalogOnlyRepositoriesAsync` — e toda linha "no catálogo" tem o atalho **Gerenciar** → edição do app. O filtro padrão da tela é **Todos**.
 - **Squad na tela Repositórios** (`specs/011-squad-na-tela-repositorios/`): coluna e filtro **Squad**, só para exibição/consulta. A squad continua derivada (Squad → App → Repository, sem `squad_id` em `repositories`); `catalogApp` e `GET /api/repositories/catalog` trazem `squadId`/`squadName`; quem não virou app aparece como "sem squad". Guardar a squad de "de outra squad" ficou de fora (exigiria coluna nova na caixa de entrada).
+- **Repository: URL, ativo único e siglas** (`specs/012-repository-url-ativo-siglas/`): "no catálogo" = mesmo `provider`+`external_id` **ou** mesma URL (`RepositoryUrl`, `CatalogMatchSql`; `IsInCatalogAsync(DiscoveredRepository)` e `GetCatalogAppsAsync(descobertos)` por `Id` do descoberto); **um ativo por papel dentro do app** — salvar/marcar como ativo (`POST /api/apps/{id}/repositories/{id}/activate`) rebaixa o outro ativo do mesmo papel para `legacy`, e a triagem ao vincular faz o mesmo com aviso; sigla-app gravada em MAIÚSCULAS e sigla em minúsculas, unicidade da sigla-app sem diferença de caixa. UI: situação, "Marcar como ativo" e aviso na edição do app. Limites: `.git` e `http`/`https` não tratados na URL; siglas-app antigas em minúscula não são reescritas.
 - **Leitor de GitHub, fase 1** (`specs/005-leitor-github-fase-1/`, ADR-010, guia `docs/leitor-github.md`):
   - ferramenta `tools/CheckApps.GitHubScan` — scan **por sigla** (validada por formato, limite de resultados), `--dry-run`, `--source fake|github`; o escopo é validado antes de pedir token;
   - tela **Repositórios** no menu: todos os repositórios que passaram pelo scan, cada um com o estado dele — novo, no catálogo (link do app, sem ações), de outra squad, ignorado; filtro padrão "Todos" ("Novos" é a caixa de entrada). Ações: criar app (painel pré-preenchido), vincular a app existente (aviso se a sigla difere), de outra squad, ignorar, restaurar;
@@ -23,7 +24,7 @@ Estágio do roadmap: **Inventário + Health + Evolution concluídos**, mais **Ch
   - fonte `fake` com os casos difíceis; fonte real do GitHub (Search API + YAML da sigla-app) testada com HTTP falso **e lida uma vez de verdade**.
 - **Scan pela tela** (`specs/006-scan-pela-tela/`): bloco **Buscar no GitHub** em Repositórios — siglas, *Pré-visualizar* e *Escanear*; mesmo `ScanService` do CLI. **Desligado por padrão** (`Scan:Enabled`); erros 400/409/502; um scan por vez.
 - **Menu "Repositórios"** (`specs/007-menu-repositorios/`) e "já no catálogo" no resultado do scan.
-- **Testes**: 169 unitários + 42 de integração, verdes. **Nenhum exige Docker, serviço externo ou rede.**
+- **Testes**: 178 unitários + 45 de integração, verdes. **Nenhum exige Docker, serviço externo ou rede.**
 - **Ambiente local**: skill `run-local`; `README.md` com o passo a passo. Verificado nesta sessão: seed, API em `:5232`, Angular em `:4200`, `curl` nos três endpoints novos e um roteiro Playwright (menu desktop/recolhido/recarregar/celular + CRUD completo, sem erros de console além do 409 esperado).
 
 ## O que está mockado / provisório
@@ -43,7 +44,7 @@ Estágio do roadmap: **Inventário + Health + Evolution concluídos**, mais **Ch
 - **Formato real do YAML da sigla-app** e caminho do arquivo: hoje `config.yaml` com a chave `siglaApp` na raiz, configuráveis.
 - **Exceção futura**: repositório compartilhado entre squads — não tratado.
 - Repositório que **some do GitHub** continua na caixa (só `last_seen_at` envelhece) — comportamento não decidido.
-- **CRUD de Repository — o que ficou de fora** (backlog): "repositório ativo" único por app, reconhecimento por URL no scan (hoje um repositório manual sem `external_id` e depois achado pelo scan aparece como *novo*). Sigla-app é comparada com diferença de maiúsculas (`AB1` ≠ `ab1`) — a criação manual não normaliza.
+- **CRUD de Repository**: sem pendências além do **CRUD de SonarProject**, que segue em backlog por decisão do usuário. Dados antigos com dois ativos no mesmo papel só se corrigem quando alguém marca um como ativo.
 - `.github/copilot-instructions.md` ainda não existe; confirmar na máquina corporativa se Devin/Copilot varrem `.agents/skills/` (ADR-008).
 
 ## Gotchas para a próxima sessão
@@ -64,7 +65,7 @@ Os críticos estão em `AGENTS.md` e nas regras. Os que mais mordem hoje:
 2. **Usar o scan pela tela com o GitHub real** (usuário): segredos da API (`docs/leitor-github.md`, seção 5), reiniciar a API e escanear em **Repositórios → Buscar no GitHub**; depois criar os repositórios de teste que faltam (arquivado, infra, outra sigla, fora do acesso do token).
 3. Repetir os roteiros Playwright das specs 001–007 contra o novo shell.
 4. Revisão do usuário no glossário (Solução, Tipo de app).
-5. Candidatos de baixo custo: o que sobrou do CRUD de Repository (ativo único, reconhecimento por URL), CRUD de SonarProject, checagens e repositórios na massa de demonstração do seed, decidir o que fazer com repositório que some do GitHub.
+5. Candidatos de baixo custo: checagens e repositórios na massa de demonstração do seed; decidir o que fazer com repositório que some do GitHub. (CRUD de SonarProject: em backlog, não fazer agora.)
 6. Depois: fase 2 do leitor (dependências de biblioteca); tags chave-valor; spec de Solução.
 7. Na migração para a máquina corporativa: `.github/copilot-instructions.md`, verificação do `.agents/skills/`; GitHub App no lugar do token pessoal (ADR-010).
 8. Antes de qualquer uso compartilhado: substituir ADR-007 por uma decisão de autenticação.

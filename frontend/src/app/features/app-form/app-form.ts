@@ -56,6 +56,7 @@ export class AppForm {
   /** Id do repositório em edição; null = formulário de novo repositório. */
   protected readonly editingRepoId = signal<string | null>(null);
   protected readonly repoError = signal<string | null>(null);
+  protected readonly repoNotice = signal<string | null>(null);
 
   constructor() {
     this.squadsApi.list().subscribe((squads) => this.squads.set(squads));
@@ -92,6 +93,7 @@ export class AppForm {
   protected editRepository(repo: RepositoryInfo): void {
     this.editingRepoId.set(repo.id);
     this.repoError.set(null);
+    this.repoNotice.set(null);
     this.repoDraft.set({
       name: repo.name,
       provider: repo.provider ?? '',
@@ -138,6 +140,21 @@ export class AppForm {
       },
       error: (err) =>
         this.repoError.set(typeof err?.error === 'string' ? err.error : 'Não foi possível salvar o repositório.'),
+    });
+  }
+
+  protected activateRepository(repo: RepositoryInfo): void {
+    this.repoError.set(null);
+    this.repoNotice.set(null);
+    this.appsApi.activateRepository(this.appId!, repo.id).subscribe({
+      next: (result) => {
+        if (result.demoted.length > 0) {
+          this.repoNotice.set(`"${repo.name}" agora é o ativo. Passou a legacy: ${result.demoted.join(', ')}.`);
+        }
+        this.reloadRepositories();
+      },
+      error: (err) =>
+        this.repoError.set(typeof err?.error === 'string' ? err.error : 'Não foi possível marcar o repositório como ativo.'),
     });
   }
 
