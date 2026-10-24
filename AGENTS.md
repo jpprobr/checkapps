@@ -40,6 +40,9 @@ A skill `run-local` (`.agents/skills/run-local/`) encapsula essa sequência com 
 | Implementar uma feature | A spec correspondente em `specs/NNN-*/spec.md` e seu `checklist.md` |
 | Criar uma feature nova | Copie `specs/_template/` para `specs/NNN-nome/` e preencha antes de codar |
 | Subir o ambiente local | Skill `run-local` em `.agents/skills/run-local/SKILL.md` |
+| Dar uma mudança por pronta (build, testes, curl, navegador em banco isolado) | Skill `verify-change` em `.agents/skills/verify-change/SKILL.md` |
+| Abrir uma spec nova ou encerrar spec/sessão (Status, checklist, STATE, backlog) | Skill `close-spec` em `.agents/skills/close-spec/SKILL.md` |
+| Avaliar se algo recorrente deve virar skill, ou criar uma skill nova | Skill `skill-discovery` em `.agents/skills/skill-discovery/SKILL.md` |
 | Encerrar a sessão | Reescreva `.agents/project/STATE.md` (não anexe — substitua) |
 
 `.agents/skills/` segue o padrão aberto **Agent Skills** (`SKILL.md` com frontmatter de seis campos). Copilot e Devin leem essa pasta diretamente; o Claude Code lê os wrappers em `.claude/skills/` que apontam para ela.
