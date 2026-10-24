@@ -69,12 +69,6 @@ export interface CatalogRepository extends RepositoryInfo {
   squadName: string | null;
 }
 
-/** Resultado de marcar um repositório como ativo: os que passaram a legacy (um ativo por papel, spec 012). */
-export interface ActivateRepositoryResult {
-  repository: RepositoryInfo;
-  demoted: string[];
-}
-
 export interface UpsertRepositoryRequest {
   name: string;
   provider: string | null;

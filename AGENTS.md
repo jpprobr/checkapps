@@ -16,7 +16,7 @@ dotnet run --project tools/CheckApps.GitHubScan -- --sigla ab1,cd2 --source fake
 dotnet run --project src/CheckApps.Api --urls http://localhost:5232
 cd frontend && npm install && npm start               # Angular em :4200
 
-dotnet test                                           # 223 testes; nenhum exige Docker, serviço externo ou rede
+dotnet test                                           # 227 testes; nenhum exige Docker, serviço externo ou rede
 ```
 
 Persistência é SQLite em arquivo (`%LOCALAPPDATA%\CheckApps\checkapps.db`). Não há banco para subir.

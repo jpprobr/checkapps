@@ -154,8 +154,8 @@ public class AppsController(AppService appService, QualitySnapshotService snapsh
     public Task<IActionResult> ActivateRepository(string appId, string repositoryId, CancellationToken cancellationToken) =>
         HandleRepository(async () =>
         {
-            var result = await appService.ActivateRepositoryAsync(appId, repositoryId, cancellationToken);
-            return Ok(new ActivateRepositoryResultDto(result.Repository.ToDto(), result.Demoted));
+            var repository = await appService.ActivateRepositoryAsync(appId, repositoryId, cancellationToken);
+            return Ok(repository.ToDto());
         });
 
     [HttpDelete("{appId}/repositories/{repositoryId}")]

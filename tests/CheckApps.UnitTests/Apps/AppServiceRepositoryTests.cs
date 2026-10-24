@@ -92,68 +92,110 @@ public class AppServiceRepositoryTests
         new(name, "github", null, status, null, null, role);
 
     [Fact]
-    public async Task Create_AsActive_DemotesOnlyTheOtherActiveOfTheSameRole()
+    public async Task Create_AsActive_ConflictsWithTheActiveOfTheSameRole_AndChangesNothing()
     {
         var infra = await _service.CreateRepositoryAsync("app-1", Active("infra-1", "infra"));
         var app1 = await _service.CreateRepositoryAsync("app-1", Active("app-1", "aplicacao"));
 
-        var app2 = await _service.CreateRepositoryAsync("app-1", Active("app-2", "aplicacao"));
+        var ex = await Assert.ThrowsAsync<DomainConflictException>(
+            () => _service.CreateRepositoryAsync("app-1", Active("app-2", "aplicacao")));
 
+        Assert.Contains("'app-1'", ex.Message);
+        Assert.Contains("aplicacao", ex.Message);
         var all = await _service.ListRepositoriesAsync("app-1");
-        Assert.Equal("legacy", all.Single(r => r.Id == app1.Id).Status);
-        Assert.Equal("active", all.Single(r => r.Id == app2.Id).Status);
-        Assert.Equal("active", all.Single(r => r.Id == infra.Id).Status);   // outro papel: continua ativo
+        Assert.Equal(2, all.Count);   // o novo não foi gravado
+        Assert.Equal("active", all.Single(r => r.Id == app1.Id).Status);   // ninguém foi rebaixado
+        Assert.Equal("active", all.Single(r => r.Id == infra.Id).Status);
     }
 
     [Fact]
-    public async Task Create_ForAnotherApp_OrAsLegacyOrArchived_DemotesNobody()
+    public async Task Create_AsActive_IsAllowedForAnotherRole_AnotherApp_OrWhenNotActive()
     {
-        var first = await _service.CreateRepositoryAsync("app-1", Active("a", "aplicacao"));
-        await _service.CreateRepositoryAsync("app-2", Active("b", "aplicacao"));
-        await _service.CreateRepositoryAsync("app-1", Active("c", "aplicacao", status: "legacy"));
-        await _service.CreateRepositoryAsync("app-1", Active("d", "aplicacao", status: "archived"));
+        await _service.CreateRepositoryAsync("app-1", Active("a", "aplicacao"));
 
-        Assert.Equal("active", (await _service.ListRepositoriesAsync("app-1")).Single(r => r.Id == first.Id).Status);
+        await _service.CreateRepositoryAsync("app-1", Active("b", "infra"));
+        await _service.CreateRepositoryAsync("app-2", Active("c", "aplicacao"));
+        await _service.CreateRepositoryAsync("app-1", Active("d", "aplicacao", status: "legacy"));
+        await _service.CreateRepositoryAsync("app-1", Active("e", "aplicacao", status: "archived"));
+
+        Assert.Equal(4, (await _service.ListRepositoriesAsync("app-1")).Count);
     }
 
     [Fact]
     public async Task NoRole_IsOneGroupOnly_AndRoleComparisonIgnoresCase()
     {
-        var a = await _service.CreateRepositoryAsync("app-1", Active("a", null));
-        var b = await _service.CreateRepositoryAsync("app-1", Active("b", null));
-        var c = await _service.CreateRepositoryAsync("app-1", Active("c", "Infra"));
-        var d = await _service.CreateRepositoryAsync("app-1", Active("d", "infra"));
+        await _service.CreateRepositoryAsync("app-1", Active("a", null));
+        await _service.CreateRepositoryAsync("app-1", Active("c", "Infra"));
 
-        var all = await _service.ListRepositoriesAsync("app-1");
-        Assert.Equal("legacy", all.Single(r => r.Id == a.Id).Status);
-        Assert.Equal("active", all.Single(r => r.Id == b.Id).Status);
-        Assert.Equal("legacy", all.Single(r => r.Id == c.Id).Status);
-        Assert.Equal("active", all.Single(r => r.Id == d.Id).Status);
+        var noRole = await Assert.ThrowsAsync<DomainConflictException>(
+            () => _service.CreateRepositoryAsync("app-1", Active("b", null)));
+        var infra = await Assert.ThrowsAsync<DomainConflictException>(
+            () => _service.CreateRepositoryAsync("app-1", Active("d", "infra")));
+
+        Assert.Contains("sem papel", noRole.Message);
+        Assert.Contains("'c'", infra.Message);
+        Assert.All(await _service.ListRepositoriesAsync("app-1"), r => Assert.Equal("active", r.Status));
     }
 
     [Fact]
-    public async Task Activate_SwapsTheActiveOfTheGroup_AndReportsWhoWasDemoted()
+    public async Task Activate_ConflictsWhileAnotherIsActive_AndWorksAfterTheOtherBecomesLegacy()
     {
         var oldRepo = await _service.CreateRepositoryAsync("app-1", Active("velho", "aplicacao"));
         var newRepo = await _service.CreateRepositoryAsync("app-1", Active("novo", "aplicacao", status: "legacy"));
 
-        var result = await _service.ActivateRepositoryAsync("app-1", newRepo.Id);
+        var ex = await Assert.ThrowsAsync<DomainConflictException>(() => _service.ActivateRepositoryAsync("app-1", newRepo.Id));
+        Assert.Contains("'velho'", ex.Message);
+        Assert.Equal("active", (await _service.ListRepositoriesAsync("app-1")).Single(r => r.Id == oldRepo.Id).Status);
 
-        Assert.Equal("active", result.Repository.Status);
-        Assert.Equal(["velho"], result.Demoted);
-        Assert.Equal("legacy", (await _service.ListRepositoriesAsync("app-1")).Single(r => r.Id == oldRepo.Id).Status);
+        await _service.UpdateRepositoryAsync("app-1", oldRepo.Id, Active("velho", "aplicacao", status: "legacy"));
+        var activated = await _service.ActivateRepositoryAsync("app-1", newRepo.Id);
+
+        Assert.Equal("active", activated.Status);
         await Assert.ThrowsAsync<KeyNotFoundException>(() => _service.ActivateRepositoryAsync("app-1", "nope"));
     }
 
     [Fact]
-    public async Task Update_ToActive_DemotesTheOtherOfTheSameRole()
+    public async Task Update_ToActive_ConflictsWithTheOtherOfTheSameRole()
     {
         var a = await _service.CreateRepositoryAsync("app-1", Active("a", "contrato"));
         var b = await _service.CreateRepositoryAsync("app-1", Active("b", "contrato", status: "legacy"));
 
-        await _service.UpdateRepositoryAsync("app-1", b.Id, Active("b", "contrato"));
+        await Assert.ThrowsAsync<DomainConflictException>(
+            () => _service.UpdateRepositoryAsync("app-1", b.Id, Active("b", "contrato")));
 
-        Assert.Equal("legacy", (await _service.ListRepositoriesAsync("app-1")).Single(r => r.Id == a.Id).Status);
+        Assert.Equal("active", (await _service.ListRepositoriesAsync("app-1")).Single(r => r.Id == a.Id).Status);
+    }
+
+    [Fact]
+    public async Task Update_OfTheActiveItself_DoesNotConflictWithItself()
+    {
+        var a = await _service.CreateRepositoryAsync("app-1", Active("a", "contrato"));
+
+        var updated = await _service.UpdateRepositoryAsync("app-1", a.Id, Active("a-renomeado", "contrato"));
+
+        Assert.Equal("a-renomeado", updated.Name);
+        Assert.Equal("active", updated.Status);
+    }
+
+    [Fact]
+    public async Task Update_ChangingTheRoleOfAnActive_ConflictsWhenThatRoleAlreadyHasOne()
+    {
+        await _service.CreateRepositoryAsync("app-1", Active("a", "aplicacao"));
+        var infra = await _service.CreateRepositoryAsync("app-1", Active("b", "infra"));
+
+        await Assert.ThrowsAsync<DomainConflictException>(
+            () => _service.UpdateRepositoryAsync("app-1", infra.Id, Active("b", "aplicacao")));
+    }
+
+    [Fact]
+    public async Task Delete_OfTheActive_PromotesNobody()
+    {
+        var active = await _service.CreateRepositoryAsync("app-1", Active("ativo", "aplicacao"));
+        var legacy = await _service.CreateRepositoryAsync("app-1", Active("antigo", "aplicacao", status: "legacy"));
+
+        await _service.DeleteRepositoryAsync("app-1", active.Id);
+
+        Assert.Equal("legacy", (await _service.ListRepositoriesAsync("app-1")).Single(r => r.Id == legacy.Id).Status);
     }
 
     [Fact]

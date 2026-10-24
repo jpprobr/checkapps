@@ -91,10 +91,7 @@ public class TriageService(
         }
 
         var linked = ToRepository(appId, repository, role ?? Suggest(repository).Role);
-        foreach (var name in await appService.DemoteOtherActiveAsync(linked, cancellationToken))
-        {
-            warnings.Add($"O repositório '{name}' do app '{appId}' passou a legacy: o ativo de cada papel é um só.");
-        }
+        await appService.EnsureNoOtherActiveInRoleAsync(linked, cancellationToken);
 
         await apps.AddRepositoryAsync(linked, cancellationToken);
         return warnings;

@@ -56,7 +56,6 @@ export class AppForm {
   /** Id do repositório em edição; null = formulário de novo repositório. */
   protected readonly editingRepoId = signal<string | null>(null);
   protected readonly repoError = signal<string | null>(null);
-  protected readonly repoNotice = signal<string | null>(null);
 
   constructor() {
     this.squadsApi.list().subscribe((squads) => this.squads.set(squads));
@@ -93,7 +92,6 @@ export class AppForm {
   protected editRepository(repo: RepositoryInfo): void {
     this.editingRepoId.set(repo.id);
     this.repoError.set(null);
-    this.repoNotice.set(null);
     this.repoDraft.set({
       name: repo.name,
       provider: repo.provider ?? '',
@@ -143,16 +141,18 @@ export class AppForm {
     });
   }
 
+  /** Conforto da tela: a API é quem garante um ativo por papel (409). Papel ausente é um grupo só. */
+  protected activeInSameRole(repo: RepositoryInfo): boolean {
+    const role = (repo.role ?? '').toLowerCase();
+    return this.repositories().some(
+      (other) => other.id !== repo.id && other.status === 'active' && (other.role ?? '').toLowerCase() === role,
+    );
+  }
+
   protected activateRepository(repo: RepositoryInfo): void {
     this.repoError.set(null);
-    this.repoNotice.set(null);
     this.appsApi.activateRepository(this.appId!, repo.id).subscribe({
-      next: (result) => {
-        if (result.demoted.length > 0) {
-          this.repoNotice.set(`"${repo.name}" agora é o ativo. Passou a legacy: ${result.demoted.join(', ')}.`);
-        }
-        this.reloadRepositories();
-      },
+      next: () => this.reloadRepositories(),
       error: (err) =>
         this.repoError.set(typeof err?.error === 'string' ? err.error : 'Não foi possível marcar o repositório como ativo.'),
     });

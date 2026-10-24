@@ -5,9 +5,6 @@ using Repository = CheckApps.Domain.Repository;
 
 namespace CheckApps.Application.Apps;
 
-/// <summary>O resultado de marcar um repositório como ativo: ele e os que passaram a <c>legacy</c>.</summary>
-public record ActivationResult(Repository Repository, IReadOnlyList<string> Demoted);
-
 /// <summary>Campos editáveis de um repositório cadastrado à mão.</summary>
 public record RepositoryInput(
     string? Name, string? Provider, string? Url, string? Status, string? Sigla, string? SiglaApp, string? Role);
@@ -39,7 +36,7 @@ public class AppService(
         };
         Apply(repository, input);
         await EnsureSiglaAppFreeAsync(repository, cancellationToken);
-        await DemoteOtherActiveAsync(repository, cancellationToken);
+        await EnsureNoOtherActiveInRoleAsync(repository, cancellationToken);
         await apps.AddRepositoryAsync(repository, cancellationToken);
         return repository;
     }
@@ -52,55 +49,52 @@ public class AppService(
         repository.Name = RequireName(input.Name);
         Apply(repository, input);
         await EnsureSiglaAppFreeAsync(repository, cancellationToken);
-        await DemoteOtherActiveAsync(repository, cancellationToken);
+        await EnsureNoOtherActiveInRoleAsync(repository, cancellationToken);
         await apps.AddRepositoryAsync(repository, cancellationToken);
         return repository;
     }
 
     /// <summary>
-    /// Marca o repositório como ativo; o outro ativo do mesmo papel no app vira <c>legacy</c> (spec 012). Devolve os
-    /// nomes dos que foram rebaixados, para a tela avisar.
+    /// Marca o repositório como ativo (spec 012). Recusa com 409 se o app já tem outro ativo no mesmo papel: nenhum
+    /// repositório é rebaixado sozinho — a pessoa marca o outro como <c>legacy</c> antes.
     /// </summary>
-    public async Task<ActivationResult> ActivateRepositoryAsync(
+    public async Task<Repository> ActivateRepositoryAsync(
         string appId, string repositoryId, CancellationToken cancellationToken = default)
     {
         var repository = await apps.GetRepositoryAsync(appId, repositoryId, cancellationToken)
             ?? throw new KeyNotFoundException($"Repositório '{repositoryId}' não encontrado no app '{appId}'.");
         repository.Status = RepositoryStatuses.Active;
-        var demoted = await DemoteOtherActiveAsync(repository, cancellationToken);
+        await EnsureNoOtherActiveInRoleAsync(repository, cancellationToken);
         await apps.AddRepositoryAsync(repository, cancellationToken);
-        return new ActivationResult(repository, demoted);
+        return repository;
     }
 
     /// <summary>
     /// Regra do repositório ativo (spec 012): no máximo um ativo por papel dentro do app — o papel ausente é um grupo
-    /// só. Se <paramref name="repository"/> é ativo, os demais ativos do grupo viram <c>legacy</c>; devolve os nomes.
-    /// Usada também pela triagem ao vincular um descoberto a um app.
+    /// só. Se <paramref name="repository"/> é ativo e outro já ocupa o grupo, lança <see cref="DomainConflictException"/>
+    /// nomeando-o; nada é gravado nem rebaixado. Usada também pela triagem ao vincular um descoberto a um app.
     /// </summary>
-    public async Task<IReadOnlyList<string>> DemoteOtherActiveAsync(
-        Repository repository, CancellationToken cancellationToken = default)
+    public async Task EnsureNoOtherActiveInRoleAsync(Repository repository, CancellationToken cancellationToken = default)
     {
         if (!string.Equals(repository.Status, RepositoryStatuses.Active, StringComparison.OrdinalIgnoreCase))
         {
-            return [];
+            return;
         }
 
-        var demoted = new List<string>();
-        foreach (var other in await apps.GetRepositoriesAsync(repository.AppId, cancellationToken))
+        var occupying = (await apps.GetRepositoriesAsync(repository.AppId, cancellationToken))
+            .Where(other => other.Id != repository.Id
+                && string.Equals(other.Status, RepositoryStatuses.Active, StringComparison.OrdinalIgnoreCase)
+                && string.Equals(other.Role ?? string.Empty, repository.Role ?? string.Empty, StringComparison.OrdinalIgnoreCase))
+            .Select(other => $"'{other.Name}'")
+            .ToList();
+        if (occupying.Count == 0)
         {
-            if (other.Id == repository.Id
-                || !string.Equals(other.Status, RepositoryStatuses.Active, StringComparison.OrdinalIgnoreCase)
-                || !string.Equals(other.Role ?? string.Empty, repository.Role ?? string.Empty, StringComparison.OrdinalIgnoreCase))
-            {
-                continue;
-            }
-
-            other.Status = RepositoryStatuses.Legacy;
-            await apps.AddRepositoryAsync(other, cancellationToken);
-            demoted.Add(other.Name);
+            return;
         }
 
-        return demoted;
+        var role = string.IsNullOrWhiteSpace(repository.Role) ? "sem papel" : repository.Role;
+        throw new DomainConflictException(
+            $"O repositório {string.Join(", ", occupying)} já é o ativo do papel '{role}' neste app. Marque-o como legacy antes de ativar '{repository.Name}'.");
     }
 
     public async Task DeleteRepositoryAsync(string appId, string repositoryId, CancellationToken cancellationToken = default)

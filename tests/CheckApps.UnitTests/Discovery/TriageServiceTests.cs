@@ -285,7 +285,7 @@ public class TriageServiceTests
     }
 
     [Fact]
-    public async Task LinkAsync_DemotesTheActiveRepositoryOfTheSameRole_AndWarns()
+    public async Task LinkAsync_ConflictsWhenTheAppAlreadyHasAnActiveOfTheSameRole_AndChangesNothing()
     {
         _apps.Add(new App { Id = "pagamentos", SquadId = "sq-1", Name = "Pagamentos" });
         await _apps.AddRepositoryAsync(new Repository
@@ -298,11 +298,28 @@ public class TriageServiceTests
         });
         await SeedAsync("1", "lab-ab1-app-novo");
 
-        var warnings = await _sut.LinkAsync("github:1", "pagamentos", role: null);
+        var ex = await Assert.ThrowsAsync<DomainConflictException>(
+            () => _sut.LinkAsync("github:1", "pagamentos", role: null));
 
-        Assert.Contains(warnings, w => w.Contains("app-antigo") && w.Contains("legacy"));
+        Assert.Contains("app-antigo", ex.Message);
         var repositories = await _apps.GetRepositoriesAsync("pagamentos");
-        Assert.Equal("legacy", repositories.Single(r => r.Id == "r-0").Status);
+        Assert.Equal(2, repositories.Count);   // o descoberto não foi vinculado
+        Assert.All(repositories, r => Assert.Equal("active", r.Status));
+    }
+
+    [Fact]
+    public async Task LinkAsync_LinksAsActive_WhenTheOtherActiveHasAnotherRole()
+    {
+        _apps.Add(new App { Id = "pagamentos", SquadId = "sq-1", Name = "Pagamentos" });
+        await _apps.AddRepositoryAsync(new Repository
+        {
+            Id = "r-1", AppId = "pagamentos", Name = "infra-fila", Sigla = "ab1", Role = RepositoryRoles.Infra, Status = "active"
+        });
+        await SeedAsync("1", "lab-ab1-app-novo");
+
+        await _sut.LinkAsync("github:1", "pagamentos", role: RepositoryRoles.Application);
+
+        var repositories = await _apps.GetRepositoriesAsync("pagamentos");
         Assert.Equal("active", repositories.Single(r => r.Id == "r-1").Status);
         Assert.Equal("active", repositories.Single(r => r.ExternalId == "1").Status);
     }

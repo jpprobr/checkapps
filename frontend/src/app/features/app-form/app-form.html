@@ -106,9 +106,6 @@
         @if (repoError()) {
           <p class="error">{{ repoError() }}</p>
         }
-        @if (repoNotice()) {
-          <p class="notice">{{ repoNotice() }}</p>
-        }
 
         @if (repositories().length > 0) {
           <table>
@@ -138,7 +135,15 @@
                   <td>{{ repo.source === 'MANUAL' ? 'manual' : repo.source === 'GITHUB_SCAN' ? 'scan' : '—' }}</td>
                   <td class="row-actions">
                     @if (repo.status !== 'active') {
-                      <button type="button" class="secondary" (click)="activateRepository(repo)">Marcar como ativo</button>
+                      <button
+                        type="button"
+                        class="secondary"
+                        [disabled]="activeInSameRole(repo)"
+                        [title]="activeInSameRole(repo) ? 'Já existe um ativo neste papel: marque-o como legacy antes.' : ''"
+                        (click)="activateRepository(repo)"
+                      >
+                        Marcar como ativo
+                      </button>
                     }
                     <button type="button" class="secondary" (click)="editRepository(repo)">Editar</button>
                     <button type="button" class="danger" (click)="removeRepository(repo)">Remover</button>
@@ -190,7 +195,7 @@
               <option value="legacy">Legacy</option>
               <option value="archived">Arquivado</option>
             </select>
-            <span class="subtitle small">Ao salvar como ativo, o outro ativo do mesmo papel passa a legacy.</span>
+            <span class="subtitle small">Só pode haver um ativo por papel: marque o outro como legacy antes de salvar este como ativo.</span>
           </label>
           <div class="form-actions">
             <button type="button" (click)="saveRepository()">{{ editingRepoId() ? 'Salvar repositório' : '+ Adicionar repositório' }}</button>
