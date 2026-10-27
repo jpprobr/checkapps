@@ -9,15 +9,27 @@ namespace CheckApps.Application.Persistence;
 /// </summary>
 public interface IAnalysisRepository
 {
-    /// <summary>Grava a análise e os fatos dela numa transação só.</summary>
+    /// <summary>Grava a análise, os fatos e as integrações dela (spec 014) numa transação só.</summary>
     Task AddAsync(
-        RepositoryAnalysis analysis, IReadOnlyList<RepositoryDependency> facts, CancellationToken cancellationToken = default);
+        RepositoryAnalysis analysis, IReadOnlyList<RepositoryDependency> facts,
+        IReadOnlyList<RepositoryIntegration>? integrations = null, CancellationToken cancellationToken = default);
 
     /// <summary>A análise corrente do repositório (a mais recente que não falhou), ou <c>null</c> se nunca foi analisado.</summary>
     Task<RepositoryAnalysis?> GetCurrentAsync(string repositoryId, CancellationToken cancellationToken = default);
 
     /// <summary>Todos os repositórios do app, cada um com a análise corrente, a última falha mais nova que ela e os fatos.</summary>
     Task<IReadOnlyList<RepositoryAnalysisView>> GetCurrentByAppAsync(string appId, CancellationToken cancellationToken = default);
+
+    /// <summary>Como <see cref="GetCurrentByAppAsync"/>, com as integrações da análise corrente em vez dos fatos.</summary>
+    Task<IReadOnlyList<RepositoryIntegrationsView>> GetCurrentIntegrationsByAppAsync(
+        string appId, CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// Integrações **com host** das análises correntes, com o repositório, o app e a squad. <paramref name="hostContains"/>
+    /// filtra por trecho do host, sem diferença de caixa; nulo traz todas. O agrupamento por host é do serviço.
+    /// </summary>
+    Task<IReadOnlyList<IntegrationUsageRow>> ListIntegrationRowsAsync(
+        string? hostContains, string? squadId, CancellationToken cancellationToken = default);
 
     /// <summary>
     /// Pacotes das análises correntes, com o app, a squad e a situação do repositório. <paramref name="name"/> nulo traz
@@ -39,6 +51,14 @@ public interface IAnalysisRepository
 /// <param name="LastFailure">A tentativa que falhou depois da corrente (ou sem nenhuma corrente); nula se não há.</param>
 public record RepositoryAnalysisView(
     Repository Repository, RepositoryAnalysis? Current, RepositoryAnalysis? LastFailure, IReadOnlyList<RepositoryDependency> Facts);
+
+/// <param name="Current">Nula se o repositório nunca teve uma análise que não falhou.</param>
+public record RepositoryIntegrationsView(
+    Repository Repository, RepositoryAnalysis? Current, RepositoryAnalysis? LastFailure, IReadOnlyList<RepositoryIntegration> Integrations);
+
+public record IntegrationUsageRow(
+    RepositoryIntegration Integration, string RepositoryId, string RepositoryName, string? RepositoryStatus,
+    string AppId, string AppName, string? SquadId, string? SquadName, DateTimeOffset AnalyzedAt);
 
 public record PackageUsageRow(
     RepositoryDependency Fact, string RepositoryId, string RepositoryName, string? RepositoryStatus,

@@ -1,3 +1,10 @@
+/* O espaçamento entre os cartões do detalhe do app vem de `section { margin-top }` no CSS do app-detail, que não
+   alcança o interior de um componente filho: o próprio elemento precisa da margem. */
+:host {
+  display: block;
+  margin-top: 1.25rem;
+}
+
 .repo-block {
   margin: 1rem 0 1.5rem;
 }

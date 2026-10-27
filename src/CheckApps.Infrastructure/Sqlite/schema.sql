@@ -207,3 +207,37 @@ CREATE INDEX IF NOT EXISTS ix_repository_dependencies_analysis
 -- "Quem usa o pacote X": a busca é por tipo, ecossistema e nome sem diferença de caixa.
 CREATE INDEX IF NOT EXISTS ix_repository_dependencies_name
     ON repository_dependencies (kind, ecosystem, lower(name));
+
+-- Integrações declaradas vistas numa análise (spec 014): "este repositório chama o host X". Só as partes normalizadas
+-- do endereço; nunca o valor bruto, usuário, senha ou query. Tabela nova: banco antigo a recebe sem tocar nas existentes.
+CREATE TABLE IF NOT EXISTS repository_integrations (
+    id               TEXT PRIMARY KEY,
+    analysis_id      TEXT NOT NULL REFERENCES repository_analyses(id) ON DELETE CASCADE,
+    mechanism        TEXT NOT NULL,
+    scheme           TEXT NULL,
+    host             TEXT NULL,
+    port             INTEGER NULL,
+    base_path        TEXT NULL,
+    reference        TEXT NOT NULL,
+    config_key       TEXT NOT NULL,
+    environment      TEXT NULL,
+    environment_kind TEXT NULL,
+    state            TEXT NOT NULL,
+    project_path     TEXT NOT NULL,
+    source_file      TEXT NOT NULL,
+    origin           TEXT NOT NULL,
+    confidence       TEXT NOT NULL,
+    confidence_note  TEXT NULL,
+    scanner_id       TEXT NOT NULL,
+    scanner_version  TEXT NOT NULL
+);
+
+CREATE INDEX IF NOT EXISTS ix_repository_integrations_analysis
+    ON repository_integrations (analysis_id);
+
+-- "Quem chama o host X": a busca é por host sem diferença de caixa.
+CREATE INDEX IF NOT EXISTS ix_repository_integrations_host
+    ON repository_integrations (lower(host));
+
+CREATE INDEX IF NOT EXISTS ix_repository_integrations_reference
+    ON repository_integrations (lower(reference));

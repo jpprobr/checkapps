@@ -1,3 +1,4 @@
+using System.Text.Json;
 using System.Text.RegularExpressions;
 using System.Xml;
 using System.Xml.Linq;
@@ -14,6 +15,10 @@ namespace CheckApps.Infrastructure.Analysis.DotNet;
 /// Arquivos lidos: <c>*.csproj</c>, o <c>packages.config</c> do mesmo diretório e o <c>Directory.Build.props</c> e o
 /// <c>Directory.Packages.props</c> mais próximos acima do projeto. Limites conhecidos: <c>Condition</c> não é avaliada,
 /// só o arquivo mais próximo de cada tipo vale, e dependências transitivas não aparecem.
+///
+/// Desde a versão 1.1.0 (spec 014) lê também <c>appsettings*.json</c>, base e por ambiente, e devolve **candidatos
+/// brutos** a integração (chave cujo último segmento está em <see cref="AnalysisOptions.EffectiveIntegrationKeyHints"/>
+/// e valor texto). Não decide o que é gravado nem redige segredos: isso é do <see cref="IntegrationNormalizer"/>.
 /// </summary>
 public sealed partial class DotNetScanner : IRepositoryScanner
 {
@@ -27,9 +32,25 @@ public sealed partial class DotNetScanner : IRepositoryScanner
     [GeneratedRegex(@"\$\(([^)]+)\)", RegexOptions.CultureInvariant, matchTimeoutMilliseconds: 1000)]
     private static partial Regex PropertyReference();
 
+    // Nunca emitidos como integração, mesmo que alguém os ponha na lista de dicas.
+    private static readonly string[] SecretKeyNames = ["Password", "Pwd", "Secret", "Token", "ApiKey", "Key", "ConnectionString"];
+
+    private const string AppSettingsPrefix = "appsettings";
+
+    private readonly string[] _keyHints;
+
+    public DotNetScanner() : this(new AnalysisOptions())
+    {
+    }
+
+    public DotNetScanner(AnalysisOptions options)
+    {
+        _keyHints = options.EffectiveIntegrationKeyHints;
+    }
+
     public string Id => "dotnet";
 
-    public string Version => "1.0.0";
+    public string Version => "1.1.0";
 
     public bool AppliesTo(IReadOnlyList<string> paths) => ProjectPaths(paths).Count > 0;
 
@@ -57,6 +78,11 @@ public sealed partial class DotNetScanner : IRepositoryScanner
             }
         }
 
+        foreach (var settings in paths.Where(IsAppSettings).Where(p => !IsIgnored(p)))
+        {
+            selected.Add(settings);
+        }
+
         return selected.ToList();
     }
 
@@ -69,7 +95,12 @@ public sealed partial class DotNetScanner : IRepositoryScanner
             AnalyzeProject(context, project);
         }
 
-        return new ScannerResult(context.Facts, context.Warnings.Distinct().ToList());
+        foreach (var settings in context.Known.Keys.Where(IsAppSettings).Where(p => !IsIgnored(p)).Order(StringComparer.Ordinal))
+        {
+            AnalyzeAppSettings(context, settings);
+        }
+
+        return new ScannerResult(context.Facts, context.Warnings.Distinct().ToList(), context.Integrations);
     }
 
     private static void AnalyzeProject(Context context, string projectPath)
@@ -358,6 +389,116 @@ public sealed partial class DotNetScanner : IRepositoryScanner
             .FirstOrDefault(v => v.Length > 0);
     }
 
+    // ---- appsettings (spec 014) ------------------------------------------------------------------------------------
+
+    private static readonly JsonDocumentOptions SettingsJson = new()
+    {
+        // O .NET aceita comentários e vírgula sobrando no appsettings; conteúdo de repositório é entrada não confiável.
+        CommentHandling = JsonCommentHandling.Skip,
+        AllowTrailingCommas = true,
+        MaxDepth = 32
+    };
+
+    private void AnalyzeAppSettings(Context context, string path)
+    {
+        JsonDocument document;
+        try
+        {
+            document = JsonDocument.Parse(context.Text(path).TrimStart((char)0xFEFF), SettingsJson);
+        }
+        catch (JsonException)
+        {
+            context.Warnings.Add($"{path}: JSON inválido; arquivo ignorado.");
+            return;
+        }
+
+        using (document)
+        {
+            var environment = EnvironmentOf(path);
+            var project = NearestProjectDirectory(context.Known, path);
+            Walk(document.RootElement, [], path, environment, project, context);
+        }
+    }
+
+    private void Walk(
+        JsonElement element, List<string> segments, string path, string? environment, string project, Context context)
+    {
+        switch (element.ValueKind)
+        {
+            case JsonValueKind.Object:
+                foreach (var property in element.EnumerateObject())
+                {
+                    // Connection strings carregam credenciais e não são integração HTTP: nem se entra na seção.
+                    if (segments.Count == 0 && string.Equals(property.Name, "ConnectionStrings", StringComparison.OrdinalIgnoreCase))
+                    {
+                        continue;
+                    }
+
+                    segments.Add(property.Name);
+                    Walk(property.Value, segments, path, environment, project, context);
+                    segments.RemoveAt(segments.Count - 1);
+                }
+
+                break;
+
+            case JsonValueKind.Array:
+                var index = 0;
+                foreach (var item in element.EnumerateArray())
+                {
+                    segments.Add(index++.ToString(System.Globalization.CultureInfo.InvariantCulture));
+                    Walk(item, segments, path, environment, project, context);
+                    segments.RemoveAt(segments.Count - 1);
+                }
+
+                break;
+
+            case JsonValueKind.String or JsonValueKind.Null when segments.Count > 0 && IsEndpointKey(segments[^1]):
+                var reference = segments.Count >= 2 ? segments[^2] : "(raiz)";
+                context.Integrations.Add(new ScannerIntegration(
+                    IntegrationMechanisms.Config, project, path, reference, string.Join(':', segments), environment,
+                    element.ValueKind == JsonValueKind.String ? element.GetString() ?? "" : ""));
+                break;
+        }
+    }
+
+    private bool IsEndpointKey(string name) =>
+        _keyHints.Contains(name, StringComparer.OrdinalIgnoreCase)
+        && !SecretKeyNames.Contains(name, StringComparer.OrdinalIgnoreCase);
+
+    private static bool IsAppSettings(string path)
+    {
+        var name = path[(path.LastIndexOf('/') + 1)..];
+        return name.StartsWith(AppSettingsPrefix + ".", StringComparison.OrdinalIgnoreCase)
+            && name.EndsWith(".json", StringComparison.OrdinalIgnoreCase);
+    }
+
+    /// <summary><c>appsettings.json</c> → nulo; <c>appsettings.Homolog.json</c> → <c>Homolog</c>.</summary>
+    private static string? EnvironmentOf(string path)
+    {
+        var name = path[(path.LastIndexOf('/') + 1)..];
+        if (string.Equals(name, AppSettingsPrefix + ".json", StringComparison.OrdinalIgnoreCase))
+        {
+            return null;
+        }
+
+        var middle = name[(AppSettingsPrefix.Length + 1)..^".json".Length];
+        return middle.Length == 0 ? null : middle;
+    }
+
+    /// <summary>O diretório do <c>.csproj</c> mais próximo acima do arquivo; sem projeto, o próprio diretório do arquivo.</summary>
+    private static string NearestProjectDirectory(IReadOnlyDictionary<string, string> known, string path)
+    {
+        var directory = DirectoryOf(path);
+        var best = known.Keys
+            .Where(IsProject).Where(p => !IsIgnored(p))
+            .Select(DirectoryOf)
+            .Where(d => d.Length == 0 || directory == d || directory.StartsWith(d + "/", StringComparison.OrdinalIgnoreCase))
+            .OrderByDescending(d => d.Length)
+            .Select(d => (string?)d)
+            .FirstOrDefault();
+        return best ?? directory;
+    }
+
     // ---- XML e caminhos --------------------------------------------------------------------------------------------
 
     // O formato legado declara xmlns do MSBuild: compara-se pelo nome local, nunca pelo nome qualificado.
@@ -437,6 +578,10 @@ public sealed partial class DotNetScanner : IRepositoryScanner
         public List<ScannerFact> Facts { get; } = [];
 
         public List<string> Warnings { get; } = [];
+
+        public List<ScannerIntegration> Integrations { get; } = [];
+
+        public string Text(string path) => _contents[path];
 
         public XDocument? Load(string path)
         {

@@ -28,3 +28,7 @@ A spec 013 abre a leitura do **conteúdo** dos repositórios já catalogados (a 
 - Só dependências diretas nesta etapa; as transitivas dependem de outra fonte (a API de SBOM do GitHub, a verificar se está habilitada na organização) e de decisão própria.
 - A análise roda por linha de comando; um endpoint de disparo, quando existir, herda o pré-requisito de autenticação da ADR-010.
 - Esta ADR não cobre a leitura de código (Refit/`HttpClient` por Roslyn, que exigirá baixar o repositório como arquivo compactado), integrações entre apps nem o mapa; cada um pede spec própria e, se mudar estas decisões, ADR própria.
+
+## Adendo (2026-10-27, spec 014): integrações como segundo tipo de fato
+
+As integrações declaradas (hosts que um repositório chama, vistos em `appsettings*.json`) ganham **tabela própria**, `repository_integrations`, ligada à mesma análise e com a mesma proveniência (origem, confiança, scanner, arquivo). Não reaproveitam `repository_dependencies` porque host, porta, caminho base e ambiente não são nome e versão de pacote, e a próxima fatia (apelidos host→app) precisa de índice por host. O contrato `IRepositoryScanner` continua um parser: ele devolve **candidatos brutos** e o **núcleo** (`IntegrationNormalizer`) decide o que é gravado, de modo que a redação de segredos (usuário e senha em URL, query, connection strings) não depende de cada scanner.

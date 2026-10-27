@@ -8,9 +8,11 @@ using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 
 // Análise por sigla (spec 013): lê os arquivos dos repositórios JÁ CATALOGADOS da sigla e grava os fatos que os scanners
-// extraem (versão do .NET e pacotes). Nunca cria App, nunca lê a organização e nunca guarda o conteúdo dos arquivos.
+// extraem (versão do .NET, pacotes e, desde a spec 014, as integrações declaradas em appsettings*.json). Nunca cria
+// App, nunca lê a organização e nunca guarda o conteúdo dos arquivos nem valores brutos (usuário, senha e query de URL
+// são descartados antes de gravar).
 //
-//   dotnet run --project tools/CheckApps.Analyze -- --sigla ab1,cd2 [--source github|fake] [--dry-run]
+//   dotnet run --project tools/CheckApps.Analyze -- --sigla ab1,cd2 [--source github|fake] [--dry-run] [--force]
 //
 // Configuração (nada disso entra no Git): GitHub:Token via `dotnet user-secrets set ... --project tools/CheckApps.Analyze`
 // (o armazenamento é o mesmo do CheckApps.GitHubScan) ou variável GitHub__Token. Opcionais: Scan:SiglaPattern,
@@ -28,12 +30,15 @@ if (parsed.Error is not null || parsed.Help)
     }
 
     Console.WriteLine("""
-        Uso: CheckApps.Analyze --sigla <sigla[,sigla...]> [--source github|fake] [--dry-run]
+        Uso: CheckApps.Analyze --sigla <sigla[,sigla...]> [--source github|fake] [--dry-run] [--force]
 
           --sigla     uma ou mais siglas (obrigatório). Analisa os repositórios JÁ CATALOGADOS dessas siglas.
           --source    github (padrão) lê o GitHub; fake usa dados de demonstração, sem rede.
                       (sem o argumento vale Scan:Source da configuração; o padrão é github)
           --dry-run   lê e mostra o que seria gravado, sem gravar nenhum dado.
+          --force     reanalisa mesmo quando o commit já foi analisado (grava uma análise nova; a anterior fica no
+                      histórico). Use depois de atualizar o scanner: sem isso, repositórios sem commit novo dão
+                      "sem alteração".
 
         Repositórios só entram no catálogo pela triagem (menu Repositórios); rode antes o CheckApps.GitHubScan.
         """);
@@ -79,7 +84,7 @@ try
     await provider.GetRequiredService<SqliteSchemaBootstrapper>().EnsureSchemaAsync();
 
     using var scope = provider.CreateScope();
-    var report = await scope.ServiceProvider.GetRequiredService<AnalysisService>().AnalyzeAsync(parsed.Siglas, parsed.DryRun);
+    var report = await scope.ServiceProvider.GetRequiredService<AnalysisService>().AnalyzeAsync(parsed.Siglas, parsed.DryRun, parsed.Force);
     Print(report, fake: string.Equals(scanOptions.Source, "fake", StringComparison.OrdinalIgnoreCase));
     return report.Count(AnalysisOutcome.Failed) > 0 ? ExitSource : ExitOk;
 }
@@ -123,7 +128,7 @@ static void Print(AnalysisReport report, bool fake)
             _ => "pulado"
         };
 
-        var facts = item.Outcome == AnalysisOutcome.Analyzed ? $" · {item.FactCount} fatos" : "";
+        var facts = item.Outcome == AnalysisOutcome.Analyzed ? $" · {item.FactCount} fatos · {item.IntegrationCount} integrações" : "";
         Console.WriteLine($"  [{outcome,-13}] {item.Catalog.Repository.Name}  (app {item.Catalog.AppName}){facts}");
         foreach (var warning in item.Warnings)
         {
@@ -149,25 +154,29 @@ static void Print(AnalysisReport report, bool fake)
     }
 }
 
-static (string[] Siglas, string? Source, bool DryRun, bool Help, string? Error) ParseArguments(string[] args)
+static (string[] Siglas, string? Source, bool DryRun, bool Force, bool Help, string? Error) ParseArguments(string[] args)
 {
     var siglas = new List<string>();
     string? source = null;
     var dryRun = false;
+    var force = false;
 
     for (var i = 0; i < args.Length; i++)
     {
         switch (args[i])
         {
             case "--help" or "-h":
-                return ([], source, dryRun, true, null);
+                return ([], source, dryRun, force, true, null);
             case "--dry-run":
                 dryRun = true;
+                break;
+            case "--force":
+                force = true;
                 break;
             case "--sigla":
                 if (i + 1 >= args.Length)
                 {
-                    return ([], source, dryRun, false, "--sigla precisa de um valor (ex.: --sigla ab1,cd2).");
+                    return ([], source, dryRun, force, false, "--sigla precisa de um valor (ex.: --sigla ab1,cd2).");
                 }
 
                 siglas.AddRange(args[++i].Split(',', StringSplitOptions.TrimEntries));
@@ -175,15 +184,15 @@ static (string[] Siglas, string? Source, bool DryRun, bool Help, string? Error) 
             case "--source":
                 if (i + 1 >= args.Length || args[i + 1] is not ("github" or "fake"))
                 {
-                    return ([], source, dryRun, false, "--source deve ser github ou fake.");
+                    return ([], source, dryRun, force, false, "--source deve ser github ou fake.");
                 }
 
                 source = args[++i];
                 break;
             default:
-                return ([], source, dryRun, false, $"argumento desconhecido: {args[i]}");
+                return ([], source, dryRun, force, false, $"argumento desconhecido: {args[i]}");
         }
     }
 
-    return (siglas.ToArray(), source, dryRun, false, null);
+    return (siglas.ToArray(), source, dryRun, force, false, null);
 }

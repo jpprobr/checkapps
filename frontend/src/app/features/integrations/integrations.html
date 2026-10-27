@@ -1,0 +1,143 @@
+<main class="page">
+  <h1>Integrações</h1>
+  <p class="subtitle">
+    Os endereços que os repositórios catalogados <strong>declaram</strong> chamar, segundo a última análise de cada um
+    (hoje lidos dos arquivos <code>appsettings*.json</code>). Um host com <code>{{ '{env}' }}</code> é um modelo: o ambiente só se
+    sabe pelo arquivo. O CheckApps ainda não diz a que app do catálogo cada host pertence. A análise roda no terminal
+    (<code>CheckApps.Analyze</code>); esta tela só lê.
+  </p>
+
+  <form class="card search-form" (ngSubmit)="search()">
+    <label>
+      Host
+      <input type="text" name="host" placeholder="pagamentos" autocomplete="off"
+        [ngModel]="host()" (ngModelChange)="host.set($event)" />
+    </label>
+    <label>
+      Squad
+      <select name="squad" [ngModel]="squadId()" (ngModelChange)="squadId.set($event)">
+        <option value="">Todas</option>
+        @for (squad of squads(); track squad.id) {
+          <option [value]="squad.id">{{ squad.name }}</option>
+        }
+      </select>
+    </label>
+    <button type="submit" [disabled]="loading()">Buscar</button>
+  </form>
+  <p class="subtitle small">Vale um trecho do host, sem diferença de maiúsculas e minúsculas. Em branco, lista todos.</p>
+
+  @if (loading()) {
+    <p role="status">Consultando…</p>
+  } @else if (failed()) {
+    <p class="error" role="alert">Não foi possível carregar as integrações.</p>
+  } @else if (result(); as r) {
+    @if (r.coverage.unanalyzedRepositories > 0) {
+      <p class="coverage" role="status">
+        ⚠ {{ r.coverage.unanalyzedRepositories }}
+        {{ r.coverage.unanalyzedRepositories === 1 ? 'repositório catalogado ainda não foi analisado' : 'repositórios catalogados ainda não foram analisados' }}:
+        a lista pode estar incompleta.
+      </p>
+    }
+    <p class="subtitle small">
+      @if (r.coverage.latestAnalyzedAt) {
+        Análise mais recente do catálogo: {{ r.coverage.latestAnalyzedAt | date: 'dd/MM/yyyy HH:mm' }}.
+      } @else {
+        Nenhuma análise foi gravada ainda.
+      }
+    </p>
+
+    @if (r.hosts.length === 0) {
+      <p role="status">Nenhum host encontrado nas análises mais recentes.</p>
+    } @else {
+      <div class="table-scroll">
+        <table>
+          <thead>
+            <tr>
+              <th>Host</th>
+              <th>Apps</th>
+              <th>Repositórios</th>
+              <th>Squads</th>
+              <th>Seções</th>
+              <th>Ambientes</th>
+            </tr>
+          </thead>
+          <tbody>
+            @for (h of r.hosts; track h.key) {
+              <tr [class.selected]="selectedKey() === h.key">
+                <td>
+                  <button type="button" class="link-button" [attr.aria-pressed]="selectedKey() === h.key"
+                    [attr.aria-label]="'Ver quem chama ' + h.key" (click)="select(h.key)">{{ h.key }}</button>
+                  @if (h.isTemplate) { <span class="tag">modelo</span> }
+                </td>
+                <td>{{ h.appCount }}</td>
+                <td>{{ h.repositoryCount }}</td>
+                <td>{{ squadNames(h.squads) }}</td>
+                <td>{{ h.references.join(', ') }}</td>
+                <td>{{ h.environmentKinds.length > 0 ? h.environmentKinds.join(', ') : '—' }}</td>
+              </tr>
+            }
+          </tbody>
+        </table>
+      </div>
+    }
+
+    @if (selectedKey()) {
+      <section class="card host-detail" aria-live="polite">
+        @if (detailLoading()) {
+          <p role="status">Carregando…</p>
+        } @else if (detailFailed()) {
+          <p class="error" role="alert">Não foi possível carregar o detalhe deste host.</p>
+        } @else if (detail(); as d) {
+          <h2>
+            {{ d.key }}
+            @if (d.isTemplate) { <span class="tag">modelo</span> }
+          </h2>
+          <div class="table-scroll">
+            <table>
+              <thead>
+                <tr>
+                  <th>App</th>
+                  <th>Squad</th>
+                  <th>Repositório</th>
+                  <th>Seção e arquivo</th>
+                  <th>Ambiente</th>
+                  <th>Endereço</th>
+                  <th>Confiança</th>
+                  <th>Analisado em</th>
+                </tr>
+              </thead>
+              <tbody>
+                @for (u of d.usages; track u.integration.id) {
+                  <tr>
+                    <td><a [routerLink]="['/apps', u.appId]">{{ u.appName }}</a></td>
+                    <td>{{ u.squadName ?? '—' }}</td>
+                    <td>
+                      {{ u.repositoryName }}
+                      @if (u.repositoryStatus) { <span class="tag">{{ u.repositoryStatus }}</span> }
+                    </td>
+                    <td>
+                      {{ u.integration.reference }}
+                      <span class="note">{{ u.integration.sourceFile }}</span>
+                    </td>
+                    <td>{{ environment(u.integration) }}</td>
+                    <td class="address">
+                      {{ address(u.integration) }}
+                      <span class="note">{{ stateLabels[u.integration.state] }}</span>
+                    </td>
+                    <td>
+                      <span class="confidence" [class.low]="u.integration.confidence === 'baixa'">{{ confidenceLabels[u.integration.confidence] }}</span>
+                      @if (u.integration.confidence !== 'alta' && u.integration.confidenceNote) {
+                        <span class="note">{{ u.integration.confidenceNote }}</span>
+                      }
+                    </td>
+                    <td>{{ u.analyzedAt | date: 'dd/MM/yyyy' }}</td>
+                  </tr>
+                }
+              </tbody>
+            </table>
+          </div>
+        }
+      </section>
+    }
+  }
+</main>

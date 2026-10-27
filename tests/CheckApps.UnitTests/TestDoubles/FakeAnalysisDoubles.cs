@@ -12,15 +12,19 @@ namespace CheckApps.UnitTests.TestDoubles;
 /// </summary>
 public class FakeAnalysisRepository : IAnalysisRepository
 {
-    private readonly List<(RepositoryAnalysis Analysis, IReadOnlyList<RepositoryDependency> Facts)> _stored = [];
+    private readonly List<(RepositoryAnalysis Analysis, IReadOnlyList<RepositoryDependency> Facts, IReadOnlyList<RepositoryIntegration> Integrations)> _stored = [];
 
     public IReadOnlyList<RepositoryAnalysis> Analyses => _stored.Select(s => s.Analysis).ToList();
 
     public IReadOnlyList<RepositoryDependency> Facts => _stored.SelectMany(s => s.Facts).ToList();
 
-    public Task AddAsync(RepositoryAnalysis analysis, IReadOnlyList<RepositoryDependency> facts, CancellationToken ct = default)
+    public IReadOnlyList<RepositoryIntegration> Integrations => _stored.SelectMany(s => s.Integrations).ToList();
+
+    public Task AddAsync(
+        RepositoryAnalysis analysis, IReadOnlyList<RepositoryDependency> facts,
+        IReadOnlyList<RepositoryIntegration>? integrations = null, CancellationToken ct = default)
     {
-        _stored.Add((analysis, facts));
+        _stored.Add((analysis, facts, integrations ?? []));
         return Task.CompletedTask;
     }
 
@@ -32,6 +36,12 @@ public class FakeAnalysisRepository : IAnalysisRepository
             .FirstOrDefault());
 
     public Task<IReadOnlyList<RepositoryAnalysisView>> GetCurrentByAppAsync(string appId, CancellationToken ct = default) =>
+        throw new NotSupportedException();
+
+    public Task<IReadOnlyList<RepositoryIntegrationsView>> GetCurrentIntegrationsByAppAsync(string appId, CancellationToken ct = default) =>
+        throw new NotSupportedException();
+
+    public Task<IReadOnlyList<IntegrationUsageRow>> ListIntegrationRowsAsync(string? hostContains, string? squadId, CancellationToken ct = default) =>
         throw new NotSupportedException();
 
     public Task<IReadOnlyList<PackageUsageRow>> SearchPackagesAsync(string? name, string? squadId, CancellationToken ct = default) =>

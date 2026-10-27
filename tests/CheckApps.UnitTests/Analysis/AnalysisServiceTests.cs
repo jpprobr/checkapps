@@ -328,6 +328,141 @@ public class AnalysisServiceTests
         Assert.Empty(report.Items);
     }
 
+    // ---- Spec 014: integrações declaradas e --force ---------------------------------------------------------------------
+
+    private const string Settings =
+        """
+        {
+          "IPagamentosServiceCliente": { "BaseUrl": "http://empresa.{env}.exemplo.com/pagamentos" },
+          "INotificacoesServiceCliente": { "BaseUrl": "https://usuario:SEGREDO-PLANTADO-3@notificacoes.exemplo.com/v1/?key=SEGREDO-PLANTADO-4" }
+        }
+        """;
+
+    [Fact]
+    public async Task Analyze_StoresTheIntegrations_InTheSameAnalysisAsThePackages_AlreadyNormalized()
+    {
+        await AddRepositoryAsync("r1");
+        _source.With("r1", "sha-1", Files(
+            ("src/App/App.csproj", Csproj),
+            ("src/App/appsettings.json", Settings),
+            ("src/App/appsettings.Production.json", """{ "IPagamentosServiceCliente": { "BaseUrl": "https://empresa.exemplo.com/pagamentos" } }""")));
+
+        var item = Assert.Single((await Sut().AnalyzeAsync(["ab1"], dryRun: false)).Items);
+
+        var analysis = Assert.Single(_analyses.Analyses);
+        Assert.Equal(3, item.IntegrationCount);
+        Assert.Equal(2, item.FactCount);                       // framework + Serilog continuam
+        Assert.Equal(3, _analyses.Integrations.Count);
+        Assert.All(_analyses.Integrations, i =>
+        {
+            Assert.Equal(analysis.Id, i.AnalysisId);
+            Assert.Equal("dotnet", i.ScannerId);
+            Assert.Equal("1.1.0", i.ScannerVersion);
+        });
+        Assert.Contains(_analyses.Integrations, i => i.Host == "notificacoes.exemplo.com" && i.BasePath == "/v1");
+        Assert.Contains(_analyses.Integrations, i => i.Environment == "Production" && i.EnvironmentKind == "prod");
+    }
+
+    [Fact]
+    public async Task Analyze_NeverLetsASecretReachTheStoredData_NorTheReport()
+    {
+        await AddRepositoryAsync("r1");
+        _source.With("r1", "sha-1", Files(("src/App/App.csproj", Csproj), ("src/App/appsettings.json", Settings)));
+
+        var report = await Sut().AnalyzeAsync(["ab1"], dryRun: false);
+
+        var everything = System.Text.Json.JsonSerializer.Serialize(new { _analyses.Analyses, _analyses.Facts, _analyses.Integrations, report.Items });
+        Assert.DoesNotContain("SEGREDO-PLANTADO", everything);
+        Assert.DoesNotContain("usuario", everything);
+    }
+
+    [Fact]
+    public async Task Analyze_AnInformativeNote_DoesNotMakeTheAnalysisPartial_ButAWarningDoes()
+    {
+        await AddRepositoryAsync("r1");
+        await AddRepositoryAsync("r2");
+        _source.With("r1", "sha-1", Files(
+                ("App.csproj", Csproj),
+                ("appsettings.json", """{ "S": { "BaseUrl": "http://localhost:5001" } }""")))
+               .With("r2", "sha-2", Files(
+                ("App.csproj", Csproj),
+                ("appsettings.json", """{ "S": { "BaseUrl": "${S_URL}" } }""")));
+
+        var report = await Sut().AnalyzeAsync(["ab1"], dryRun: false);
+
+        var withNote = report.Items.Single(i => i.Catalog.Repository.Id == "r1");
+        Assert.Equal(AnalysisStatuses.Ok, withNote.Status);
+        Assert.Contains(withNote.Warnings, w => w.StartsWith(AnalysisService.NotePrefix, StringComparison.Ordinal) && w.Contains("1 valor ignorado"));
+        Assert.Equal(0, withNote.IntegrationCount);
+
+        var withWarning = report.Items.Single(i => i.Catalog.Repository.Id == "r2");
+        Assert.Equal(AnalysisStatuses.Partial, withWarning.Status);
+        Assert.Contains(withWarning.Warnings, w => w.Contains("integração não resolvida"));
+        Assert.Equal(1, withWarning.IntegrationCount);   // a não resolvida é registrada, sem host
+    }
+
+    [Fact]
+    public async Task Analyze_InvalidSettingsJson_IsAWarning_AndTheOtherFilesStillCount()
+    {
+        await AddRepositoryAsync("r1");
+        _source.With("r1", "sha-1", Files(
+            ("App.csproj", Csproj),
+            ("appsettings.json", "{ \"S\": { \"BaseUrl\": \"https://a.exemplo.com\" "),
+            ("appsettings.Production.json", """{ "S": { "BaseUrl": "https://b.exemplo.com" } }""")));
+
+        var item = Assert.Single((await Sut().AnalyzeAsync(["ab1"], dryRun: false)).Items);
+
+        Assert.Equal(AnalysisStatuses.Partial, item.Status);
+        Assert.Equal(1, item.IntegrationCount);
+        Assert.DoesNotContain(item.Warnings, w => w.Contains("a.exemplo.com"));
+    }
+
+    [Fact]
+    public async Task Analyze_Force_ReanalyzesTheSameCommit_AndKeepsTheOldOneAsHistory()
+    {
+        await AddRepositoryAsync("r1");
+        _source.With("r1", "sha-1", Files(("App.csproj", Csproj), ("appsettings.json", Settings)));
+        await Sut().AnalyzeAsync(["ab1"], dryRun: false);
+
+        _clock.Advance(TimeSpan.FromMinutes(5));
+        var withoutForce = await Sut().AnalyzeAsync(["ab1"], dryRun: false);
+        var withForce = await Sut().AnalyzeAsync(["ab1"], dryRun: false, force: true);
+
+        Assert.Equal(1, withoutForce.Count(AnalysisOutcome.Unchanged));
+        Assert.Equal(1, withForce.Count(AnalysisOutcome.Analyzed));
+        Assert.Equal(2, _analyses.Analyses.Count);
+        Assert.All(_analyses.Analyses, a => Assert.Equal("sha-1", a.CommitSha));
+    }
+
+    [Fact]
+    public async Task Analyze_ForceWithDryRun_StillStoresNothing()
+    {
+        await AddRepositoryAsync("r1");
+        _source.With("r1", "sha-1", Files(("App.csproj", Csproj), ("appsettings.json", Settings)));
+        await Sut().AnalyzeAsync(["ab1"], dryRun: false);
+
+        var report = await Sut().AnalyzeAsync(["ab1"], dryRun: true, force: true);
+
+        Assert.Equal(1, report.Count(AnalysisOutcome.Analyzed));
+        Assert.Single(_analyses.Analyses);
+        Assert.Equal(2, _analyses.Integrations.Count);   // só os da primeira gravação
+    }
+
+    [Fact]
+    public async Task Analyze_ReadsTheSettingsFiles_ButNeverSourceCode()
+    {
+        await AddRepositoryAsync("r1");
+        _source.With("r1", "sha-1", Files(
+            ("src/App/App.csproj", Csproj),
+            ("src/App/appsettings.json", Settings),
+            ("src/App/Clients/IPagamentosServiceCliente.cs", "public interface IPagamentosServiceCliente {}")));
+
+        await Sut().AnalyzeAsync(["ab1"], dryRun: false);
+
+        Assert.Contains("src/App/appsettings.json", _source.ReadPaths);
+        Assert.DoesNotContain(_source.ReadPaths, p => p.EndsWith(".cs"));
+    }
+
     private sealed class ThrowingScanner : IRepositoryScanner
     {
         public string Id => "quebrado";

@@ -86,6 +86,22 @@ public class FakeRepositoryContentSourceTests
         Assert.DoesNotContain(result.Facts, f => f.Name == "Serilog" && InternalPackage.IsInternal(f.Name, ["Empresa."]));
     }
 
+    [Theory]
+    [InlineData("app-pagamentos", 3, 0, true)]       // base ({env} e um host fixo) e Production; o localhost é ignorado
+    [InlineData("app-bff-pagamentos", 3, 1, false)]  // base ({env} e um ${...} não resolvido) e Staging
+    [InlineData("app-migrado", 0, 0, false)]
+    public async Task TheDemoRepositories_ShowTheirDeclaredIntegrations(string suffix, int recorded, int unresolved, bool hasNote)
+    {
+        var result = await AnalyzeAsync(suffix);
+
+        var normalized = IntegrationNormalizer.Normalize(
+            result.Integrations, "an", "dotnet", "1.1.0", EnvironmentNames.DefaultAliases, () => Guid.NewGuid().ToString("n"));
+
+        Assert.Equal(recorded, normalized.Items.Count);
+        Assert.Equal(unresolved, normalized.Items.Count(i => i.State == IntegrationStates.Unresolved));
+        Assert.Equal(hasNote, normalized.Notes.Count > 0);
+    }
+
     [Fact]
     public async Task ReadingAFileThatDoesNotExist_IsNull() =>
         Assert.Null(await _source.ReadFileAsync(Repo("app-migrado"), "x", "nao/existe.csproj"));

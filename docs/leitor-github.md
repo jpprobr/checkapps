@@ -124,11 +124,29 @@ dotnet run --project tools/CheckApps.Analyze -- --sigla ab1
 ```
 
 - **Mesmo token da descoberta**: a ferramenta usa o mesmo armazenamento de segredos do `CheckApps.GitHubScan` (mesmo `UserSecretsId`), então `GitHub:Token` já configurado serve. Só o token é necessário: o repositório é lido pelo id, não pela organização.
-- **Idempotente por commit**: rodar de novo sobre um commit já analisado não grava nada ("sem alteração"); um commit novo gera uma análise nova e a anterior fica como histórico. Falha de um repositório (sem acesso, vazio, limite de chamadas) não interrompe os outros e fica registrada; ela não esconde a última análise boa. Para reanalisar o mesmo commit depois de uma correção no scanner, ainda não há opção: só um commit novo gera análise.
+- **Idempotente por commit**: rodar de novo sobre um commit já analisado não grava nada ("sem alteração"); um commit novo gera uma análise nova e a anterior fica como histórico. Falha de um repositório (sem acesso, vazio, limite de chamadas) não interrompe os outros e fica registrada; ela não esconde a última análise boa. Para reanalisar o mesmo commit (por exemplo, depois de atualizar o scanner, já que as análises feitas antes não têm o que o scanner novo passou a ler), use `--force`: grava uma análise nova e a anterior fica no histórico; `--dry-run --force` mostra sem gravar.
 - **Limites**: `Analysis:MaxProjectFiles` (padrão 200) e `Analysis:MaxFileBytes` (padrão 512 KB); ao exceder, a análise fica **parcial** com aviso.
 - **Pacote interno**: `Analysis:InternalPackagePrefixes` (lista; o nome da empresa no início do namespace, ex.: `Empresa.`). **Configuração local, nunca em arquivo versionado nem em exemplo de documentação**: `dotnet user-secrets set "Analysis:InternalPackagePrefixes:0" "<prefixo>" --project src/CheckApps.Api` (a marcação é calculada pela **API** ao ler). Sem prefixo, nada é marcado.
 - **Onde ver**: seção **Dependências** no detalhe do app e a tela **Dependências** do menu ("Quem usa o pacote" e ".NET por squad"). A API só lê; não há como disparar a análise pela tela.
-- **O que não cobre ainda**: dependências transitivas, outras tecnologias, integrações entre apps (`appsettings`, Refit), `ProjectReference`. Códigos de saída iguais aos da descoberta; `3` também quando algum repositório falha.
+- **O que não cobre ainda**: dependências transitivas, outras tecnologias, `ProjectReference`. As integrações entre apps estão na seção 6c. Códigos de saída iguais aos da descoberta; `3` também quando algum repositório falha.
+
+## 6c. Integrações declaradas (spec 014)
+
+A mesma análise do scanner .NET lê os arquivos `appsettings*.json` (o base e os de ambiente, em qualquer pasta, exceto `bin/`, `obj/`, `node_modules/` e `.git/`) e grava as **integrações declaradas**: "este repositório chama o host X", com o arquivo e a chave de onde vem. Padrão do time: uma seção com o nome da interface Refit e um `BaseUrl`, com `{env}` no host:
+
+```json
+"IPagamentosServiceCliente": { "BaseUrl": "http://empresa.{env}.exemplo.com/pagamentos" }
+```
+
+- **O que entra**: só a chave cujo **último segmento** está em `Analysis:IntegrationKeyHints` (padrão `BaseUrl`, `Url`, `Endpoint`, `Host`) e cujo valor é uma URL `http(s)`, está vazio ou tem uma referência de substituição (`${VAR}`, `#{Var}#`, `%VAR%`, `{{x}}`). Links de ajuda (`LinkAjuda`) e a seção `ConnectionStrings` não entram.
+- **Redação**: o scanner devolve candidatos brutos e o **núcleo** decide o que é gravado. Usuário, senha, query e fragmento de URL são descartados; connection strings nunca são lidas; o valor bruto não vai para banco, aviso, nota nem log. Só esquema, host, porta (se não for a padrão) e caminho base são gravados.
+- **`{env}` no host** vira um **modelo** (estado "parametrizada", confiança média). O CheckApps **não** troca `{env}` por `dev`/`hom`/`prod` nem casa o modelo com o host concreto do arquivo de ambiente; a lista de hosts agrupa pelo host literal e mostra as seções e as categorias de ambiente vistas.
+- **Valor vazio ou com `${VAR}`**: integração "não resolvida" (sem host), confiança baixa, com aviso; a análise fica **parcial**.
+- **Ignorados, com uma nota informativa** (a nota não torna a análise parcial): `localhost`, `127.0.0.1`, `::1` e valores que não são URL `http(s)` (`amqp://`, texto solto).
+- **Ambiente**: o nome do arquivo (`appsettings.Homolog.json` → `Homolog`) é guardado como está e normalizado por apelidos, sem diferença de caixa: `dev` ← `Dev`, `Development`; `hom` ← `Hom`, `Homolog`, `Staging`; `prod` ← `Prod`, `Production`. Nome fora da tabela (`Uat`, `Local`) fica só com o nome, sem categoria. A tabela é configurável: `Analysis:EnvironmentAliases:hom:0=Uat` (substitui os padrões, não soma).
+- **Reanalisar**: as análises feitas antes da spec 014 não têm integrações; rode `CheckApps.Analyze --sigla <sigla> --force` (ou espere um commit novo).
+- **Onde ver**: seção **Integrações** no detalhe do app e o item **Integrações** do menu (lista de hosts, com quem os chama). A API só lê.
+- **O que não cobre ainda**: interfaces Refit e `AddHttpClient` no código (spec 015), dizer a que app do catálogo um host pertence e confirmar o vínculo, e o mapa de aplicações.
 
 ## 7. Problemas comuns
 

@@ -414,3 +414,103 @@ export interface FrameworkOverview {
   coverage: AnalysisCoverage;
 }
 
+
+// ---- Integrações declaradas (spec 014) ------------------------------------------------------------------------------
+// Estado, ambiente e confiança circulam como códigos em texto; os rótulos ficam em core/integration-labels.ts.
+// Nenhum campo traz o valor bruto lido do arquivo: só o endereço já normalizado.
+
+export type IntegrationState = 'resolvida' | 'parametrizada' | 'nao-resolvida';
+
+export interface Integration {
+  id: string;
+  mechanism: string;
+  scheme: string | null;
+  /** Nulo quando não resolvida; pode ser um modelo com {env}. */
+  host: string | null;
+  port: number | null;
+  basePath: string | null;
+  /** Seção de configuração (ex.: IPagamentosServiceCliente). */
+  reference: string;
+  configKey: string;
+  /** Nome do ambiente como está no arquivo; nulo no arquivo base. */
+  environment: string | null;
+  /** Categoria normalizada (dev, hom, prod); nula se o nome do ambiente não é conhecido. */
+  environmentKind: string | null;
+  state: IntegrationState;
+  projectPath: string;
+  sourceFile: string;
+  origin: string;
+  confidence: Confidence;
+  confidenceNote: string | null;
+  scannerId: string;
+  scannerVersion: string;
+}
+
+export interface IntegrationSection {
+  reference: string;
+  integrations: Integration[];
+}
+
+export interface RepositoryIntegrations {
+  repositoryId: string;
+  repositoryName: string;
+  repositoryStatus: string | null;
+  role: string | null;
+  url: string | null;
+  sigla: string | null;
+  /** A análise corrente; nula se o repositório nunca foi analisado. */
+  analysis: RepositoryAnalysis | null;
+  /** Tentativa que falhou depois da corrente. */
+  lastFailure: RepositoryAnalysis | null;
+  sections: IntegrationSection[];
+}
+
+export interface AppIntegrations {
+  appId: string;
+  repositories: RepositoryIntegrations[];
+}
+
+export interface SquadRef {
+  id: string;
+  name: string;
+}
+
+export interface HostSummary {
+  /** host[:porta] literal: a identidade do host nesta fase. */
+  key: string;
+  host: string;
+  port: number | null;
+  /** O host tem {env}: depende do ambiente. */
+  isTemplate: boolean;
+  appCount: number;
+  repositoryCount: number;
+  squads: SquadRef[];
+  references: string[];
+  environmentKinds: string[];
+  latestAnalyzedAt: string;
+}
+
+export interface HostList {
+  hosts: HostSummary[];
+  coverage: AnalysisCoverage;
+}
+
+export interface HostUsage {
+  appId: string;
+  appName: string;
+  squadId: string | null;
+  squadName: string | null;
+  repositoryId: string;
+  repositoryName: string;
+  repositoryStatus: string | null;
+  integration: Integration;
+  analyzedAt: string;
+}
+
+export interface HostDetail {
+  key: string;
+  host: string;
+  port: number | null;
+  isTemplate: boolean;
+  usages: HostUsage[];
+}

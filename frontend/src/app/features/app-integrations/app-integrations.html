@@ -1,0 +1,107 @@
+<section class="card">
+  <h2>Integrações</h2>
+  <p class="subtitle small">
+    Endereços que o repositório <strong>declara</strong> chamar, lidos dos arquivos <code>appsettings*.json</code> (base e
+    por ambiente). O CheckApps ainda não diz a que app do catálogo cada endereço pertence, e não lê o código (interfaces
+    Refit e <code>HttpClient</code>).
+  </p>
+
+  @if (loading()) {
+    <p class="subtitle">Carregando…</p>
+  } @else if (failed()) {
+    <p class="error" role="alert">Não foi possível carregar as integrações deste app.</p>
+  } @else if (data(); as integrations) {
+    @if (integrations.repositories.length === 0) {
+      <p class="subtitle">Este app não tem repositórios cadastrados.</p>
+    }
+
+    @for (repo of integrations.repositories; track repo.repositoryId) {
+      <div class="repo-block">
+        <h3>
+          {{ repo.repositoryName }}
+          @if (repo.repositoryStatus) { <span class="tag">{{ repo.repositoryStatus }}</span> }
+          @if (repo.role) { <span class="tag">{{ repo.role }}</span> }
+        </h3>
+
+        @if (repo.lastFailure; as failure) {
+          <p class="error" role="alert">
+            A última tentativa de análise falhou em {{ failure.analyzedAt | date: 'dd/MM/yyyy HH:mm' }}:
+            {{ failure.warnings.join(' ') }}
+          </p>
+        }
+
+        @if (repo.analysis; as analysis) {
+          <p class="subtitle small">
+            Análise de {{ analysis.analyzedAt | date: 'dd/MM/yyyy HH:mm' }} · commit
+            <code>{{ shortSha(analysis.commitSha) }}</code> · situação: <strong>{{ statusLabels[analysis.status] }}</strong>
+          </p>
+
+          @if (analysis.warnings.length > 0) {
+            <ul class="warnings" role="status">
+              @for (warning of analysis.warnings; track warning) {
+                @if (isNote(warning)) {
+                  <li>ℹ {{ noteText(warning) }}</li>
+                } @else {
+                  <li>⚠ {{ warning }}</li>
+                }
+              }
+            </ul>
+          }
+
+          @if (analysis.status === 'sem-scanner') {
+            <p class="subtitle">Nenhum scanner se aplica a este repositório (por exemplo, não há projeto .NET nele).</p>
+          } @else if (repo.sections.length === 0) {
+            <p class="subtitle">
+              Nenhuma integração declarada foi encontrada nos arquivos <code>appsettings*.json</code> desta análise.
+            </p>
+          } @else {
+            @for (section of repo.sections; track section.reference) {
+              <h4 class="section-name">{{ section.reference }}</h4>
+              <div class="table-scroll">
+                <table>
+                  <thead>
+                    <tr>
+                      <th>Arquivo</th>
+                      <th>Ambiente</th>
+                      <th>Endereço</th>
+                      <th>Estado</th>
+                      <th>Confiança</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    @for (integration of section.integrations; track integration.id) {
+                      <tr>
+                        <td>
+                          {{ integration.sourceFile }}
+                          <span class="note">chave <code>{{ integration.configKey }}</code> · {{ mechanism(integration.mechanism) }}</span>
+                        </td>
+                        <td>{{ environment(integration) }}</td>
+                        <td class="address">{{ address(integration) }}</td>
+                        <td>{{ stateLabels[integration.state] }}</td>
+                        <td>
+                          <span class="confidence" [class.low]="integration.confidence === 'baixa'">{{ confidenceLabels[integration.confidence] }}</span>
+                          @if (needsNote(integration)) { <span class="note">{{ integration.confidenceNote }}</span> }
+                        </td>
+                      </tr>
+                    }
+                  </tbody>
+                </table>
+              </div>
+            }
+          }
+        } @else if (!repo.lastFailure) {
+          <p class="subtitle">
+            Ainda não analisado. Rode a análise no terminal
+            @if (repo.sigla) {
+              (<code>dotnet run --project tools/CheckApps.Analyze -- --sigla {{ repo.sigla }}</code>);
+            } @else {
+              (<code>dotnet run --project tools/CheckApps.Analyze -- --sigla &lt;sigla&gt;</code>; este repositório não tem sigla
+              cadastrada);
+            }
+            detalhes em <code>docs/leitor-github.md</code>.
+          </p>
+        }
+      </div>
+    }
+  }
+</section>

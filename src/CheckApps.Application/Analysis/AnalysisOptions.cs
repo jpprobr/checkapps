@@ -19,4 +19,25 @@ public class AnalysisOptions
     /// Sem nenhum, nada é marcado.
     /// </summary>
     public string[] InternalPackagePrefixes { get; set; } = [];
+
+    /// <summary>
+    /// Nomes de chave (último segmento) que guardam o endereço de uma integração (spec 014). Nulo = o padrão. É nulo por
+    /// padrão de propósito: o binder do .NET **soma** itens de configuração a um array que já tem valor, em vez de
+    /// substituí-lo; quem lê usa <see cref="EffectiveIntegrationKeyHints"/>.
+    /// </summary>
+    public string[]? IntegrationKeyHints { get; set; }
+
+    public static readonly string[] DefaultIntegrationKeyHints = ["BaseUrl", "Url", "Endpoint", "Host"];
+
+    public string[] EffectiveIntegrationKeyHints =>
+        IntegrationKeyHints is { Length: > 0 } hints ? hints : DefaultIntegrationKeyHints;
+
+    /// <summary>
+    /// Apelidos de ambiente por categoria (<c>dev</c>, <c>hom</c>, <c>prod</c>) para os arquivos
+    /// <c>appsettings.&lt;Nome&gt;.json</c>. Nulo = <see cref="EnvironmentNames.DefaultAliases"/> (mesmo motivo do binder).
+    /// </summary>
+    public Dictionary<string, string[]>? EnvironmentAliases { get; set; }
+
+    public IReadOnlyDictionary<string, string[]> EffectiveEnvironmentAliases =>
+        EnvironmentAliases is { Count: > 0 } aliases ? aliases : EnvironmentNames.DefaultAliases;
 }

@@ -86,6 +86,17 @@ public class FakeRepositoryContentSource(int revision = 0) : IRepositoryContentS
                   </ItemGroup>
                 </Project>
                 """,
+            // Integrações declaradas (spec 014): seção com o nome do cliente, {env} no host e um arquivo por ambiente.
+            ["src/Pagamentos.Api/appsettings.json"] =
+                """
+                {
+                  "IClientesServiceCliente": { "BaseUrl": "http://empresa.{env}.exemplo.com/clientes" },
+                  "INotificacoesServiceCliente": { "BaseUrl": "https://notificacoes.exemplo.com/v1/" },
+                  "IAuditoriaServiceCliente": { "BaseUrl": "http://localhost:5001" }
+                }
+                """,
+            ["src/Pagamentos.Api/appsettings.Production.json"] =
+                """{ "IClientesServiceCliente": { "BaseUrl": "https://empresa.exemplo.com/clientes" } }""",
             ["src/Pagamentos.Domain/Pagamentos.Domain.csproj"] =
                 """
                 <Project Sdk="Microsoft.NET.Sdk">
@@ -113,6 +124,15 @@ public class FakeRepositoryContentSource(int revision = 0) : IRepositoryContentS
                   </ItemGroup>
                 </Project>
                 """,
+            ["src/Bff/appsettings.json"] =
+                """
+                {
+                  "IPagamentosServiceCliente": { "BaseUrl": "http://empresa.{env}.exemplo.com/pagamentos" },
+                  "IFaturasServiceCliente": { "BaseUrl": "${FATURAS_URL}" }
+                }
+                """,
+            ["src/Bff/appsettings.Staging.json"] =
+                """{ "IPagamentosServiceCliente": { "BaseUrl": "http://empresa.hom.exemplo.com/pagamentos" } }""",
         }),
 
         // Projeto simples, tudo literal.

@@ -156,6 +156,29 @@ public class DiscoveryCompositionTests : IDisposable
         Assert.Contains(repository.Frameworks, f => f.Fact.Name == "net9.0");
         Assert.Contains(repository.Packages, p => p.Fact.Name == "Empresa.Contratos.Cliente" && p.IsInternal);
         Assert.Contains(repository.Packages, p => p.Fact.Name == "Serilog" && !p.IsInternal && p.Fact.Version == "3.1.1");
+
+        // Spec 014: --force regrava no mesmo commit (uma análise nova) e a leitura mostra as integrações.
+        var forced = await analysis.AnalyzeAsync(["ab1"], dryRun: false, force: true);
+        Assert.Equal(1, forced.Count(Application.Analysis.AnalysisOutcome.Analyzed));
+
+        var integrations = await scope.ServiceProvider.GetRequiredService<Application.Analysis.IntegrationService>().GetForAppAsync("app-1");
+        var sections = Assert.Single(integrations.Repositories).Sections;
+        Assert.Equal(["IClientesServiceCliente", "INotificacoesServiceCliente"], sections.Select(s => s.Reference));
+        Assert.Contains(sections.SelectMany(s => s.Integrations), i => i.Host == "empresa.{env}.exemplo.com" && i.State == "parametrizada");
+        Assert.Contains(sections.SelectMany(s => s.Integrations), i => i.Environment == "Production" && i.EnvironmentKind == "prod");
+    }
+
+    [Fact]
+    public async Task Analysis_IntegrationOptions_FromConfiguration_ReplaceTheDefaults_NotAddToThem()
+    {
+        await using var provider = Build(
+            ("Scan:Source", "fake"), ("Analysis:IntegrationKeyHints:0", "Address"), ("Analysis:EnvironmentAliases:hom:0", "Uat"));
+
+        var options = provider.GetRequiredService<Application.Analysis.AnalysisOptions>();
+
+        Assert.Equal(["Address"], options.EffectiveIntegrationKeyHints);   // o binder não soma aos padrões
+        Assert.Equal("hom", Application.Analysis.EnvironmentNames.Classify("Uat", options.EffectiveEnvironmentAliases));
+        Assert.Null(Application.Analysis.EnvironmentNames.Classify("Staging", options.EffectiveEnvironmentAliases));
     }
 
     [Fact]

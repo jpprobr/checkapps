@@ -78,9 +78,12 @@ dotnet run --project tools/CheckApps.Analyze -- --sigla ab1,cd2 --source fake
 
 # GitHub de verdade (mesmo token do scan; veja o guia):
 dotnet run --project tools/CheckApps.Analyze -- --sigla ab1 --dry-run
+
+# reanalisa o mesmo commit (ex.: depois de atualizar o scanner):
+dotnet run --project tools/CheckApps.Analyze -- --sigla ab1,cd2 --source fake --force
 ```
 
-O resultado aparece na seção **Dependências** do app e na tela **Dependências** do menu. Detalhes e configuração em [`docs/leitor-github.md`](docs/leitor-github.md).
+O resultado aparece na seção **Dependências** do app e na tela **Dependências** do menu; os endereços que o repositório declara chamar (`appsettings*.json`) aparecem na seção **Integrações** do app e na tela **Integrações**. Detalhes e configuração em [`docs/leitor-github.md`](docs/leitor-github.md).
 
 ## Testes
 
@@ -103,6 +106,6 @@ tests/
 tools/
   CheckApps.Seed             popula o banco com dados de demonstração
   CheckApps.GitHubScan       descobre repositórios por sigla e os grava na caixa de entrada
-  CheckApps.Analyze          lê os projetos dos repositórios catalogados e grava versão do .NET e pacotes
+  CheckApps.Analyze          lê os projetos dos repositórios catalogados e grava versão do .NET, pacotes e integrações declaradas
 frontend/                    Angular 20
 ```

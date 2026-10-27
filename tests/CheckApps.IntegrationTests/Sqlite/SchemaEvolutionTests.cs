@@ -91,7 +91,7 @@ public class SchemaEvolutionTests : IDisposable
         await bootstrapper.EnsureSchemaAsync(); // idempotente
 
         using var check = _factory.Create();
-        foreach (var table in new[] { "repository_analyses", "repository_dependencies" })
+        foreach (var table in new[] { "repository_analyses", "repository_dependencies", "repository_integrations" })
         {
             Assert.Equal(1, check.ExecuteScalar<int>(
                 $"SELECT COUNT(*) FROM sqlite_master WHERE type = 'table' AND name = '{table}'"));
@@ -99,7 +99,8 @@ public class SchemaEvolutionTests : IDisposable
 
         foreach (var index in new[]
         {
-            "ix_repository_analyses_repo_analyzed", "ix_repository_dependencies_analysis", "ix_repository_dependencies_name"
+            "ix_repository_analyses_repo_analyzed", "ix_repository_dependencies_analysis", "ix_repository_dependencies_name",
+            "ix_repository_integrations_analysis", "ix_repository_integrations_host", "ix_repository_integrations_reference"
         })
         {
             Assert.Equal(1, check.ExecuteScalar<int>(
@@ -116,10 +117,14 @@ public class SchemaEvolutionTests : IDisposable
             INSERT INTO repository_dependencies
                 (id, analysis_id, ecosystem, kind, name, project_path, source_file, origin, confidence, scanner_id, scanner_version)
             VALUES ('f-1', 'an-1', 'nuget', 'package', 'Serilog', 'App.csproj', 'App.csproj', 'PARSER', 'alta', 'dotnet', '1.0.0');
+            INSERT INTO repository_integrations
+                (id, analysis_id, mechanism, host, reference, config_key, state, project_path, source_file, origin, confidence, scanner_id, scanner_version)
+            VALUES ('i-1', 'an-1', 'config', 'a.exemplo.com', 'ISvc', 'ISvc:BaseUrl', 'resolvida', 'App', 'App/appsettings.json', 'PARSER', 'alta', 'dotnet', '1.1.0');
             DELETE FROM repositories WHERE id = 'r-1';
             """);
         Assert.Equal(0, check.ExecuteScalar<int>("SELECT COUNT(*) FROM repository_analyses"));
         Assert.Equal(0, check.ExecuteScalar<int>("SELECT COUNT(*) FROM repository_dependencies"));
+        Assert.Equal(0, check.ExecuteScalar<int>("SELECT COUNT(*) FROM repository_integrations"));
     }
 
     public void Dispose()

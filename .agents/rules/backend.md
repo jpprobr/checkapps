@@ -41,6 +41,12 @@ Leia antes de editar código .NET. Só regras não-óbvias e específicas deste 
 - **`GitHubApiClient` é o único lugar que fala HTTP com o GitHub** (cabeçalhos, erros, limite de chamadas): descoberta e leitura de conteúdo o compartilham, e é ele que garante que nenhuma mensagem leva token. Mensagens específicas de uma chamada (404/409/422) entram por parâmetro, nunca pelo corpo da resposta.
 - **Fixtures de scanner ficam em `tests/CheckApps.UnitTests/Fixtures/<Tecnologia>/`** (um repositório fictício por pasta, com `EXPECTED.md`). O SDK exclui `*.csproj` dos itens padrão: os projetos fictícios precisam de `<None Include=… CopyToOutputDirectory>` explícito, e as pastas `obj/` e `bin/` de dentro de `Fixtures/` estão liberadas no `.gitignore`.
 
+- **Redação de segredos é do núcleo, não do scanner.** O scanner devolve candidatos brutos (`ScannerIntegration`) e `IntegrationNormalizer` decide o que é gravado: usuário, senha e query de URL somem, connection string nunca é lida, e o valor bruto não vai para aviso, nota nem log. Todo teste de integração tem de plantar um segredo na fixture e provar que ele não aparece no resultado.
+- **Aviso e nota são coisas diferentes.** Aviso (arquivo inválido, valor não resolvido) torna a análise `parcial`; **nota** (`ScannerResult.Notes`, gravada com o prefixo `nota: `) só informa — "3 valores ignorados" — e nunca decide a situação.
+- **O binder do .NET soma itens de configuração a um array/dicionário que já tem valor padrão**, em vez de substituí-lo. Opções com padrão (`IntegrationKeyHints`, `EnvironmentAliases`) são nulas por padrão e expostas por um getter `Effective…`; há teste de composição provando que a configuração substitui.
+- **Reanálise do mesmo commit é explícita** (`--force`), nunca implícita: sem ela, o commit já analisado dá "sem alteração" e não ganha o que um scanner novo passou a ler.
+- **`ScannerResult` evolui por parâmetros opcionais** (`Integrations`, `Notes`): scanners e testes antigos continuam compilando. Não troque para record posicional com propriedades de tipo diferente do parâmetro (`CS8866`).
+
 ## Testes
 
 - **Unitários usam fakes escritos à mão** (`tests/CheckApps.UnitTests/TestDoubles/FakeRepositories.cs`), não Moq/NSubstitute. Se precisar de comportamento novo no fake, adicione lá — os fakes têm armazenamento real em dicionário para que regras de colisão/remoção sejam testáveis.

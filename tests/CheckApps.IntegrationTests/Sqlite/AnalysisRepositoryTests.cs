@@ -54,6 +54,103 @@ public class AnalysisRepositoryTests(SqliteFixture fixture) : IClassFixture<Sqli
             ConfidenceNote = confidence == Confidences.High ? null : "motivo em texto", ScannerId = "dotnet", ScannerVersion = "1.0.0"
         };
 
+    private static RepositoryIntegration Integration(
+        RepositoryAnalysis analysis, string? host, string reference = "IPagamentosServiceCliente", string? environment = null,
+        string state = IntegrationStates.Resolved, int? port = null, string? basePath = "/pagamentos") =>
+        new()
+        {
+            Id = Guid.NewGuid().ToString("n"), AnalysisId = analysis.Id, Mechanism = IntegrationMechanisms.Config,
+            Scheme = host is null ? null : "https", Host = host, Port = port, BasePath = basePath, Reference = reference,
+            ConfigKey = $"{reference}:BaseUrl", Environment = environment,
+            EnvironmentKind = environment is null ? null : "prod", State = state, ProjectPath = "src/App",
+            SourceFile = environment is null ? "src/App/appsettings.json" : $"src/App/appsettings.{environment}.json",
+            Confidence = Confidences.High, ConfidenceNote = null, ScannerId = "dotnet", ScannerVersion = "1.1.0"
+        };
+
+    [Fact]
+    public async Task Integrations_AreStoredWithTheAnalysis_AndComeBackFieldByField()
+    {
+        var (_, appId, repoId) = await SeedAsync();
+        var analysis = Analysis(repoId, T1);
+        var stored = Integration(analysis, "faturas.exemplo.com", "IFaturasServiceCliente", "Production", port: 8443, basePath: "/api");
+        var unresolved = Integration(analysis, null, "IEstoqueServiceCliente", state: IntegrationStates.Unresolved, basePath: null) with
+        {
+            Confidence = Confidences.Low, ConfidenceNote = "valor vazio"
+        };
+        await _analyses.AddAsync(analysis, [], [stored, unresolved]);
+
+        var view = Assert.Single(await _analyses.GetCurrentIntegrationsByAppAsync(appId));
+
+        Assert.Equal(analysis.Id, view.Current!.Id);
+        Assert.Equal(2, view.Integrations.Count);
+        Assert.Equal(stored, view.Integrations.Single(i => i.Reference == "IFaturasServiceCliente"));
+        var back = view.Integrations.Single(i => i.Reference == "IEstoqueServiceCliente");
+        Assert.Null(back.Host);
+        Assert.Equal(IntegrationStates.Unresolved, back.State);
+        Assert.Equal("valor vazio", back.ConfidenceNote);
+    }
+
+    [Fact]
+    public async Task Integrations_OnlyTheCurrentAnalysisCounts_AndAFailureDoesNotHideThem()
+    {
+        var (_, appId, repoId) = await SeedAsync();
+        var old = Analysis(repoId, T1);
+        var current = Analysis(repoId, T2);
+        var failure = Analysis(repoId, T3, AnalysisStatuses.Failed, sha: "x", "sem acesso");
+        await _analyses.AddAsync(old, [], [Integration(old, "antigo.exemplo.com")]);
+        await _analyses.AddAsync(current, [], [Integration(current, "novo.exemplo.com")]);
+        await _analyses.AddAsync(failure, []);
+
+        var view = Assert.Single(await _analyses.GetCurrentIntegrationsByAppAsync(appId));
+
+        Assert.Equal("novo.exemplo.com", Assert.Single(view.Integrations).Host);
+        Assert.Equal(failure.Id, view.LastFailure!.Id);
+    }
+
+    [Fact]
+    public async Task IntegrationRows_CarryTheAppAndTheSquad_FilterByHostIgnoringCase_AndEscapeWildcards()
+    {
+        var (squadId, appId, repoId) = await SeedAsync();
+        var marker = Guid.NewGuid().ToString("n")[..8];
+        var analysis = Analysis(repoId, T1);
+        await _analyses.AddAsync(analysis, [], [
+            Integration(analysis, $"Pagamentos-{marker}.exemplo.com"),
+            Integration(analysis, $"outro-{marker}.exemplo.com", "IOutroServiceCliente"),
+            Integration(analysis, null, "IFaturasServiceCliente", state: IntegrationStates.Unresolved)   // sem host: fora da lista
+        ]);
+
+        var all = await _analyses.ListIntegrationRowsAsync(marker, null);
+        var filtered = await _analyses.ListIntegrationRowsAsync($"PAGAMENTOS-{marker}", null);
+        var wildcard = await _analyses.ListIntegrationRowsAsync("%", null);
+        var otherSquad = await _analyses.ListIntegrationRowsAsync(marker, "sq-que-nao-existe");
+        var ofSquad = await _analyses.ListIntegrationRowsAsync(marker, squadId);
+
+        Assert.Equal(2, all.Count);
+        Assert.Equal($"pagamentos-{marker}.exemplo.com", Assert.Single(filtered).Integration.Host!.ToLowerInvariant());
+        Assert.DoesNotContain(wildcard, r => r.AppId == appId);   // "%" é texto, não curinga
+        Assert.Empty(otherSquad);
+        Assert.Equal(2, ofSquad.Count);
+        var row = filtered[0];
+        Assert.Equal(appId, row.AppId);
+        Assert.Equal(squadId, row.SquadId);
+        Assert.Equal(repoId, row.RepositoryId);
+        Assert.Equal(T1, row.AnalyzedAt);
+    }
+
+    [Fact]
+    public async Task Integrations_AreRemovedWithTheRepository()
+    {
+        var (_, appId, repoId) = await SeedAsync();
+        var marker = Guid.NewGuid().ToString("n")[..8];
+        var analysis = Analysis(repoId, T1);
+        await _analyses.AddAsync(analysis, [], [Integration(analysis, $"somem-{marker}.exemplo.com")]);
+        Assert.Single(await _analyses.ListIntegrationRowsAsync(marker, null));
+
+        await _apps.DeleteRepositoryAsync(appId, repoId);
+
+        Assert.Empty(await _analyses.ListIntegrationRowsAsync(marker, null));
+    }
+
     [Fact]
     public async Task Current_IsTheMostRecentAnalysisThatDidNotFail()
     {

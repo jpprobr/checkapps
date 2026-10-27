@@ -23,6 +23,9 @@
     <None Update="Fixtures\**" CopyToOutputDirectory="PreserveNewest" />
     <!-- O SDK exclui *.csproj dos itens padrão, então os projetos fictícios precisam de Include explícito. -->
     <None Include="Fixtures\**\*.csproj" CopyToOutputDirectory="PreserveNewest" />
+    <!-- Os .cs das amostras (ex.: interface Refit da spec 014) são dado de teste, não código deste projeto. -->
+    <Compile Remove="Fixtures\**\*.cs" />
+    <None Include="Fixtures\**\*.cs" CopyToOutputDirectory="PreserveNewest" />
   </ItemGroup>
 
   <ItemGroup>

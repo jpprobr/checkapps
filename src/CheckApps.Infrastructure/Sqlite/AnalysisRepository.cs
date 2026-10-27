@@ -19,6 +19,15 @@ public class AnalysisRepository(SqliteConnectionFactory connectionFactory) : IAn
         d.scanner_version AS ScannerVersion
         """;
 
+    private const string IntegrationColumns =
+        """
+        i.id AS Id, i.analysis_id AS AnalysisId, i.mechanism AS Mechanism, i.scheme AS Scheme, i.host AS Host,
+        i.port AS Port, i.base_path AS BasePath, i.reference AS Reference, i.config_key AS ConfigKey,
+        i.environment AS Environment, i.environment_kind AS EnvironmentKind, i.state AS State,
+        i.project_path AS ProjectPath, i.source_file AS SourceFile, i.origin AS Origin, i.confidence AS Confidence,
+        i.confidence_note AS ConfidenceNote, i.scanner_id AS ScannerId, i.scanner_version AS ScannerVersion
+        """;
+
     private const string AnalysisColumns =
         """
         an.id AS Id, an.repository_id AS RepositoryId, an.analyzed_at AS AnalyzedAt, an.commit_sha AS CommitSha,
@@ -34,7 +43,8 @@ public class AnalysisRepository(SqliteConnectionFactory connectionFactory) : IAn
         """;
 
     public async Task AddAsync(
-        RepositoryAnalysis analysis, IReadOnlyList<RepositoryDependency> facts, CancellationToken cancellationToken = default)
+        RepositoryAnalysis analysis, IReadOnlyList<RepositoryDependency> facts,
+        IReadOnlyList<RepositoryIntegration>? integrations = null, CancellationToken cancellationToken = default)
     {
         using var connection = connectionFactory.Create();
         using var transaction = connection.BeginTransaction();
@@ -70,6 +80,22 @@ public class AnalysisRepository(SqliteConnectionFactory connectionFactory) : IAn
                 fact, transaction, cancellationToken: cancellationToken));
         }
 
+        foreach (var integration in integrations ?? [])
+        {
+            await connection.ExecuteAsync(new CommandDefinition(
+                """
+                INSERT INTO repository_integrations
+                    (id, analysis_id, mechanism, scheme, host, port, base_path, reference, config_key, environment,
+                     environment_kind, state, project_path, source_file, origin, confidence, confidence_note,
+                     scanner_id, scanner_version)
+                VALUES
+                    (@Id, @AnalysisId, @Mechanism, @Scheme, @Host, @Port, @BasePath, @Reference, @ConfigKey, @Environment,
+                     @EnvironmentKind, @State, @ProjectPath, @SourceFile, @Origin, @Confidence, @ConfidenceNote,
+                     @ScannerId, @ScannerVersion)
+                """,
+                integration, transaction, cancellationToken: cancellationToken));
+        }
+
         transaction.Commit();
     }
 
@@ -82,11 +108,10 @@ public class AnalysisRepository(SqliteConnectionFactory connectionFactory) : IAn
         return row?.ToEntity();
     }
 
-    public async Task<IReadOnlyList<RepositoryAnalysisView>> GetCurrentByAppAsync(
-        string appId, CancellationToken cancellationToken = default)
+    /// <summary>Os repositórios do app, cada um com a análise corrente e a falha mais nova que ela (se houver).</summary>
+    private static async Task<IReadOnlyList<(Repository Repository, RepositoryAnalysis? Current, RepositoryAnalysis? LastFailure)>> LoadCurrentAsync(
+        System.Data.IDbConnection connection, string appId, CancellationToken cancellationToken)
     {
-        using var connection = connectionFactory.Create();
-
         var repositories = (await connection.QueryAsync<Repository>(new CommandDefinition(
             """
             SELECT id AS Id, app_id AS AppId, name AS Name, provider AS Provider, url AS Url,
@@ -121,13 +146,6 @@ public class AnalysisRepository(SqliteConnectionFactory connectionFactory) : IAn
             .Select(r => r.ToEntity())
             .ToDictionary(a => a.RepositoryId);
 
-        var analysisIds = current.Values.Select(a => a.Id).ToArray();
-        var facts = analysisIds.Length == 0
-            ? []
-            : (await connection.QueryAsync<RepositoryDependency>(new CommandDefinition(
-                $"SELECT {FactColumns} FROM repository_dependencies d WHERE d.analysis_id IN @analysisIds ORDER BY d.kind, d.project_path, d.name",
-                new { analysisIds }, cancellationToken: cancellationToken))).ToList();
-
         return repositories.Select(repository =>
         {
             current.TryGetValue(repository.Id, out var analysis);
@@ -135,9 +153,81 @@ public class AnalysisRepository(SqliteConnectionFactory connectionFactory) : IAn
 
             // Só interessa a falha que veio depois da análise corrente (ou quando não há corrente).
             var lastFailure = failure is not null && (analysis is null || failure.AnalyzedAt > analysis.AnalyzedAt) ? failure : null;
-            var ownFacts = analysis is null ? [] : facts.Where(f => f.AnalysisId == analysis.Id).ToList();
-            return new RepositoryAnalysisView(repository, analysis, lastFailure, ownFacts);
+            return (repository, analysis, lastFailure);
         }).ToList();
+    }
+
+    public async Task<IReadOnlyList<RepositoryAnalysisView>> GetCurrentByAppAsync(
+        string appId, CancellationToken cancellationToken = default)
+    {
+        using var connection = connectionFactory.Create();
+        var loaded = await LoadCurrentAsync(connection, appId, cancellationToken);
+
+        var analysisIds = loaded.Where(l => l.Current is not null).Select(l => l.Current!.Id).ToArray();
+        var facts = analysisIds.Length == 0
+            ? []
+            : (await connection.QueryAsync<RepositoryDependency>(new CommandDefinition(
+                $"SELECT {FactColumns} FROM repository_dependencies d WHERE d.analysis_id IN @analysisIds ORDER BY d.kind, d.project_path, d.name",
+                new { analysisIds }, cancellationToken: cancellationToken))).ToList();
+
+        return loaded.Select(l => new RepositoryAnalysisView(
+            l.Repository, l.Current, l.LastFailure,
+            l.Current is null ? [] : facts.Where(f => f.AnalysisId == l.Current.Id).ToList())).ToList();
+    }
+
+    public async Task<IReadOnlyList<RepositoryIntegrationsView>> GetCurrentIntegrationsByAppAsync(
+        string appId, CancellationToken cancellationToken = default)
+    {
+        using var connection = connectionFactory.Create();
+        var loaded = await LoadCurrentAsync(connection, appId, cancellationToken);
+
+        var analysisIds = loaded.Where(l => l.Current is not null).Select(l => l.Current!.Id).ToArray();
+        var integrations = analysisIds.Length == 0
+            ? []
+            : (await connection.QueryAsync<IntegrationRow>(new CommandDefinition(
+                $"SELECT {IntegrationColumns} FROM repository_integrations i WHERE i.analysis_id IN @analysisIds ORDER BY i.reference, i.config_key, i.source_file",
+                new { analysisIds }, cancellationToken: cancellationToken))).Select(r => r.ToEntity()).ToList();
+
+        return loaded.Select(l => new RepositoryIntegrationsView(
+            l.Repository, l.Current, l.LastFailure,
+            l.Current is null ? [] : integrations.Where(i => i.AnalysisId == l.Current.Id).ToList())).ToList();
+    }
+
+    public async Task<IReadOnlyList<IntegrationUsageRow>> ListIntegrationRowsAsync(
+        string? hostContains, string? squadId, CancellationToken cancellationToken = default)
+    {
+        using var connection = connectionFactory.Create();
+        var rows = await connection.QueryAsync<IntegrationUsageDbRow>(new CommandDefinition(
+            $"""
+            SELECT {IntegrationColumns},
+                   r.id AS RepositoryId, r.name AS RepositoryName, r.status AS RepositoryStatus,
+                   a.id AS AppId, a.name AS AppName, s.id AS SquadId, s.name AS SquadName,
+                   an.analyzed_at AS AnalyzedAt
+            FROM repository_integrations i
+            JOIN repository_analyses an ON an.id = i.analysis_id
+            JOIN repositories r ON r.id = an.repository_id
+            JOIN apps a ON a.id = r.app_id
+            JOIN squads s ON s.id = a.squad_id
+            WHERE i.host IS NOT NULL
+              AND (@pattern IS NULL OR lower(i.host) LIKE @pattern ESCAPE '\')
+              AND (@squadId IS NULL OR s.id = @squadId)
+              AND an.id = {CurrentIdFor("r.id")}
+            ORDER BY lower(i.host), a.name, r.name, i.reference, i.config_key, i.source_file
+            """,
+            new { pattern = LikePattern(hostContains), squadId }, cancellationToken: cancellationToken));
+        return rows.Select(r => r.ToRow()).ToList();
+    }
+
+    /// <summary>Trecho de host → padrão LIKE (contém), com os curingas digitados escapados. Portável (ESCAPE explícito).</summary>
+    private static string? LikePattern(string? text)
+    {
+        if (string.IsNullOrWhiteSpace(text))
+        {
+            return null;
+        }
+
+        var escaped = text.Trim().ToLowerInvariant().Replace("\\", "\\\\").Replace("%", "\\%").Replace("_", "\\_");
+        return $"%{escaped}%";
     }
 
     public async Task<IReadOnlyList<PackageUsageRow>> SearchPackagesAsync(
@@ -220,6 +310,67 @@ public class AnalysisRepository(SqliteConnectionFactory connectionFactory) : IAn
             Warnings = string.IsNullOrEmpty(Warnings) ? [] : Warnings.Split('\n'),
             Source = Source
         };
+    }
+
+    private class IntegrationRow
+    {
+        public string Id { get; set; } = "";
+        public string AnalysisId { get; set; } = "";
+        public string Mechanism { get; set; } = "";
+        public string? Scheme { get; set; }
+        public string? Host { get; set; }
+        public int? Port { get; set; }
+        public string? BasePath { get; set; }
+        public string Reference { get; set; } = "";
+        public string ConfigKey { get; set; } = "";
+        public string? Environment { get; set; }
+        public string? EnvironmentKind { get; set; }
+        public string State { get; set; } = "";
+        public string ProjectPath { get; set; } = "";
+        public string SourceFile { get; set; } = "";
+        public string Origin { get; set; } = "";
+        public string Confidence { get; set; } = "";
+        public string? ConfidenceNote { get; set; }
+        public string ScannerId { get; set; } = "";
+        public string ScannerVersion { get; set; } = "";
+
+        public RepositoryIntegration ToEntity() => new()
+        {
+            Id = Id,
+            AnalysisId = AnalysisId,
+            Mechanism = Mechanism,
+            Scheme = Scheme,
+            Host = Host,
+            Port = Port,
+            BasePath = BasePath,
+            Reference = Reference,
+            ConfigKey = ConfigKey,
+            Environment = Environment,
+            EnvironmentKind = EnvironmentKind,
+            State = State,
+            ProjectPath = ProjectPath,
+            SourceFile = SourceFile,
+            Origin = Origin,
+            Confidence = Confidence,
+            ConfidenceNote = ConfidenceNote,
+            ScannerId = ScannerId,
+            ScannerVersion = ScannerVersion
+        };
+    }
+
+    private sealed class IntegrationUsageDbRow : IntegrationRow
+    {
+        public string RepositoryId { get; set; } = "";
+        public string RepositoryName { get; set; } = "";
+        public string? RepositoryStatus { get; set; }
+        public string AppId { get; set; } = "";
+        public string AppName { get; set; } = "";
+        public string? SquadId { get; set; }
+        public string? SquadName { get; set; }
+        public string AnalyzedAt { get; set; } = "";
+
+        public IntegrationUsageRow ToRow() =>
+            new(ToEntity(), RepositoryId, RepositoryName, RepositoryStatus, AppId, AppName, SquadId, SquadName, IsoTimestamp.Parse(AnalyzedAt));
     }
 
     private sealed class PackageRow

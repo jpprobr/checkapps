@@ -85,6 +85,15 @@ Revistos para SQL em 2026-10-12. Os ⚠️ da versão DynamoDB (partição únic
 | 42 | Repositórios do catálogo de uma sigla | `repositories` por `lower(sigla)` ⨝ `apps` ⟕ `squads` | ✅ | O que a análise percorre |
 | 43 | Cobertura: repositórios nunca analisados e data da análise mais recente | `NOT EXISTS` sobre `repository_analyses` e `MAX(analyzed_at)` | ✅ | Mostrada na busca de pacote: a resposta pode estar incompleta |
 
+## Spec 014 — Integrações declaradas (implementada)
+
+| # | Padrão | Resolução | Fit | Observação |
+|---|---|---|---|---|
+| 44 | Integrações de um app (por repositório) | `repositories` do app + análise corrente (mesma subconsulta do #37) + `repository_integrations` por `analysis_id` | ✅ | Inclui repositório nunca analisado e a falha mais nova que a corrente; o serviço agrupa por seção (`reference`), arquivo base primeiro |
+| 45 | Hosts chamados, com apps e squads | `repository_integrations` ⨝ análise corrente ⨝ `repositories` ⨝ `apps` ⨝ `squads`, `host IS NOT NULL` | ✅ | Agrupa por `host[:porta]` literal **no serviço**; `{env}` não é casado com `dev`/`hom` por palpite |
+| 46 | Filtro por trecho do host | `lower(host) LIKE @pattern ESCAPE '\'` | ✅ | Curingas digitados (`%`, `_`) são escapados; índice `(lower(host))` serve ao igual, o "contém" varre as correntes (volume pequeno) |
+| 47 | Quem chama o host X (detalhe) | o mesmo SQL do #45 filtrado por trecho; o serviço compara a chave exata (`host[:porta]`) | ✅ | Host inexistente → 404 |
+
 ## Fora de escopo hoje — agora por decisão de produto, não de banco
 
 Com SQLite, todos os itens abaixo são tecnicamente triviais. Seguem fora de escopo porque ninguém pediu ainda — o que muda é que incluí-los passou a ser decisão de produto, e não mais "o banco não deixa". O ❌ registra como era no DynamoDB.

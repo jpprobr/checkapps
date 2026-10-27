@@ -29,9 +29,43 @@ public sealed record ScannerFact(
     string Confidence, string? ConfidenceNote = null);
 
 /// <summary>
-/// Os fatos e os avisos de uma execução. Aviso nunca traz conteúdo de arquivo: só o caminho e o que aconteceu.
+/// Um candidato a integração visto por um scanner (spec 014), **ainda bruto**: o valor pode trazer usuário, senha ou
+/// query. Quem decide o que é gravado é o núcleo (<see cref="IntegrationNormalizer"/>); o valor bruto nunca é
+/// persistido, logado nem posto em aviso.
 /// </summary>
-public sealed record ScannerResult(IReadOnlyList<ScannerFact> Facts, IReadOnlyList<string> Warnings);
+/// <param name="Reference">Seção de configuração (ex.: <c>IPagamentosServiceCliente</c>).</param>
+/// <param name="ConfigKey">Chave completa (ex.: <c>IPagamentosServiceCliente:BaseUrl</c>).</param>
+/// <param name="EnvironmentName">Nome do ambiente do arquivo (<c>Homolog</c>); nulo no arquivo base.</param>
+/// <param name="RawTarget">O valor como está no arquivo.</param>
+public sealed record ScannerIntegration(
+    string Mechanism, string ProjectPath, string SourceFile, string Reference, string ConfigKey,
+    string? EnvironmentName, string RawTarget);
+
+/// <summary>
+/// Os fatos, as integrações e os avisos de uma execução. Aviso nunca traz conteúdo de arquivo: só o caminho e o que
+/// aconteceu. <see cref="Notes"/> são informativas (ex.: quantos valores foram ignorados) e **não** tornam a análise
+/// parcial; um aviso torna.
+/// </summary>
+public sealed record ScannerResult
+{
+    public ScannerResult(
+        IReadOnlyList<ScannerFact> facts, IReadOnlyList<string> warnings,
+        IReadOnlyList<ScannerIntegration>? integrations = null, IReadOnlyList<string>? notes = null)
+    {
+        Facts = facts;
+        Warnings = warnings;
+        Integrations = integrations ?? [];
+        Notes = notes ?? [];
+    }
+
+    public IReadOnlyList<ScannerFact> Facts { get; }
+
+    public IReadOnlyList<string> Warnings { get; }
+
+    public IReadOnlyList<ScannerIntegration> Integrations { get; }
+
+    public IReadOnlyList<string> Notes { get; }
+}
 
 /// <summary>Os scanners conhecidos. Um repositório pode ter mais de um se aplicando.</summary>
 public sealed class ScannerRegistry(IEnumerable<IRepositoryScanner> scanners)

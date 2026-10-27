@@ -21,6 +21,7 @@ public static class ServiceCollectionExtensions
         // ferramenta de scan registra. Registrá-lo aqui quebraria a API (validação de DI em Development).
         services.AddScoped<TriageService>();
         services.AddScoped<DependencyService>();
+        services.AddScoped<IntegrationService>();
         services.TryAddSingleton(TimeProvider.System);
         return services;
     }
