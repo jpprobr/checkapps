@@ -1,0 +1,18 @@
+<Project Sdk="Microsoft.NET.Sdk.Web">
+
+  <!-- Declara o próprio TargetFramework: ele vale mais que o do Directory.Build.props. -->
+  <PropertyGroup>
+    <TargetFramework>net9.0</TargetFramework>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Serilog" />
+    <PackageReference Include="Refit" />
+    <PackageReference Include="Empresa.Contratos.Cliente" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\Empresa.Pagamentos.Domain\Empresa.Pagamentos.Domain.csproj" />
+  </ItemGroup>
+
+</Project>

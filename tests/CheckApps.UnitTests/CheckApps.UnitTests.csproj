@@ -19,6 +19,13 @@
   </ItemGroup>
 
   <ItemGroup>
+    <!-- Repositórios fictícios dos scanners (spec 013): copiados para a saída, onde os testes os leem. -->
+    <None Update="Fixtures\**" CopyToOutputDirectory="PreserveNewest" />
+    <!-- O SDK exclui *.csproj dos itens padrão, então os projetos fictícios precisam de Include explícito. -->
+    <None Include="Fixtures\**\*.csproj" CopyToOutputDirectory="PreserveNewest" />
+  </ItemGroup>
+
+  <ItemGroup>
     <ProjectReference Include="..\..\src\CheckApps.Domain\CheckApps.Domain.csproj" />
     <ProjectReference Include="..\..\src\CheckApps.Application\CheckApps.Application.csproj" />
     <ProjectReference Include="..\..\src\CheckApps.Infrastructure\CheckApps.Infrastructure.csproj" />

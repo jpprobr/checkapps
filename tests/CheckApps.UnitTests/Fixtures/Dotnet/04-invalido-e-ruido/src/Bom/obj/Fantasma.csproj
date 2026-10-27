@@ -1,0 +1,9 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <!-- Dentro de obj/: deve ser ignorado. -->
+  <PropertyGroup>
+    <TargetFramework>net5.0</TargetFramework>
+  </PropertyGroup>
+  <ItemGroup>
+    <PackageReference Include="PacoteFantasma" Version="1.0.0" />
+  </ItemGroup>
+</Project>

@@ -14,12 +14,13 @@ import {
   RepositoryInfo,
   SonarProjectInfo,
 } from '../../core/models';
+import { AppDependenciesSection } from '../app-dependencies/app-dependencies';
 import { QualityBadge } from '../../shared/quality-badge/quality-badge';
 import { QualityHistoryChart } from '../../shared/quality-history-chart/quality-history-chart';
 
 @Component({
   selector: 'app-app-detail',
-  imports: [RouterLink, DatePipe, QualityBadge, QualityHistoryChart],
+  imports: [RouterLink, DatePipe, QualityBadge, QualityHistoryChart, AppDependenciesSection],
   templateUrl: './app-detail.html',
   styleUrl: './app-detail.css',
 })

@@ -495,3 +495,7 @@ data/
 *.db
 *.db-wal
 *.db-shm
+
+# Fixtures dos scanners (spec 013): as pastas obj/ e bin/ de dentro delas sao dado de teste, nao saida de build
+!tests/CheckApps.UnitTests/Fixtures/**/[Oo]bj/
+!tests/CheckApps.UnitTests/Fixtures/**/[Bb]in/

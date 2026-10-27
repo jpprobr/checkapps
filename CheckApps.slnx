@@ -10,6 +10,7 @@
     <Project Path="tests/CheckApps.UnitTests/CheckApps.UnitTests.csproj" />
   </Folder>
   <Folder Name="/tools/">
+    <Project Path="tools/CheckApps.Analyze/CheckApps.Analyze.csproj" />
     <Project Path="tools/CheckApps.GitHubScan/CheckApps.GitHubScan.csproj" />
     <Project Path="tools/CheckApps.Seed/CheckApps.Seed.csproj" />
   </Folder>

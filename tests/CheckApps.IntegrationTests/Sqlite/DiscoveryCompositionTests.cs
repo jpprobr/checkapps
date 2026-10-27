@@ -1,4 +1,4 @@
-using CheckApps.Application.DependencyInjection;
+﻿using CheckApps.Application.DependencyInjection;
 using CheckApps.Application.Discovery;
 using CheckApps.Application.Persistence;
 using CheckApps.Infrastructure.DependencyInjection;
@@ -121,6 +121,67 @@ public class DiscoveryCompositionTests : IDisposable
 
         Assert.False(off.GetRequiredService<ScanOptions>().Enabled);
         Assert.True(on.GetRequiredService<ScanOptions>().Enabled);
+    }
+
+    // ---- Análise de repositórios (spec 013) -----------------------------------------------------------------------
+
+    [Fact]
+    public async Task Analysis_FakeSource_ComposesWithValidatedDI_AnalyzesACatalogedRepository_AndTheApiServiceReadsIt()
+    {
+        await using var provider = Build(("Scan:Source", "fake"), ("Analysis:InternalPackagePrefixes:0", "Empresa."));
+        await provider.GetRequiredService<SqliteSchemaBootstrapper>().EnsureSchemaAsync();
+
+        using var scope = provider.CreateScope();
+        var squads = scope.ServiceProvider.GetRequiredService<Application.Persistence.ISquadRepository>();
+        var apps = scope.ServiceProvider.GetRequiredService<Application.Persistence.IAppRepository>();
+        await squads.SaveAsync(new Domain.Squad { Id = "sq-1", Name = "Squad" });
+        await apps.SaveAsync(new Domain.App { Id = "app-1", SquadId = "sq-1", Name = "Pagamentos" });
+        await apps.AddRepositoryAsync(new Domain.Repository
+        {
+            Id = "r1", AppId = "app-1", Name = "fake-ab1-app-pagamentos", Provider = "fake", ExternalId = "1",
+            Sigla = "ab1", Status = "active"
+        });
+
+        var analysis = scope.ServiceProvider.GetRequiredService<Application.Analysis.AnalysisService>();
+        Assert.Null(analysis.ConfigurationProblem);
+
+        var first = await analysis.AnalyzeAsync(["ab1"], dryRun: false);
+        var second = await analysis.AnalyzeAsync(["ab1"], dryRun: false);
+
+        Assert.Equal(1, first.Count(Application.Analysis.AnalysisOutcome.Analyzed));
+        Assert.Equal(1, second.Count(Application.Analysis.AnalysisOutcome.Unchanged));   // mesmo commit: nada novo
+
+        var dependencies = await scope.ServiceProvider.GetRequiredService<Application.Analysis.DependencyService>().GetForAppAsync("app-1");
+        var repository = Assert.Single(dependencies.Repositories);
+        Assert.Contains(repository.Frameworks, f => f.Fact.Name == "net9.0");
+        Assert.Contains(repository.Packages, p => p.Fact.Name == "Empresa.Contratos.Cliente" && p.IsInternal);
+        Assert.Contains(repository.Packages, p => p.Fact.Name == "Serilog" && !p.IsInternal && p.Fact.Version == "3.1.1");
+    }
+
+    [Fact]
+    public async Task Analysis_GitHubSource_WithoutAToken_ComposesFine_ExplainsWhatIsMissing_AndNeverGoesOnline()
+    {
+        await using var provider = Build(("GitHub:ApiBaseUrl", "http://127.0.0.1:1"));
+        await provider.GetRequiredService<SqliteSchemaBootstrapper>().EnsureSchemaAsync();
+
+        using var scope = provider.CreateScope();
+        var analysis = scope.ServiceProvider.GetRequiredService<Application.Analysis.AnalysisService>();
+
+        Assert.Contains("GitHub:Token", analysis.ConfigurationProblem);
+        var error = await Assert.ThrowsAsync<InvalidOperationException>(() => analysis.AnalyzeAsync(["ab1"], dryRun: false));
+        Assert.Contains("GitHub:Token", error.Message);
+    }
+
+    [Fact]
+    public async Task Analysis_Options_HaveSafeDefaults_AndTheDotNetScannerIsRegistered()
+    {
+        await using var provider = Build(("Scan:Source", "fake"));
+
+        var options = provider.GetRequiredService<Application.Analysis.AnalysisOptions>();
+
+        Assert.Empty(options.InternalPackagePrefixes);   // sem configuração, nada é interno
+        Assert.True(options.MaxProjectFiles > 0 && options.MaxFileBytes > 0);
+        Assert.Contains(provider.GetRequiredService<Application.Analysis.ScannerRegistry>().All, s => s.Id == "dotnet");
     }
 
     public void Dispose()

@@ -110,6 +110,26 @@ siglaApp: AB1-0001
 
 Esperado para `--sigla ab1`: 5 repositórios (o restrito não aparece); `app-legado` com `[arquivado]`; `infra-fila` e `contrato-api-pagamentos` sem sigla-app.
 
+## 6b. Analisar o conteúdo dos repositórios (spec 013)
+
+A **descoberta** acima acha repositórios e os leva à triagem. A **análise** lê os arquivos de repositórios **já catalogados** (os que viraram app ou foram vinculados) e grava o que um *scanner* extrai: hoje, o scanner .NET lê a versão do framework e os pacotes diretos de `*.csproj` (formato SDK e legado, com `packages.config`), `Directory.Packages.props` e `Directory.Build.props`. Não grava código nem conteúdo de arquivo, só fatos, com a confiança em texto.
+
+```bash
+# sem rede nem token (os repositórios do scan fake, depois de vinculados a apps):
+dotnet run --project tools/CheckApps.Analyze -- --sigla ab1,cd2 --source fake
+
+# GitHub de verdade: simulação primeiro, depois gravando
+dotnet run --project tools/CheckApps.Analyze -- --sigla ab1 --dry-run
+dotnet run --project tools/CheckApps.Analyze -- --sigla ab1
+```
+
+- **Mesmo token da descoberta**: a ferramenta usa o mesmo armazenamento de segredos do `CheckApps.GitHubScan` (mesmo `UserSecretsId`), então `GitHub:Token` já configurado serve. Só o token é necessário: o repositório é lido pelo id, não pela organização.
+- **Idempotente por commit**: rodar de novo sobre um commit já analisado não grava nada ("sem alteração"); um commit novo gera uma análise nova e a anterior fica como histórico. Falha de um repositório (sem acesso, vazio, limite de chamadas) não interrompe os outros e fica registrada; ela não esconde a última análise boa. Para reanalisar o mesmo commit depois de uma correção no scanner, ainda não há opção: só um commit novo gera análise.
+- **Limites**: `Analysis:MaxProjectFiles` (padrão 200) e `Analysis:MaxFileBytes` (padrão 512 KB); ao exceder, a análise fica **parcial** com aviso.
+- **Pacote interno**: `Analysis:InternalPackagePrefixes` (lista; o nome da empresa no início do namespace, ex.: `Empresa.`). **Configuração local, nunca em arquivo versionado nem em exemplo de documentação**: `dotnet user-secrets set "Analysis:InternalPackagePrefixes:0" "<prefixo>" --project src/CheckApps.Api` (a marcação é calculada pela **API** ao ler). Sem prefixo, nada é marcado.
+- **Onde ver**: seção **Dependências** no detalhe do app e a tela **Dependências** do menu ("Quem usa o pacote" e ".NET por squad"). A API só lê; não há como disparar a análise pela tela.
+- **O que não cobre ainda**: dependências transitivas, outras tecnologias, integrações entre apps (`appsettings`, Refit), `ProjectReference`. Códigos de saída iguais aos da descoberta; `3` também quando algum repositório falha.
+
 ## 7. Problemas comuns
 
 | Sintoma | Causa provável |
@@ -126,4 +146,7 @@ Esperado para `--sigla ab1`: 5 repositórios (o restrito não aparece); `app-leg
 | "O scan não está pronto" na tela | falta `GitHub:Token`, `GitHub:Organization` ou `Scan:NameTemplate` nos user-secrets **da API**; a mensagem diz qual |
 | "Já há um scan em andamento" | outro scan está rodando; espere terminar |
 | "Não foi possível falar com o GitHub" (502) | rede indisponível ou `GitHub:ApiBaseUrl` errada |
+| "Nenhum repositório catalogado nessa sigla" na análise | os repositórios precisam estar no catálogo (virar app ou vincular a um app pela triagem) e ter a sigla preenchida; a análise não lê o que ainda é só "descoberto" |
+| "O repositório não foi encontrado no GitHub, ou o token não tem acesso a ele" | o token não enxerga aquele repositório (acesso parcial é normal); os demais seguem |
+| Análise "parcial" | há aviso na saída e na tela: arquivo de projeto inválido, versão por propriedade não resolvida, limite de arquivos ou de tamanho, ou árvore truncada pelo GitHub |
 | Aviso de YAML | o arquivo existe mas não é um YAML válido, ou a chave não tem valor simples; o repositório entra sem sigla-app |

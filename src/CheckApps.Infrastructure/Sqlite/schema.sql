@@ -165,3 +165,45 @@ CREATE INDEX IF NOT EXISTS ix_check_events_check_occurred
 
 CREATE INDEX IF NOT EXISTS ix_discovered_repositories_status_sigla
     ON discovered_repositories (status, sigla);
+
+-- Análises de repositórios (spec 013, ADR-011). Uma linha por execução, como o quality_snapshots:
+-- a análise CORRENTE de um repositório é a mais recente que não falhou, derivada por consulta, nunca
+-- armazenada. Uma falha fica no histórico, mas não esconde a última análise boa. Os fatos são neutros à
+-- tecnologia (ecossistema + tipo + nome) e dizem de onde vieram (origin, scanner, arquivo) e o quanto
+-- se confia neles (confidence, em texto). Nunca se grava o conteúdo dos arquivos lidos.
+CREATE TABLE IF NOT EXISTS repository_analyses (
+    id            TEXT PRIMARY KEY,
+    repository_id TEXT NOT NULL REFERENCES repositories(id) ON DELETE CASCADE,
+    analyzed_at   TEXT NOT NULL,
+    commit_sha    TEXT NULL,
+    status        TEXT NOT NULL,
+    warnings      TEXT NULL,
+    source        TEXT NOT NULL
+);
+
+CREATE TABLE IF NOT EXISTS repository_dependencies (
+    id               TEXT PRIMARY KEY,
+    analysis_id      TEXT NOT NULL REFERENCES repository_analyses(id) ON DELETE CASCADE,
+    ecosystem        TEXT NOT NULL,
+    kind             TEXT NOT NULL,
+    name             TEXT NOT NULL,
+    version          TEXT NULL,
+    project_path     TEXT NOT NULL,
+    source_file      TEXT NOT NULL,
+    origin           TEXT NOT NULL,
+    confidence       TEXT NOT NULL,
+    confidence_note  TEXT NULL,
+    scanner_id       TEXT NOT NULL,
+    scanner_version  TEXT NOT NULL
+);
+
+-- Serve a busca da análise corrente de cada repositório e o histórico por período.
+CREATE INDEX IF NOT EXISTS ix_repository_analyses_repo_analyzed
+    ON repository_analyses (repository_id, analyzed_at DESC);
+
+CREATE INDEX IF NOT EXISTS ix_repository_dependencies_analysis
+    ON repository_dependencies (analysis_id);
+
+-- "Quem usa o pacote X": a busca é por tipo, ecossistema e nome sem diferença de caixa.
+CREATE INDEX IF NOT EXISTS ix_repository_dependencies_name
+    ON repository_dependencies (kind, ecosystem, lower(name));

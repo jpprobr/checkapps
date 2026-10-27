@@ -1,0 +1,33 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <ItemGroup>
+    <ProjectReference Include="..\..\src\CheckApps.Application\CheckApps.Application.csproj" />
+    <ProjectReference Include="..\..\src\CheckApps.Infrastructure\CheckApps.Infrastructure.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Microsoft.Extensions.Configuration.EnvironmentVariables" Version="10.0.12" />
+    <PackageReference Include="Microsoft.Extensions.Configuration.Json" Version="10.0.12" />
+    <PackageReference Include="Microsoft.Extensions.Configuration.UserSecrets" Version="10.0.12" />
+    <PackageReference Include="Microsoft.Extensions.DependencyInjection" Version="10.0.12" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <None Update="appsettings.json">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
+  </ItemGroup>
+
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <TargetFramework>net10.0</TargetFramework>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+    <!--
+      Mesmo UserSecretsId do CheckApps.GitHubScan, de propósito: GitHub:Token e GitHub:Organization são os mesmos nas duas
+      ferramentas, então configurá-los uma vez basta. (A API tem armazenamento de segredos próprio.)
+    -->
+    <UserSecretsId>checkapps-github-scan-7d4c1b9e</UserSecretsId>
+  </PropertyGroup>
+
+</Project>

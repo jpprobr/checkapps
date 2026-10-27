@@ -73,6 +73,18 @@ Revistos para SQL em 2026-10-12. Os ⚠️ da versão DynamoDB (partição únic
 | 35 | Sigla-app em uso? | `EXISTS` em `repositories` por `sigla_app` | ✅ | Índice único parcial é a rede de segurança (FR-013) |
 | 36 | Repositórios de um app, com sigla, sigla-app e papel | `repositories` por `app_id` | ✅ | Pré-existente; ganhou as colunas |
 
+## Spec 013 — Dependências e versão do .NET (implementada)
+
+| # | Padrão | Resolução | Fit | Observação |
+|---|---|---|---|---|
+| 37 | Análise corrente de um repositório | `repository_analyses` por `repository_id`, `status <> 'falha'`, mais recente (`LIMIT 1`) | ✅ | Índice `(repository_id, analyzed_at DESC)`. A mesma subconsulta é a base das demais leituras |
+| 38 | Dependências de um app (por repositório) | `repositories` do app + análise corrente + fatos | ✅ | Inclui repositórios nunca analisados e a falha mais nova que a corrente |
+| 39 | Quem usa o pacote X (versão, app, squad) | `repository_dependencies` ⨝ análise corrente ⨝ `repositories` ⨝ `apps` ⨝ `squads`, `lower(name) = @name` | ✅ | Índice `(kind, ecosystem, lower(name))`. Uma linha por projeto; o resumo de versões conta apps distintos |
+| 40 | Pacotes internos em uso (sem nome) | os mesmos fatos de pacote, filtrados por prefixo **no serviço** | ✅ | O prefixo é configuração local; SQL não conhece a empresa |
+| 41 | Framework por app e squad (repositórios ativos) | `apps` ⨝ `squads` ⟕ `repositories` ativos ⟕ fatos `framework` da corrente | ✅ | App sem informação volta com `Framework = NULL`; app inativo fica de fora |
+| 42 | Repositórios do catálogo de uma sigla | `repositories` por `lower(sigla)` ⨝ `apps` ⟕ `squads` | ✅ | O que a análise percorre |
+| 43 | Cobertura: repositórios nunca analisados e data da análise mais recente | `NOT EXISTS` sobre `repository_analyses` e `MAX(analyzed_at)` | ✅ | Mostrada na busca de pacote: a resposta pode estar incompleta |
+
 ## Fora de escopo hoje — agora por decisão de produto, não de banco
 
 Com SQLite, todos os itens abaixo são tecnicamente triviais. Seguem fora de escopo porque ninguém pediu ainda — o que muda é que incluí-los passou a ser decisão de produto, e não mais "o banco não deixa". O ❌ registra como era no DynamoDB.

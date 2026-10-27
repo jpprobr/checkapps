@@ -21,8 +21,10 @@ Banco em arquivo único. Caminho: `Sqlite:DatabasePath` — absoluto é usado co
 | `checks` | `id` (slug) | Checagens (spec 003). `status` = `open`/`closed`; datas de calendário em TEXT `yyyy-MM-dd` |
 | `check_items` | `(check_id, app_id)` | `check_id` → `checks` e `app_id` → `apps`, **ambas sem cascata** |
 | `check_events` | `id` | `check_id` → `checks` CASCADE; `app_id` **sem FK**. Só de acréscimo |
+| `repository_analyses` | `id` | Uma execução de análise (spec 013, ADR-011). `repository_id` → `repositories` CASCADE. Histórico: a **corrente** é a mais recente com `status <> 'falha'`, derivada por consulta |
+| `repository_dependencies` | `id` | Fatos de uma análise: `analysis_id` → `repository_analyses` CASCADE. Neutra à tecnologia (`ecosystem` + `kind` + `name`), com `origin`, `confidence` e scanner |
 
-Índices: `apps(squad_id)`, `quality_snapshots(app_id, collected_at DESC)` — o segundo serve tanto o histórico por período quanto a busca do snapshot mais recente —, `check_items(app_id)` e `check_events(check_id, occurred_at DESC)`.
+Índices (além dos das análises, abaixo): `apps(squad_id)`, `quality_snapshots(app_id, collected_at DESC)` — o segundo serve tanto o histórico por período quanto a busca do snapshot mais recente —, `check_items(app_id)` e `check_events(check_id, occurred_at DESC)`.
 
 ## Decisões que não são óbvias no DDL
 
@@ -53,6 +55,10 @@ Consequência boa: a armadilha do `SaveAsync` sumiu estruturalmente — não há
 **`repositories.sigla_app` é único só quando presente** (índice único parcial `ux_repositories_sigla_app`): a sigla-app identifica um repositório, e repositórios de infra não têm. O índice é criado pelo `SqliteSchemaBootstrapper`, não pelo `schema.sql`, porque depende de uma coluna que bancos antigos ainda não têm.
 
 **`check_events` é histórico só de acréscimo**, gravado na mesma transação da mudança que registra (fechar, reabrir, entrada e saída de app, mudança de status). `app_id` sem FK pelo mesmo motivo de `quality_snapshots.sonar_project_id`: o evento é um fato passado e precisa sobreviver à remoção do app. Cascateia com a checagem, que só pode ser removida vazia. Status e tipos são gravados como os códigos do glossário (`em-andamento`, `item-added`), não como nomes de enum.
+
+**Análises de repositório são snapshots, como `quality_snapshots`** (spec 013). Cada execução da ferramenta `CheckApps.Analyze` sobre um repositório cujo commit mudou grava uma linha em `repository_analyses` e as suas em `repository_dependencies`; a mesma execução sobre o mesmo commit não grava nada. A análise **corrente** nunca é armazenada — é a subconsulta `SELECT id FROM repository_analyses WHERE repository_id = r.id AND status <> 'falha' ORDER BY analyzed_at DESC, id DESC LIMIT 1` —, e uma falha (`status = 'falha'`) fica no histórico sem esconder a última análise boa. `status` ∈ `ok | parcial | sem-scanner | falha`; `warnings` é texto, um aviso por linha.
+
+**`repository_dependencies` guarda só fatos, nunca conteúdo de arquivo** (FR-011). `version` é a versão **declarada** (pode ser `$(Propriedade)` não resolvida, `13.*` ou um intervalo, sempre com `confidence` e `confidence_note` em texto); `origin` é `PARSER` hoje e `RULE`/`AI` só entrarão como sugestão. "Pacote interno" **não é coluna**: é calculado na leitura a partir de `Analysis:InternalPackagePrefixes`, para que trocar o prefixo valha também para o histórico. Índice `(kind, ecosystem, lower(name))` serve a busca de pacote sem diferença de caixa.
 
 ## Evolução do schema
 

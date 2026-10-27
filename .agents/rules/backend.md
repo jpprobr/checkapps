@@ -31,6 +31,16 @@ Leia antes de editar código .NET. Só regras não-óbvias e específicas deste 
 - **Convenção de status para integração externa**: escopo inválido ou limite de resultados excedido → **400**; recurso desligado, não configurado ou operação já em andamento → **409**; falha da fonte (token, permissão, limite de chamadas, rede) → **502** com a mensagem já saneada. Endpoints que gastam um recurso externo limitado (como o scan) rodam **um por vez** (`SemaphoreSlim(1,1)` com `WaitAsync(0)`) e vêm **desligados por padrão** (`Scan:Enabled`) enquanto não houver autenticação.
 - **Guarda de remoção de App tem duas condições**: sem snapshots e fora de qualquer checagem (ADR-005 + spec 003).
 
+## Análise de repositórios (scanners)
+
+- **Scanner é parser puro**: `IRepositoryScanner` recebe só texto de arquivos já lidos (caminho → conteúdo) e devolve fatos; nada de rede, relógio ou disco. Só ele conhece o formato da sua tecnologia. Quem lista, lê com limite e grava é o `AnalysisService`. Tecnologia nova = scanner novo + testes; o scanner mínimo de `package.json` nos testes (`PackageJsonTestScanner`) é o que prova que o contrato não vazou o .NET.
+- **Nunca grave nem logue conteúdo de arquivo.** Aviso diz o caminho e o que aconteceu ("XML inválido; arquivo ignorado"), jamais um trecho do arquivo; erro de scanner mostra só o tipo da exceção. Conteúdo de repositório é entrada não confiável: XML com `DtdProcessing.Prohibit` e `XmlResolver = null`.
+- **A análise corrente é a mais recente que não falhou.** Falha é gravada (histórico), mas não esconde os fatos da última análise boa nem entra na comparação de idempotência por commit. Toda consulta de leitura usa a mesma subconsulta (`AnalysisRepository.CurrentIdFor`).
+- **Fato sempre diz origem e confiança** (`PARSER`/`alta|media|baixa`, nota em texto). Resolver versão é "melhor esforço declarado": nunca invente versão; propriedade não resolvida fica como texto cru com confiança baixa e aviso.
+- **"Interno" é derivado na leitura** de `Analysis:InternalPackagePrefixes` (`InternalPackage`), nunca uma coluna. O prefixo real da empresa só existe em configuração local — nem em teste, nem em documentação, nem em fixture (usa-se `Empresa.`).
+- **`GitHubApiClient` é o único lugar que fala HTTP com o GitHub** (cabeçalhos, erros, limite de chamadas): descoberta e leitura de conteúdo o compartilham, e é ele que garante que nenhuma mensagem leva token. Mensagens específicas de uma chamada (404/409/422) entram por parâmetro, nunca pelo corpo da resposta.
+- **Fixtures de scanner ficam em `tests/CheckApps.UnitTests/Fixtures/<Tecnologia>/`** (um repositório fictício por pasta, com `EXPECTED.md`). O SDK exclui `*.csproj` dos itens padrão: os projetos fictícios precisam de `<None Include=… CopyToOutputDirectory>` explícito, e as pastas `obj/` e `bin/` de dentro de `Fixtures/` estão liberadas no `.gitignore`.
+
 ## Testes
 
 - **Unitários usam fakes escritos à mão** (`tests/CheckApps.UnitTests/TestDoubles/FakeRepositories.cs`), não Moq/NSubstitute. Se precisar de comportamento novo no fake, adicione lá — os fakes têm armazenamento real em dicionário para que regras de colisão/remoção sejam testáveis.

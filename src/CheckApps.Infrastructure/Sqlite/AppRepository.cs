@@ -190,6 +190,30 @@ public class AppRepository(SqliteConnectionFactory connectionFactory) : IAppRepo
         return rows.ToList();
     }
 
+    public async Task<IReadOnlyList<CatalogRepository>> ListRepositoriesBySiglaAsync(
+        string sigla, CancellationToken cancellationToken = default)
+    {
+        using var connection = connectionFactory.Create();
+        var rows = await connection.QueryAsync<Repository, string, string, string?, string?, CatalogRepository>(new CommandDefinition(
+            """
+            SELECT r.id AS Id, r.app_id AS AppId, r.name AS Name, r.provider AS Provider, r.url AS Url,
+                   r.external_id AS ExternalId, r.status AS Status,
+                   r.sigla AS Sigla, r.sigla_app AS SiglaApp, r.role AS Role, r.source AS Source,
+                   a.id AS CatalogAppId, a.name AS CatalogAppName,
+                   s.id AS CatalogSquadId, s.name AS CatalogSquadName
+            FROM repositories r
+            JOIN apps a ON a.id = r.app_id
+            LEFT JOIN squads s ON s.id = a.squad_id
+            WHERE lower(r.sigla) = @sigla
+            ORDER BY a.name, r.name
+            """,
+            new { sigla = sigla.Trim().ToLowerInvariant() }, cancellationToken: cancellationToken),
+            (repository, appId, appName, squadId, squadName) =>
+                new CatalogRepository(repository, appId, appName, squadId, squadName),
+            splitOn: "CatalogAppId,CatalogAppName,CatalogSquadId,CatalogSquadName");
+        return rows.ToList();
+    }
+
     public async Task<Repository?> GetRepositoryAsync(
         string appId, string repositoryId, CancellationToken cancellationToken = default)
     {

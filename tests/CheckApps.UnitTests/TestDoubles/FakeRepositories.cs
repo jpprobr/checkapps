@@ -1,4 +1,4 @@
-using CheckApps.Application.Checks;
+﻿using CheckApps.Application.Checks;
 using CheckApps.Application.Discovery;
 using CheckApps.Application.Persistence;
 using CheckApps.Domain;
@@ -68,6 +68,12 @@ public class FakeAppRepository : IAppRepository
 
     public Task<IReadOnlyList<SonarProject>> GetSonarProjectsAsync(string appId, CancellationToken ct = default) =>
         Task.FromResult<IReadOnlyList<SonarProject>>([]);
+
+    public Task<IReadOnlyList<CatalogRepository>> ListRepositoriesBySiglaAsync(string sigla, CancellationToken ct = default) =>
+        Task.FromResult<IReadOnlyList<CatalogRepository>>(_repositories
+            .Where(r => string.Equals(r.Sigla, sigla.Trim(), StringComparison.OrdinalIgnoreCase))
+            .Select(r => new CatalogRepository(r, r.AppId, _apps.GetValueOrDefault(r.AppId)?.Name ?? r.AppId))
+            .ToList());
 
     public Task SaveAsync(App app, CancellationToken ct = default)
     {

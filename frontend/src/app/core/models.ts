@@ -304,3 +304,113 @@ export interface ScanReport {
   items: ScanItem[];
   warnings: string[];
 }
+
+// ---- Dependências e versão do .NET (spec 013) -----------------------------------------------------------------------
+// Situação da análise e confiança circulam como códigos em texto; os rótulos ficam em core/dependency-labels.ts.
+
+export type Confidence = 'alta' | 'media' | 'baixa';
+
+export type AnalysisStatus = 'ok' | 'parcial' | 'sem-scanner' | 'falha';
+
+export interface DependencyFact {
+  id: string;
+  ecosystem: string;
+  kind: 'package' | 'framework';
+  name: string;
+  version: string | null;
+  projectPath: string;
+  sourceFile: string;
+  origin: string;
+  confidence: Confidence;
+  confidenceNote: string | null;
+  scannerId: string;
+  scannerVersion: string;
+  /** Calculado na leitura a partir do prefixo configurado; nunca gravado. */
+  isInternal: boolean;
+}
+
+export interface RepositoryAnalysis {
+  id: string;
+  analyzedAt: string;
+  commitSha: string | null;
+  status: AnalysisStatus;
+  warnings: string[];
+}
+
+export interface RepositoryDependencies {
+  repositoryId: string;
+  repositoryName: string;
+  repositoryStatus: string | null;
+  role: string | null;
+  url: string | null;
+  sigla: string | null;
+  /** A análise corrente; nula se o repositório nunca foi analisado. */
+  analysis: RepositoryAnalysis | null;
+  /** Tentativa que falhou depois da corrente. */
+  lastFailure: RepositoryAnalysis | null;
+  frameworks: DependencyFact[];
+  packages: DependencyFact[];
+}
+
+export interface AppDependencies {
+  appId: string;
+  internalPrefixesConfigured: boolean;
+  repositories: RepositoryDependencies[];
+}
+
+export interface PackageUsage {
+  appId: string;
+  appName: string;
+  squadId: string | null;
+  squadName: string | null;
+  repositoryId: string;
+  repositoryName: string;
+  repositoryStatus: string | null;
+  name: string;
+  version: string | null;
+  projectPath: string;
+  confidence: Confidence;
+  confidenceNote: string | null;
+  isInternal: boolean;
+  analyzedAt: string;
+}
+
+export interface PackageVersionSummary {
+  name: string;
+  version: string | null;
+  appCount: number;
+  isInternal: boolean;
+}
+
+export interface AnalysisCoverage {
+  /** Repositórios catalogados que nunca foram analisados: a resposta pode estar incompleta. */
+  unanalyzedRepositories: number;
+  latestAnalyzedAt: string | null;
+}
+
+export interface PackageSearchResult {
+  usages: PackageUsage[];
+  versions: PackageVersionSummary[];
+  coverage: AnalysisCoverage;
+  internalPrefixesConfigured: boolean;
+}
+
+export interface FrameworkApp {
+  appId: string;
+  appName: string;
+  repositories: string[];
+}
+
+export interface FrameworkCell {
+  /** Nulo = "sem informação". */
+  framework: string | null;
+  squadId: string | null;
+  squadName: string | null;
+  apps: FrameworkApp[];
+}
+
+export interface FrameworkOverview {
+  cells: FrameworkCell[];
+  coverage: AnalysisCoverage;
+}
+

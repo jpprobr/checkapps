@@ -1,0 +1,116 @@
+<section class="card">
+  <h2>Dependências</h2>
+  <p class="subtitle small">
+    Versão do .NET e pacotes <strong>diretos</strong>, como estão declarados nos projetos (dependências transitivas não
+    são incluídas). O que o CheckApps não consegue resolver aparece com a confiança e o motivo.
+  </p>
+
+  @if (loading()) {
+    <p class="subtitle">Carregando…</p>
+  } @else if (failed()) {
+    <p class="error" role="alert">Não foi possível carregar as dependências deste app.</p>
+  } @else if (data(); as deps) {
+    @if (deps.repositories.length === 0) {
+      <p class="subtitle">Este app não tem repositórios cadastrados.</p>
+    }
+
+    @for (repo of deps.repositories; track repo.repositoryId) {
+      <div class="repo-block">
+        <h3>
+          {{ repo.repositoryName }}
+          @if (repo.repositoryStatus) { <span class="tag">{{ repo.repositoryStatus }}</span> }
+          @if (repo.role) { <span class="tag">{{ repo.role }}</span> }
+        </h3>
+
+        @if (repo.lastFailure; as failure) {
+          <p class="error" role="alert">
+            A última tentativa de análise falhou em {{ failure.analyzedAt | date: 'dd/MM/yyyy HH:mm' }}:
+            {{ failure.warnings.join(' ') }}
+          </p>
+        }
+
+        @if (repo.analysis; as analysis) {
+          <p class="subtitle small">
+            Análise de {{ analysis.analyzedAt | date: 'dd/MM/yyyy HH:mm' }} · commit
+            <code>{{ shortSha(analysis.commitSha) }}</code> · situação: <strong>{{ statusLabels[analysis.status] }}</strong>
+          </p>
+
+          @if (analysis.warnings.length > 0) {
+            <ul class="warnings" role="status">
+              @for (warning of analysis.warnings; track warning) {
+                <li>⚠ {{ warning }}</li>
+              }
+            </ul>
+          }
+
+          @if (analysis.status === 'sem-scanner') {
+            <p class="subtitle">Nenhum scanner se aplica a este repositório (por exemplo, não há projeto .NET nele).</p>
+          } @else {
+            @if (repo.frameworks.length > 0) {
+              <p class="frameworks">
+                <strong>Framework:</strong>
+                @for (framework of repo.frameworks; track framework.id) {
+                  <span class="tag">{{ framework.name }}</span>
+                  @if (needsNote(framework)) {
+                    <span class="note">(confiança {{ confidenceLabels[framework.confidence] }}: {{ framework.confidenceNote }})</span>
+                  }
+                }
+              </p>
+            }
+
+            @if (repo.packages.length > 0) {
+              <div class="table-scroll">
+              <table>
+                <thead>
+                  <tr>
+                    <th>Pacote</th>
+                    <th>Versão declarada</th>
+                    <th>Projeto</th>
+                    <th>Confiança</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  @for (pkg of repo.packages; track pkg.id) {
+                    <tr>
+                      <td>
+                        {{ pkg.name }}
+                        @if (pkg.isInternal) { <span class="tag internal">interno</span> }
+                      </td>
+                      <td>{{ pkg.version ?? '—' }}</td>
+                      <td>{{ pkg.projectPath }}</td>
+                      <td>
+                        <span class="confidence" [class.low]="pkg.confidence === 'baixa'">{{ confidenceLabels[pkg.confidence] }}</span>
+                        @if (needsNote(pkg)) { <span class="note">{{ pkg.confidenceNote }}</span> }
+                      </td>
+                    </tr>
+                  }
+                </tbody>
+              </table>
+              </div>
+            } @else if (repo.frameworks.length === 0) {
+              <p class="subtitle">A análise não encontrou framework nem pacotes neste repositório.</p>
+            }
+          }
+        } @else if (!repo.lastFailure) {
+          <p class="subtitle">
+            Ainda não analisado. Rode a análise no terminal
+            @if (repo.sigla) {
+              (<code>dotnet run --project tools/CheckApps.Analyze -- --sigla {{ repo.sigla }}</code>);
+            } @else {
+              (<code>dotnet run --project tools/CheckApps.Analyze -- --sigla &lt;sigla&gt;</code>; este repositório não tem sigla
+              cadastrada);
+            }
+            detalhes em <code>docs/leitor-github.md</code>.
+          </p>
+        }
+      </div>
+    }
+
+    @if (deps.internalPrefixesConfigured === false && deps.repositories.length > 0) {
+      <p class="subtitle small">
+        Nenhum prefixo de pacotes internos está configurado (<code>Analysis:InternalPackagePrefixes</code>), então nenhum
+        pacote é marcado como interno.
+      </p>
+    }
+  }
+</section>

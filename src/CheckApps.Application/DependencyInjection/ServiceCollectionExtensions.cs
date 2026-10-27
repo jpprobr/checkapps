@@ -1,3 +1,4 @@
+using CheckApps.Application.Analysis;
 using CheckApps.Application.Apps;
 using CheckApps.Application.Checks;
 using CheckApps.Application.Discovery;
@@ -19,6 +20,7 @@ public static class ServiceCollectionExtensions
         // ScanService fica de fora de propósito: depende de IRepositoryDiscoverySource, que só a
         // ferramenta de scan registra. Registrá-lo aqui quebraria a API (validação de DI em Development).
         services.AddScoped<TriageService>();
+        services.AddScoped<DependencyService>();
         services.TryAddSingleton(TimeProvider.System);
         return services;
     }

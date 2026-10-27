@@ -68,6 +68,20 @@ dotnet run --project tools/CheckApps.GitHubScan -- --sigla ab1 --dry-run
 
 Os repositórios aparecem no menu **Repositórios**, onde a pessoa decide o destino de cada um. O scan nunca cria app. O mesmo scan pode ser disparado pela própria tela (bloco **Buscar no GitHub**), que vem **desligada** — veja o guia para ligar e para os segredos da API. Configuração, token e organização de teste: [`docs/leitor-github.md`](docs/leitor-github.md).
 
+### 5. (Opcional) Analisar as dependências dos repositórios catalogados
+
+Depois que os repositórios viram apps (menu **Repositórios**), a análise lê os projetos .NET deles e grava a versão do framework e os pacotes diretos:
+
+```bash
+# sem rede nem token (usa os repositórios do scan fake, já vinculados a apps):
+dotnet run --project tools/CheckApps.Analyze -- --sigla ab1,cd2 --source fake
+
+# GitHub de verdade (mesmo token do scan; veja o guia):
+dotnet run --project tools/CheckApps.Analyze -- --sigla ab1 --dry-run
+```
+
+O resultado aparece na seção **Dependências** do app e na tela **Dependências** do menu. Detalhes e configuração em [`docs/leitor-github.md`](docs/leitor-github.md).
+
 ## Testes
 
 ```bash
@@ -89,5 +103,6 @@ tests/
 tools/
   CheckApps.Seed             popula o banco com dados de demonstração
   CheckApps.GitHubScan       descobre repositórios por sigla e os grava na caixa de entrada
+  CheckApps.Analyze          lê os projetos dos repositórios catalogados e grava versão do .NET e pacotes
 frontend/                    Angular 20
 ```

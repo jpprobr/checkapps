@@ -1,4 +1,4 @@
-using CheckApps.Infrastructure.Sqlite;
+﻿using CheckApps.Infrastructure.Sqlite;
 using Dapper;
 using Microsoft.Data.Sqlite;
 using Microsoft.Extensions.Options;
@@ -63,6 +63,63 @@ public class SchemaEvolutionTests : IDisposable
             "SELECT COUNT(*) FROM sqlite_master WHERE type = 'table' AND name = 'discovered_repositories'"));
         Assert.Equal(1, check.ExecuteScalar<int>(
             "SELECT COUNT(*) FROM sqlite_master WHERE type = 'index' AND name = 'ux_repositories_sigla_app'"));
+    }
+
+    [Fact]
+    public async Task EnsureSchema_OnADatabaseBeforeTheAnalysisTables_CreatesThem_KeepsTheData_AndIsIdempotent()
+    {
+        using (var connection = _factory.Create())
+        {
+            connection.Execute(
+                """
+                CREATE TABLE squads (id TEXT PRIMARY KEY, name TEXT NOT NULL, description TEXT NULL, status TEXT NULL);
+                CREATE TABLE apps (
+                    id TEXT PRIMARY KEY, squad_id TEXT NOT NULL REFERENCES squads(id), name TEXT NOT NULL,
+                    description TEXT NULL, criticality TEXT NULL, status TEXT NULL, external_id TEXT NULL);
+                CREATE TABLE repositories (
+                    id TEXT PRIMARY KEY, app_id TEXT NOT NULL REFERENCES apps(id) ON DELETE CASCADE,
+                    name TEXT NOT NULL, provider TEXT NULL, url TEXT NULL, external_id TEXT NULL, status TEXT NULL,
+                    sigla TEXT NULL, sigla_app TEXT NULL, role TEXT NULL, source TEXT NULL);
+                INSERT INTO squads (id, name) VALUES ('sq-1', 'Squad');
+                INSERT INTO apps (id, squad_id, name) VALUES ('app-1', 'sq-1', 'App');
+                INSERT INTO repositories (id, app_id, name, status) VALUES ('r-1', 'app-1', 'repo-existente', 'active');
+                """);
+        }
+
+        var bootstrapper = new SqliteSchemaBootstrapper(_factory);
+        await bootstrapper.EnsureSchemaAsync();
+        await bootstrapper.EnsureSchemaAsync(); // idempotente
+
+        using var check = _factory.Create();
+        foreach (var table in new[] { "repository_analyses", "repository_dependencies" })
+        {
+            Assert.Equal(1, check.ExecuteScalar<int>(
+                $"SELECT COUNT(*) FROM sqlite_master WHERE type = 'table' AND name = '{table}'"));
+        }
+
+        foreach (var index in new[]
+        {
+            "ix_repository_analyses_repo_analyzed", "ix_repository_dependencies_analysis", "ix_repository_dependencies_name"
+        })
+        {
+            Assert.Equal(1, check.ExecuteScalar<int>(
+                $"SELECT COUNT(*) FROM sqlite_master WHERE type = 'index' AND name = '{index}'"));
+        }
+
+        Assert.Equal("repo-existente", check.ExecuteScalar<string>("SELECT name FROM repositories WHERE id = 'r-1'"));
+
+        // As tabelas novas funcionam sobre o banco antigo, inclusive a cascata a partir do repositório.
+        check.Execute(
+            """
+            INSERT INTO repository_analyses (id, repository_id, analyzed_at, status, source)
+            VALUES ('an-1', 'r-1', '2026-10-24T12:00:00.0000000+00:00', 'ok', 'GITHUB_SCAN');
+            INSERT INTO repository_dependencies
+                (id, analysis_id, ecosystem, kind, name, project_path, source_file, origin, confidence, scanner_id, scanner_version)
+            VALUES ('f-1', 'an-1', 'nuget', 'package', 'Serilog', 'App.csproj', 'App.csproj', 'PARSER', 'alta', 'dotnet', '1.0.0');
+            DELETE FROM repositories WHERE id = 'r-1';
+            """);
+        Assert.Equal(0, check.ExecuteScalar<int>("SELECT COUNT(*) FROM repository_analyses"));
+        Assert.Equal(0, check.ExecuteScalar<int>("SELECT COUNT(*) FROM repository_dependencies"));
     }
 
     public void Dispose()

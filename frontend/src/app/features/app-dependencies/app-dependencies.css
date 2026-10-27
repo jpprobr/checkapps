@@ -1,0 +1,60 @@
+.repo-block {
+  margin: 1rem 0 1.5rem;
+}
+
+.repo-block h3 {
+  margin: 0 0 0.25rem;
+  font-size: 1rem;
+}
+
+.repo-block table {
+  margin-top: 0.5rem;
+}
+
+/* Tabela larga rola dentro do cartão: não alarga a página no celular. */
+.table-scroll {
+  overflow-x: auto;
+}
+
+.subtitle.small {
+  margin-top: 0;
+}
+
+.warnings {
+  margin: 0.25rem 0 0.75rem;
+  padding-left: 1.25rem;
+  color: var(--text-secondary);
+}
+
+.frameworks {
+  margin: 0.5rem 0;
+}
+
+.note {
+  display: block;
+  font-size: 0.8rem;
+  color: var(--text-secondary);
+}
+
+.frameworks .note {
+  display: inline;
+  margin-left: 0.25rem;
+}
+
+/* Confiança baixa pede atenção: o texto está sempre presente, o contraste só reforça. */
+.confidence {
+  font-size: 0.85rem;
+}
+
+.confidence.low {
+  color: var(--text-primary);
+  font-weight: 600;
+  border-bottom: 2px solid var(--quality-c);
+}
+
+code {
+  background: var(--gridline);
+  border-radius: 6px;
+  padding: 0.1rem 0.4rem;
+  font-size: 0.85rem;
+}

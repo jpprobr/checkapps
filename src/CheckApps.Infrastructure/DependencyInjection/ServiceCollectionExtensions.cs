@@ -1,7 +1,10 @@
+using CheckApps.Application.Analysis;
 using CheckApps.Application.Discovery;
 using CheckApps.Application.Persistence;
 using CheckApps.Application.Sonar;
 using CheckApps.Domain.QualityAssessment;
+using CheckApps.Infrastructure.Analysis;
+using CheckApps.Infrastructure.Analysis.DotNet;
 using CheckApps.Infrastructure.Discovery;
 using CheckApps.Infrastructure.Sonar;
 using CheckApps.Infrastructure.Sqlite;
@@ -16,6 +19,8 @@ public static class ServiceCollectionExtensions
     {
         services.Configure<SqliteOptions>(configuration.GetSection(SqliteOptions.SectionName));
         AddRepositoryDiscovery(services, configuration);
+        AddRepositoryAnalysis(services, configuration);
+        services.AddSingleton(configuration.GetSection(AnalysisOptions.SectionName).Get<AnalysisOptions>() ?? new AnalysisOptions());
 
         services.AddSingleton<SqliteConnectionFactory>();
         services.AddSingleton<SqliteSchemaBootstrapper>();
@@ -25,11 +30,38 @@ public static class ServiceCollectionExtensions
         services.AddSingleton<IQualitySnapshotRepository, QualitySnapshotRepository>();
         services.AddSingleton<ICheckRepository, CheckRepository>();
         services.AddSingleton<IDiscoveredRepositoryRepository, DiscoveredRepositoryRepository>();
+        services.AddSingleton<IAnalysisRepository, AnalysisRepository>();
 
         services.AddSingleton<IQualityAssessmentEngine, QualityAssessmentEngineV1>();
         services.AddSingleton<ISonarProvider, MockSonarProvider>();
 
         return services;
+    }
+
+    /// <summary>
+    /// Composição da análise (spec 013), usada pela ferramenta <c>CheckApps.Analyze</c>: scanners, fonte de conteúdo
+    /// escolhida pela mesma chave <c>Scan:Source</c> da descoberta (<c>github</c> | <c>fake</c>) e o
+    /// <see cref="AnalysisService"/>. Como na descoberta, a fonte nunca falha na construção: sem credencial ela expõe
+    /// <c>ConfigurationProblem</c>. A API só lê: nenhum endpoint dela usa o <see cref="AnalysisService"/> (FR-015).
+    /// </summary>
+    private static void AddRepositoryAnalysis(IServiceCollection services, IConfiguration configuration)
+    {
+        var source = configuration.GetSection(ScanOptions.SectionName).Get<ScanOptions>()?.Source ?? "github";
+
+        services.AddSingleton<IRepositoryScanner, DotNetScanner>();
+        services.AddSingleton<ScannerRegistry>();
+        services.AddHttpClient<GitHubRepositoryContentSource>();
+
+        if (string.Equals(source, "fake", StringComparison.OrdinalIgnoreCase))
+        {
+            services.AddSingleton<IRepositoryContentSource, FakeRepositoryContentSource>(_ => new FakeRepositoryContentSource());
+        }
+        else
+        {
+            services.AddScoped<IRepositoryContentSource>(sp => sp.GetRequiredService<GitHubRepositoryContentSource>());
+        }
+
+        services.AddScoped<AnalysisService>();
     }
 
     /// <summary>

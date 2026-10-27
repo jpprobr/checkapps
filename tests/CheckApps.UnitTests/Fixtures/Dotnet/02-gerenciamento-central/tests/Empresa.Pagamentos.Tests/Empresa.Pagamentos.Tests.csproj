@@ -1,0 +1,18 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <IsPackable>false</IsPackable>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <!-- VersionOverride vale mais que o PackageVersion central. -->
+    <PackageReference Include="xunit" VersionOverride="2.9.0" />
+    <!-- Pacote sem entrada em Directory.Packages.props e sem Version: não dá para saber a versão. -->
+    <PackageReference Include="Moq" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\..\src\Empresa.Pagamentos.Api\Empresa.Pagamentos.Api.csproj" />
+  </ItemGroup>
+
+</Project>

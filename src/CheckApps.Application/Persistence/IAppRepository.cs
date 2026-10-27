@@ -32,6 +32,12 @@ public interface IAppRepository
     Task<IReadOnlyList<CatalogRepository>> ListCatalogOnlyRepositoriesAsync(
         string? sigla, CancellationToken cancellationToken = default);
 
+    /// <summary>
+    /// Todos os repositórios do catálogo de uma sigla (comparada sem diferença de caixa), com o app e a squad de cada
+    /// um. É o que a análise percorre (spec 013).
+    /// </summary>
+    Task<IReadOnlyList<CatalogRepository>> ListRepositoriesBySiglaAsync(string sigla, CancellationToken cancellationToken = default);
+
     Task<Repository?> GetRepositoryAsync(string appId, string repositoryId, CancellationToken cancellationToken = default);
 
     Task DeleteRepositoryAsync(string appId, string repositoryId, CancellationToken cancellationToken = default);

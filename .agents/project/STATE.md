@@ -1,6 +1,6 @@
 # STATE.md — estado atual do projeto
 
-> Reescrito (não anexado) ao fim de cada sessão de trabalho. Se este arquivo estiver desatualizado em relação ao `git log`, o git está certo. Última atualização: **2026-10-24**, ao revisar a regra do ativo único da spec 012 (agora **bloqueia com 409** em vez de rebaixar sozinha) e criar as skills `skill-discovery`, `verify-change` e `close-spec`. **A spec 012 está implementada, revisada, confirmada na tela pelo usuário e commitada.**
+> Reescrito (não anexado) ao fim de cada sessão de trabalho. Se este arquivo estiver desatualizado em relação ao `git log`, o git está certo. Última atualização: **2026-10-26**, ao fechar a spec 013 (scanner .NET: dependências e versão do .NET), depois de revisar a regra do ativo único da 012 e criar as skills `skill-discovery`, `verify-change` e `close-spec`. **As specs 012 e 013 estão fechadas. A 013 foi confirmada pelo usuário na tela com 4 repositórios de demonstração no GitHub real, mas NÃO está commitada.**
 
 ## Onde estamos
 
@@ -24,15 +24,16 @@ Estágio do roadmap: **Inventário + Health + Evolution concluídos**, mais **Ch
   - fonte `fake` com os casos difíceis; fonte real do GitHub (Search API + YAML da sigla-app) testada com HTTP falso **e lida uma vez de verdade**.
 - **Scan pela tela** (`specs/006-scan-pela-tela/`): bloco **Buscar no GitHub** em Repositórios — siglas, *Pré-visualizar* e *Escanear*; mesmo `ScanService` do CLI. **Desligado por padrão** (`Scan:Enabled`); erros 400/409/502; um scan por vez.
 - **Menu "Repositórios"** (`specs/007-menu-repositorios/`) e "já no catálogo" no resultado do scan.
-- **Testes**: 182 unitários + 45 de integração, verdes. **Nenhum exige Docker, serviço externo ou rede.**
+- **Testes**: 282 unitários + 64 de integração, verdes. **Nenhum exige Docker, serviço externo ou rede.**
 - **Ambiente local**: skill `run-local`; `README.md` com o passo a passo. Verificado nesta sessão: seed, API em `:5232`, Angular em `:4200`, `curl` nos três endpoints novos e um roteiro Playwright (menu desktop/recolhido/recarregar/celular + CRUD completo, sem erros de console além do 409 esperado).
 
+- **Análise de repositórios: dependências e versão do .NET** (`specs/013-dependencias-dotnet/`, ADR-011, guia `docs/leitor-github.md` seção 6b): ferramenta `tools/CheckApps.Analyze` (`--sigla`, `--source github|fake`, `--dry-run`; mesmo `UserSecretsId` do `GitHubScan`) lê os repositórios **já catalogados** da sigla, escolhe os scanners pela lista de arquivos e grava uma **análise** por execução (`repository_analyses` + `repository_dependencies`: fatos neutros à tecnologia com origem `PARSER`, confiança alta/média/baixa em texto, scanner e arquivo). Idempotente por commit; falha de um repositório não para os outros e não esconde a última análise boa (a **corrente** = a mais recente que não falhou). O scanner .NET (`Infrastructure/Analysis/DotNet/DotNetScanner.cs`, só `System.Xml.Linq`) lê `*.csproj` (SDK e legado com `packages.config`), `Directory.Build.props` e `Directory.Packages.props`: gerenciamento central, `VersionOverride`, propriedades resolvidas ou cruas, flutuante/intervalo, `TargetFrameworks`, XML inválido vira aviso. Fontes de conteúdo: `GitHubRepositoryContentSource` (id do repositório → commit → árvore → arquivos pedidos; `GitHubApiClient` compartilhado com a descoberta) e `FakeRepositoryContentSource` (subconjunto em texto para a demonstração). API **só de leitura**: `GET /api/apps/{id}/dependencies`, `GET /api/dependencies/packages?name=&squadId=&internalOnly=`, `GET /api/dependencies/frameworks`. Tela: seção **Dependências** no app e item **Dependências** no menu (aba "Quem usa o pacote" com resumo de versões, filtro de squad, "apenas internos" e aviso de repositórios nunca analisados; aba ".NET por squad", framework × squad com detalhe da célula). "Pacote interno" = nome começa com `Analysis:InternalPackagePrefixes` (config local, **nunca em arquivo versionado**), calculado na leitura. Fixtures em `tests/CheckApps.UnitTests/Fixtures/Dotnet/` (6 cenários com `EXPECTED.md`, copiadas para a saída; as pastas `obj/` e `bin/` delas estão liberadas no `.gitignore`).
 - **Skills do repositório** (`.agents/skills/`, wrappers em `.claude/skills/`): `run-local`, `skill-discovery` (descobre e cria skills), `verify-change` (build, testes, curl, navegador em banco isolado, confirmação) e `close-spec` (abrir/encerrar spec e sessão). As três últimas foram criadas em 2026-10-24 e **ainda não foram exercitadas de ponta a ponta**: usá-las na próxima spec e corrigir o que faltar.
 
 ## O que está mockado / provisório
 
 - **Dados de Sonar** vêm de `MockSonarProvider` + `DemoDataFactory`. Sem integração real com SonarQube.
-- **O GitHub real foi lido uma vez** (2026-10-12, `--dry-run`). **Ainda não exercitados com o GitHub real**: arquivado, paginação, limite de resultados, limite de chamadas, acesso parcial e YAML inválido — só cobertos por JSON fixo nos testes.
+- **O GitHub real foi lido** (2026-10-12, `--dry-run`; e em 2026-10-26 pela descoberta e pela análise, com 4 repositórios de demonstração `jplay-dm1-*`). **Ainda não exercitados com o GitHub real**: arquivado, paginação, limite de resultados, limite de chamadas, acesso parcial e YAML inválido — só cobertos por JSON fixo nos testes.
 - **O scan pela tela ainda não foi usado contra o GitHub real** (pendência do usuário): exige os segredos da **API**, separados dos da ferramenta de linha de comando.
 - **Sem autenticação** (ADR-007): "minha squad" é a última visitada (navegador); autor de checagem é texto livre. **O endpoint de scan usa o token configurado e qualquer pessoa que abra o sistema pode dispará-lo** — por isso vem desligado; autenticação é pré-requisito de uso compartilhado.
 - **Sem deploy, sem CI.** Litestream e ECS documentados como alvo (spec 004, ADR-009), não implementados.
@@ -63,11 +64,12 @@ Os críticos estão em `AGENTS.md` e nas regras. Os que mais mordem hoje:
 
 ## Próximos passos (em ordem)
 
-1. **Exercitar as skills novas** (`verify-change`, `close-spec`, `skill-discovery`) na próxima spec e ajustar o que faltar.
-2. **Usar o scan pela tela com o GitHub real** (usuário): segredos da API (`docs/leitor-github.md`, seção 5), reiniciar a API e escanear em **Repositórios → Buscar no GitHub**; depois criar os repositórios de teste que faltam (arquivado, infra, outra sigla, fora do acesso do token).
-3. Repetir os roteiros Playwright das specs 001–007 contra o novo shell.
-4. Revisão do usuário no glossário (Solução, Tipo de app).
-5. Candidatos de baixo custo: checagens e repositórios na massa de demonstração do seed; decidir o que fazer com repositório que some do GitHub. (CRUD de SonarProject: em backlog, não fazer agora.)
-6. Depois: fase 2 do leitor (dependências de biblioteca); tags chave-valor; spec de Solução.
-7. Na migração para a máquina corporativa: `.github/copilot-instructions.md`, verificação do `.agents/skills/`; GitHub App no lugar do token pessoal (ADR-010).
-8. Antes de qualquer uso compartilhado: substituir ADR-007 por uma decisão de autenticação.
+1. **Commitar a spec 013** quando o usuário pedir (nada dela está commitado; `rascunho.md` fica de fora). Os repositórios de demonstração ficam em `checkapps-demo/` fora deste repositório, com o passo a passo.
+2. **Exercitar as skills novas** (`verify-change`, `close-spec`, `skill-discovery`): a `verify-change` foi seguida à mão nesta spec (banco isolado, `curl`, Playwright); registrar o que faltar nelas.
+3. **Usar o scan pela tela com o GitHub real** (usuário): segredos da API (`docs/leitor-github.md`, seção 5), reiniciar a API e escanear em **Repositórios → Buscar no GitHub**; depois criar os repositórios de teste que faltam (arquivado, infra, outra sigla, fora do acesso do token).
+4. Repetir os roteiros Playwright das specs 001–007 contra o novo shell.
+5. Revisão do usuário no glossário (Solução, Tipo de app).
+6. Candidatos de baixo custo: checagens e repositórios na massa de demonstração do seed; decidir o que fazer com repositório que some do GitHub. (CRUD de SonarProject: em backlog, não fazer agora.)
+7. Depois: fase 3 do leitor (integrações entre apps por `appsettings` e Refit, apelidos host→app, mapa de aplicações), detecção automática de status nas Checagens a partir dos fatos da 013, dependências transitivas, tags chave-valor e a spec de Solução.
+8. Na migração para a máquina corporativa: `.github/copilot-instructions.md`, verificação do `.agents/skills/`; GitHub App no lugar do token pessoal (ADR-010).
+9. Antes de qualquer uso compartilhado: substituir ADR-007 por uma decisão de autenticação.

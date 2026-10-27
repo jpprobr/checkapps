@@ -1,0 +1,219 @@
+<main class="page">
+  <h1>Dependências</h1>
+  <p class="subtitle">
+    O que os repositórios catalogados usam, segundo a última análise de cada um. Só dependências diretas, com a versão
+    como está declarada. A análise roda no terminal (<code>CheckApps.Analyze</code>); esta tela só lê.
+  </p>
+
+  <div class="tabs" role="tablist" aria-label="Visões de dependências">
+    <button type="button" role="tab" class="tab" [class.active]="tab() === 'packages'"
+      [attr.aria-selected]="tab() === 'packages'" (click)="showTab('packages')">Quem usa o pacote</button>
+    <button type="button" role="tab" class="tab" [class.active]="tab() === 'frameworks'"
+      [attr.aria-selected]="tab() === 'frameworks'" (click)="showTab('frameworks')">.NET por squad</button>
+  </div>
+
+  @if (tab() === 'packages') {
+    <section role="tabpanel" aria-label="Quem usa o pacote">
+      <form class="card search-form" (ngSubmit)="search()">
+        <label>
+          Nome do pacote
+          <input type="text" name="name" placeholder="Newtonsoft.Json" autocomplete="off"
+            [ngModel]="name()" (ngModelChange)="name.set($event)" />
+        </label>
+        <label>
+          Squad
+          <select name="squad" [ngModel]="squadId()" (ngModelChange)="squadId.set($event)">
+            <option value="">Todas</option>
+            @for (squad of squads(); track squad.id) {
+              <option [value]="squad.id">{{ squad.name }}</option>
+            }
+          </select>
+        </label>
+        <label class="inline-checkbox">
+          <input type="checkbox" name="internalOnly" [ngModel]="internalOnly()" (ngModelChange)="internalOnly.set($event)" />
+          Apenas internos
+        </label>
+        <button type="submit" [disabled]="searching()">Buscar</button>
+      </form>
+      <p class="subtitle small">
+        O nome é exato (sem diferença de maiúsculas e minúsculas). Com "apenas internos" e o nome em branco, lista os
+        pacotes internos em uso.
+      </p>
+
+      @if (searchError()) {
+        <p class="error" role="alert">{{ searchError() }}</p>
+      }
+
+      @if (searching()) {
+        <p role="status">Consultando…</p>
+      }
+
+      @if (result(); as r) {
+        @if (r.coverage.unanalyzedRepositories > 0) {
+          <p class="coverage" role="status">
+            ⚠ {{ r.coverage.unanalyzedRepositories }}
+            {{ r.coverage.unanalyzedRepositories === 1 ? 'repositório catalogado ainda não foi analisado' : 'repositórios catalogados ainda não foram analisados' }}:
+            a resposta pode estar incompleta.
+          </p>
+        }
+        <p class="subtitle small">
+          @if (r.coverage.latestAnalyzedAt) {
+            Análise mais recente do catálogo: {{ r.coverage.latestAnalyzedAt | date: 'dd/MM/yyyy HH:mm' }}.
+          } @else {
+            Nenhuma análise foi gravada ainda.
+          }
+        </p>
+
+        @if (searched()?.internalOnly && !r.internalPrefixesConfigured) {
+          <p role="status">
+            Nenhum prefixo de pacotes internos está configurado (<code>Analysis:InternalPackagePrefixes</code>), então não há
+            como saber quais pacotes são internos. Veja <code>docs/leitor-github.md</code>.
+          </p>
+        } @else if (r.usages.length === 0) {
+          <p role="status">
+            @if (searched()?.name) {
+              Nenhum app usa «{{ searched()!.name }}» nas análises mais recentes.
+            } @else {
+              Nenhum pacote interno foi encontrado nas análises mais recentes.
+            }
+          </p>
+        } @else {
+          <h2>Versões em uso</h2>
+          <table>
+            <thead>
+              <tr>
+                <th>Pacote</th>
+                <th>Versão declarada</th>
+                <th>Apps</th>
+              </tr>
+            </thead>
+            <tbody>
+              @for (v of r.versions; track v.name + '@' + v.version) {
+                <tr>
+                  <td>
+                    {{ v.name }}
+                    @if (v.isInternal) { <span class="tag internal">interno</span> }
+                  </td>
+                  <td>{{ v.version ?? '—' }}</td>
+                  <td>{{ v.appCount }}</td>
+                </tr>
+              }
+            </tbody>
+          </table>
+
+          <h2>Onde é usado</h2>
+          <div class="table-scroll">
+            <table>
+              <thead>
+                <tr>
+                  <th>App</th>
+                  <th>Squad</th>
+                  <th>Repositório</th>
+                  <th>Pacote</th>
+                  <th>Versão</th>
+                  <th>Projeto</th>
+                  <th>Confiança</th>
+                  <th>Analisado em</th>
+                </tr>
+              </thead>
+              <tbody>
+                @for (u of r.usages; track u.repositoryId + '|' + u.projectPath + '|' + u.name + '|' + u.version) {
+                  <tr>
+                    <td><a [routerLink]="['/apps', u.appId]">{{ u.appName }}</a></td>
+                    <td>{{ u.squadName ?? '—' }}</td>
+                    <td>
+                      {{ u.repositoryName }}
+                      @if (u.repositoryStatus) { <span class="tag">{{ u.repositoryStatus }}</span> }
+                    </td>
+                    <td>
+                      {{ u.name }}
+                      @if (u.isInternal) { <span class="tag internal">interno</span> }
+                    </td>
+                    <td>{{ u.version ?? '—' }}</td>
+                    <td>{{ u.projectPath }}</td>
+                    <td>
+                      <span class="confidence" [class.low]="u.confidence === 'baixa'">{{ confidenceLabels[u.confidence] }}</span>
+                      @if (u.confidence !== 'alta' && u.confidenceNote) { <span class="note">{{ u.confidenceNote }}</span> }
+                    </td>
+                    <td>{{ u.analyzedAt | date: 'dd/MM/yyyy' }}</td>
+                  </tr>
+                }
+              </tbody>
+            </table>
+          </div>
+        }
+      }
+    </section>
+  } @else {
+    <section role="tabpanel" aria-label=".NET por squad">
+      @if (overviewLoading()) {
+        <p role="status">Carregando…</p>
+      } @else if (overviewFailed()) {
+        <p class="error" role="alert">Não foi possível carregar o panorama.</p>
+      } @else if (overview(); as o) {
+        <p class="subtitle small">
+          Conta os apps pelo framework dos repositórios <strong>ativos</strong> na análise mais recente. Um app em dois
+          frameworks conta nos dois. App sem informação (nunca analisado, só com repositório legado ou arquivado, ou sem
+          projeto .NET) fica em "Sem informação".
+          @if (o.coverage.unanalyzedRepositories > 0) {
+            · {{ o.coverage.unanalyzedRepositories }} repositório(s) catalogado(s) ainda não analisado(s).
+          }
+        </p>
+
+        @if (o.cells.length === 0) {
+          <p role="status">Nenhum app para mostrar ainda.</p>
+        } @else {
+          <div class="table-scroll">
+            <table class="matrix">
+              <thead>
+                <tr>
+                  <th>Framework</th>
+                  @for (squad of overviewSquads(); track squad.id) {
+                    <th>{{ squad.name }}</th>
+                  }
+                </tr>
+              </thead>
+              <tbody>
+                @for (framework of frameworks(); track framework) {
+                  <tr>
+                    <th scope="row">{{ frameworkLabel(framework) }}</th>
+                    @for (squad of overviewSquads(); track squad.id) {
+                      <td>
+                        @if (cellFor(framework, squad.id); as cell) {
+                          <button type="button" class="secondary count" [class.selected]="isSelected(framework, squad.id)"
+                            [attr.aria-pressed]="isSelected(framework, squad.id)"
+                            [attr.aria-label]="cell.apps.length + ' apps em ' + frameworkLabel(framework) + ', ' + squad.name"
+                            (click)="select(framework, squad.id)">
+                            {{ cell.apps.length }}
+                          </button>
+                        } @else {
+                          <span class="empty" aria-label="nenhum app">—</span>
+                        }
+                      </td>
+                    }
+                  </tr>
+                }
+              </tbody>
+            </table>
+          </div>
+
+          @if (selectedCell(); as cell) {
+            <section class="card cell-detail" aria-live="polite">
+              <h2>{{ frameworkLabel(cell.framework) }} · {{ cell.squadName ?? 'Sem squad' }}</h2>
+              <ul>
+                @for (app of cell.apps; track app.appId) {
+                  <li>
+                    <a [routerLink]="['/apps', app.appId]">{{ app.appName }}</a>
+                    @if (app.repositories.length > 0) {
+                      <span class="subtitle">({{ app.repositories.join(', ') }})</span>
+                    }
+                  </li>
+                }
+              </ul>
+            </section>
+          }
+        }
+      }
+    </section>
+  }
+</main>
