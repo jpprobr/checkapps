@@ -157,7 +157,7 @@ Para cada dado novo: identidade, relações, proveniência e tempo estão acima.
 
 ## Perguntas em aberto
 
-- `[NEEDS CLARIFICATION: valores de {env}]` Os **nomes de arquivo** de ambiente não seguem convenção (respondido em 2026-10-27; ver *Edge Cases*). Falta saber **o que o `{env}` vira dentro da URL** (`dev`, `hom`/`hml`, `prod`?): decide se a lista de hosts consegue casar `empresa.{env}.exemplo.com` com `empresa.dev.exemplo.com`. Até saber, não se casa por palpite: agrupa-se pela **seção** (`reference`) e, dentro dela, pela categoria `environment_kind`.
+- **Resolvido em 2026-10-27 (depois da spec):** o `{env}` dentro da URL vira o **ambiente** mesmo. Como nem todos os apps seguem o mesmo padrão de nome, o valor padrão é `dev`, `hom` ou `prod` (configurável). Esta spec continua sem casar o modelo com o host concreto; quem fará isso é a fatia 2 (apelidos host→app e confirmação), usando esses valores.
 - `[NEEDS CLARIFICATION: tabela própria]` Confirmar no plano: `repository_integrations` (inclinação) × reaproveitar `repository_dependencies`.
 
 ## Design notes *(opcional)*

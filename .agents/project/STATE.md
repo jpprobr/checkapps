@@ -44,7 +44,7 @@ Estágio do roadmap: **Inventário + Health + Evolution concluídos**, mais **Ch
 
 ## Decisões pendentes / perguntas abertas
 
-- **O que o `{env}` vira dentro da URL** (`dev`, `hom`, `hml`, `prod`?): decide se a fatia 2 consegue casar `empresa.{env}.exemplo.com` com `empresa.dev.exemplo.com`. Até lá a lista de hosts agrupa pelo host literal, sem palpite.
+- **`{env}` na URL** (decidido em 2026-10-27): vira o ambiente; o padrão é `dev`, `hom` ou `prod` (configurável, porque os apps não seguem um padrão único de nome). A fatia 2 das integrações usa isso para casar `empresa.{env}.exemplo.com` com `empresa.dev.exemplo.com`; a spec 014 não casa nada por palpite.
 - **Exemplo real de `appsettings` do time**: a fixture 07 é inventada a partir da descrição do usuário; ajustar quando houver um modelo.
 
 - **Solução e Tipo de app**: definições no glossário aguardam revisão do usuário.
