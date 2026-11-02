@@ -241,3 +241,21 @@ CREATE INDEX IF NOT EXISTS ix_repository_integrations_host
 
 CREATE INDEX IF NOT EXISTS ix_repository_integrations_reference
     ON repository_integrations (lower(reference));
+
+-- Vínculo host→app (spec 017): decisão HUMANA de que o host é o app que recebe a chamada. Fica fora das análises de
+-- propósito (reanalisar não pode apagar decisão de pessoa) e sem FK para repository_integrations: o vínculo precede e
+-- sobrevive ao fato lido. host_key é host[:porta] em minúsculas e pode ser um modelo com {env}. Um confirmado por host é
+-- regra do serviço (SQL portável, sem índice parcial); o par (host_key, app_id) é único.
+CREATE TABLE IF NOT EXISTS host_links (
+    id         TEXT PRIMARY KEY,
+    host_key   TEXT NOT NULL,
+    app_id     TEXT NOT NULL REFERENCES apps(id) ON DELETE CASCADE,
+    state      TEXT NOT NULL,
+    origin     TEXT NOT NULL,
+    decided_at TEXT NOT NULL,
+    note       TEXT NULL,
+    UNIQUE (host_key, app_id)
+);
+
+CREATE INDEX IF NOT EXISTS ix_host_links_app
+    ON host_links (app_id);

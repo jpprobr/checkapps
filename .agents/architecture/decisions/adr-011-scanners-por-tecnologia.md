@@ -32,3 +32,14 @@ A spec 013 abre a leitura do **conteúdo** dos repositórios já catalogados (a 
 ## Adendo (2026-10-27, spec 014): integrações como segundo tipo de fato
 
 As integrações declaradas (hosts que um repositório chama, vistos em `appsettings*.json`) ganham **tabela própria**, `repository_integrations`, ligada à mesma análise e com a mesma proveniência (origem, confiança, scanner, arquivo). Não reaproveitam `repository_dependencies` porque host, porta, caminho base e ambiente não são nome e versão de pacote, e a próxima fatia (apelidos host→app) precisa de índice por host. O contrato `IRepositoryScanner` continua um parser: ele devolve **candidatos brutos** e o **núcleo** (`IntegrationNormalizer`) decide o que é gravado, de modo que a redação de segredos (usuário e senha em URL, query, connection strings) não depende de cada scanner.
+
+## Adendo (2026-11-02, spec 017): o vínculo host→app é decisão humana, em tabela própria
+
+O vínculo "este host é o app Y" (Y **recebe** a chamada) **não é um fato lido**: é uma decisão de pessoa, com ciclo de vida diferente das análises. Por isso ganha a tabela própria `host_links`, **fora** de `repository_analyses`/`repository_integrations`:
+
+- **Sem FK para a integração**: o vínculo precede e sobrevive ao fato (reanalisar não apaga decisão). Só o app tem FK (cascata).
+- **Chave de texto**: `host_key` = `host[:porta]` em minúsculas, que pode ser o **modelo** com `{env}`. O casamento do modelo com o host concreto é uma função pura (`HostKeyMatcher`) que troca `{env}` pelos valores de `Analysis:EnvPlaceholderValues` (padrão `dev`, `hom`, `prod`). Nunca por palpite fora dessa lista.
+- **Estados**: `confirmado` e `rejeitado`. `sugerido` fica reservado ao domínio (sugestão por nome ou IA no futuro, com `origin` e confiança); nada o produz hoje. `origin = HUMAN`.
+- **Regras no serviço** (SQL portável, sem índice parcial): par `(host_key, app_id)` único; no máximo **um `confirmado` por host** (o segundo é conflito, 409); vários `rejeitado`. O vínculo **exato** vence o do modelo.
+- **"Não visto na última análise"** é derivado (nenhuma integração corrente casa), nunca gravado.
+- **Limite aceito**: um vínculo por **host**, não por seção nem por caminho. Um gateway com vários serviços atrás do mesmo host não se expressa. A evolução (host + caminho base) acrescenta uma coluna sem quebrar a tabela.

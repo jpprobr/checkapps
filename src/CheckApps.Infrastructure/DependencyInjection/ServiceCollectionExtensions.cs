@@ -31,6 +31,7 @@ public static class ServiceCollectionExtensions
         services.AddSingleton<ICheckRepository, CheckRepository>();
         services.AddSingleton<IDiscoveredRepositoryRepository, DiscoveredRepositoryRepository>();
         services.AddSingleton<IAnalysisRepository, AnalysisRepository>();
+        services.AddSingleton<IHostLinkRepository, HostLinkRepository>();
 
         services.AddSingleton<IQualityAssessmentEngine, QualityAssessmentEngineV1>();
         services.AddSingleton<ISonarProvider, MockSonarProvider>();

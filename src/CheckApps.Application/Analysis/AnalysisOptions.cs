@@ -40,4 +40,15 @@ public class AnalysisOptions
 
     public IReadOnlyDictionary<string, string[]> EffectiveEnvironmentAliases =>
         EnvironmentAliases is { Count: > 0 } aliases ? aliases : EnvironmentNames.DefaultAliases;
+
+    /// <summary>
+    /// Valores que o <c>{env}</c> de um host-modelo (<c>empresa.{env}.exemplo.com</c>) pode assumir ao casar com um host
+    /// concreto (spec 017). Nulo = <see cref="DefaultEnvPlaceholderValues"/> (mesmo motivo do binder).
+    /// </summary>
+    public string[]? EnvPlaceholderValues { get; set; }
+
+    public static readonly string[] DefaultEnvPlaceholderValues = ["dev", "hom", "prod"];
+
+    public string[] EffectiveEnvPlaceholderValues =>
+        EnvPlaceholderValues is { Length: > 0 } values ? values : DefaultEnvPlaceholderValues;
 }

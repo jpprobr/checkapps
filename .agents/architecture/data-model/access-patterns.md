@@ -92,6 +92,9 @@ Revistos para SQL em 2026-10-12. Os ⚠️ da versão DynamoDB (partição únic
 | 44 | Integrações de um app (por repositório) | `repositories` do app + análise corrente (mesma subconsulta do #37) + `repository_integrations` por `analysis_id` | ✅ | Inclui repositório nunca analisado e a falha mais nova que a corrente; o serviço agrupa por seção (`reference`), arquivo base primeiro |
 | 45 | Hosts chamados, com apps e squads | `repository_integrations` ⨝ análise corrente ⨝ `repositories` ⨝ `apps` ⨝ `squads`, `host IS NOT NULL` | ✅ | Agrupa por `host[:porta]` literal **no serviço**; `{env}` não é casado com `dev`/`hom` por palpite |
 | 46 | Filtro por trecho do host | `lower(host) LIKE @pattern ESCAPE '\'` | ✅ | Curingas digitados (`%`, `_`) são escapados; índice `(lower(host))` serve ao igual, o "contém" varre as correntes (volume pequeno) |
+| 48 | Vínculos host→app (todos) | `host_links` ordenado por `host_key, app_id`; nome do app e "visto" calculados no serviço | ✅ | Tabela pequena (decisões humanas); lida inteira e resolvida em memória |
+| 49 | Gravar/trocar o vínculo de um par (host, app) | `UPDATE` pelo par e, se nada mudou, `INSERT` | ✅ | Portável (sem `ON CONFLICT`); preserva o id da linha existente |
+| 50 | Remover o vínculo de um par | `DELETE ... WHERE host_key = @k AND app_id = @a` | ✅ | `false` → 404 |
 | 47 | Quem chama o host X (detalhe) | o mesmo SQL do #45 filtrado por trecho; o serviço compara a chave exata (`host[:porta]`) | ✅ | Host inexistente → 404 |
 
 ## Fora de escopo hoje — agora por decisão de produto, não de banco

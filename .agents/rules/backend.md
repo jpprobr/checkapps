@@ -43,7 +43,7 @@ Leia antes de editar código .NET. Só regras não-óbvias e específicas deste 
 
 - **Redação de segredos é do núcleo, não do scanner.** O scanner devolve candidatos brutos (`ScannerIntegration`) e `IntegrationNormalizer` decide o que é gravado: usuário, senha e query de URL somem, connection string nunca é lida, e o valor bruto não vai para aviso, nota nem log. Todo teste de integração tem de plantar um segredo na fixture e provar que ele não aparece no resultado.
 - **Aviso e nota são coisas diferentes.** Aviso (arquivo inválido, valor não resolvido) torna a análise `parcial`; **nota** (`ScannerResult.Notes`, gravada com o prefixo `nota: `) só informa — "3 valores ignorados" — e nunca decide a situação.
-- **O binder do .NET soma itens de configuração a um array/dicionário que já tem valor padrão**, em vez de substituí-lo. Opções com padrão (`IntegrationKeyHints`, `EnvironmentAliases`) são nulas por padrão e expostas por um getter `Effective…`; há teste de composição provando que a configuração substitui.
+- **O binder do .NET soma itens de configuração a um array/dicionário que já tem valor padrão**, em vez de substituí-lo. Opções com padrão (`IntegrationKeyHints`, `EnvironmentAliases`, `EnvPlaceholderValues`) são nulas por padrão e expostas por um getter `Effective…`; há teste de composição provando que a configuração substitui.
 - **Reanálise do mesmo commit é explícita** (`--force`), nunca implícita: sem ela, o commit já analisado dá "sem alteração" e não ganha o que um scanner novo passou a ler.
 - **`ScannerResult` evolui por parâmetros opcionais** (`Integrations`, `Notes`): scanners e testes antigos continuam compilando. Não troque para record posicional com propriedades de tipo diferente do parâmetro (`CS8866`).
 

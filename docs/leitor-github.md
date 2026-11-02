@@ -146,7 +146,17 @@ A mesma análise do scanner .NET lê os arquivos `appsettings*.json` (o base e o
 - **Ambiente**: o nome do arquivo (`appsettings.Homolog.json` → `Homolog`) é guardado como está e normalizado por apelidos, sem diferença de caixa: `dev` ← `Dev`, `Development`; `hom` ← `Hom`, `Homolog`, `Staging`; `prod` ← `Prod`, `Production`. Nome fora da tabela (`Uat`, `Local`) fica só com o nome, sem categoria. A tabela é configurável: `Analysis:EnvironmentAliases:hom:0=Uat` (substitui os padrões, não soma).
 - **Reanalisar**: as análises feitas antes da spec 014 não têm integrações; rode `CheckApps.Analyze --sigla <sigla> --force` (ou espere um commit novo).
 - **Onde ver**: seção **Integrações** no detalhe do app e o item **Integrações** do menu (lista de hosts, com quem os chama). A API só lê.
-- **O que não cobre ainda**: interfaces Refit e `AddHttpClient` no código (spec 015), dizer a que app do catálogo um host pertence e confirmar o vínculo, e o mapa de aplicações.
+- **Vínculo host→app** (spec 017, veja abaixo): dizer a que app um host pertence é decisão de pessoa.
+- **O que não cobre ainda**: interfaces Refit e `AddHttpClient` no código (spec 015), a tela para confirmar vínculos e o mapa de aplicações.
+
+### Vínculo host→app (spec 017)
+
+O host `empresa.{env}.exemplo.com` é o app "Pagamentos"? Quem responde é uma pessoa; o CheckApps só guarda a decisão e a aplica. Hoje por API (a tela de confirmação é a próxima fatia):
+
+- `PUT /api/integrations/hosts/{host}/link` com `{ "appId": "...", "state": "confirmado" | "rejeitado", "note": "..." }` (o `{host}` vai codificado na URL: o modelo tem `{env}`). Um host só pode ter **um** app confirmado (o segundo dá 409; remova o anterior); rejeitos podem ser vários.
+- `DELETE /api/integrations/hosts/{host}/link/{appId}` remove; `GET /api/integrations/links` lista tudo, com `seen` = se alguma análise corrente ainda chama o host.
+- Um vínculo no **modelo** (`empresa.{env}.exemplo.com`) vale para `empresa.dev…`, `empresa.hom…` e `empresa.prod…` (a lista é `Analysis:EnvPlaceholderValues`, padrão `dev`, `hom`, `prod`; configurar **substitui** o padrão). Um vínculo no host exato vence o do modelo. Outros valores (`qa`) **não** casam, a menos que estejam na lista.
+- A lista de hosts traz o vínculo de cada um (`link`, com `via` = `exact` ou `template`) e aceita `?linkStatus=sem-vinculo|confirmado|rejeitado`; as integrações de um app trazem o app destino quando o host está confirmado.
 
 ## 7. Problemas comuns
 

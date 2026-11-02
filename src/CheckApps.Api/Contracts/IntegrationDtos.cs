@@ -12,7 +12,9 @@ public record IntegrationDto(
     string? Environment, string? EnvironmentKind, string State, string ProjectPath, string SourceFile, string Origin,
     string Confidence, string? ConfidenceNote, string ScannerId, string ScannerVersion);
 
-public record IntegrationSectionDto(string Reference, IReadOnlyList<IntegrationDto> Integrations);
+/// <param name="Destinations">Por id da integração: o app destino, só quando o host tem vínculo <c>confirmado</c> (spec 017).</param>
+public record IntegrationSectionDto(
+    string Reference, IReadOnlyList<IntegrationDto> Integrations, IReadOnlyDictionary<string, HostLinkMatchDto> Destinations);
 
 /// <param name="Analysis">A corrente; nula se o repositório nunca foi analisado.</param>
 /// <param name="LastFailure">Tentativa que falhou depois da corrente.</param>
@@ -28,7 +30,7 @@ public record SquadRefDto(string Id, string Name);
 /// <param name="IsTemplate">O host tem <c>{env}</c>.</param>
 public record HostSummaryDto(
     string Key, string Host, int? Port, bool IsTemplate, int AppCount, int RepositoryCount, IReadOnlyList<SquadRefDto> Squads,
-    IReadOnlyList<string> References, IReadOnlyList<string> EnvironmentKinds, DateTimeOffset LatestAnalyzedAt);
+    IReadOnlyList<string> References, IReadOnlyList<string> EnvironmentKinds, DateTimeOffset LatestAnalyzedAt, HostLinkInfoDto Link);
 
 /// <param name="Coverage">Repositórios catalogados nunca analisados: a lista pode estar incompleta.</param>
 public record HostListDto(IReadOnlyList<HostSummaryDto> Hosts, AnalysisCoverageDto Coverage);
@@ -37,4 +39,23 @@ public record HostUsageDto(
     string AppId, string AppName, string? SquadId, string? SquadName, string RepositoryId, string RepositoryName,
     string? RepositoryStatus, IntegrationDto Integration, DateTimeOffset AnalyzedAt);
 
-public record HostDetailDto(string Key, string Host, int? Port, bool IsTemplate, IReadOnlyList<HostUsageDto> Usages);
+public record HostDetailDto(
+    string Key, string Host, int? Port, bool IsTemplate, IReadOnlyList<HostUsageDto> Usages, HostLinkInfoDto Link);
+
+// Spec 017: vínculo host→app, sempre decisão de pessoa. State = confirmado | rejeitado; Via = exact | template.
+
+/// <param name="Template">A chave do modelo (<c>empresa.{env}.exemplo.com</c>) quando <c>Via</c> é <c>template</c>.</param>
+public record HostLinkMatchDto(
+    string LinkId, string HostKey, string AppId, string AppName, string State, string Via, string? Template,
+    DateTimeOffset DecidedAt, string? Note);
+
+/// <param name="Status"><c>confirmado</c>, <c>rejeitado</c> (só há rejeitos) ou <c>sem-vinculo</c>.</param>
+/// <param name="Confirmed">O app confirmado para o host (o exato vence o modelo); nulo se não há.</param>
+public record HostLinkInfoDto(string Status, HostLinkMatchDto? Confirmed, IReadOnlyList<HostLinkMatchDto> Rejected);
+
+/// <param name="Seen"><c>false</c> = nenhuma integração das análises correntes casa com o vínculo ("não visto na última análise").</param>
+public record HostLinkDto(
+    string Id, string HostKey, bool IsTemplate, string AppId, string AppName, string State, string Origin,
+    DateTimeOffset DecidedAt, string? Note, bool Seen);
+
+public record SetHostLinkRequest(string? AppId, string? State, string? Note);

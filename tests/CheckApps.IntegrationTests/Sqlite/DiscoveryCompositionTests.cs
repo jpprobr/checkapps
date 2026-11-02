@@ -172,13 +172,14 @@ public class DiscoveryCompositionTests : IDisposable
     public async Task Analysis_IntegrationOptions_FromConfiguration_ReplaceTheDefaults_NotAddToThem()
     {
         await using var provider = Build(
-            ("Scan:Source", "fake"), ("Analysis:IntegrationKeyHints:0", "Address"), ("Analysis:EnvironmentAliases:hom:0", "Uat"));
+            ("Scan:Source", "fake"), ("Analysis:IntegrationKeyHints:0", "Address"), ("Analysis:EnvironmentAliases:hom:0", "Uat"), ("Analysis:EnvPlaceholderValues:0", "qa"));
 
         var options = provider.GetRequiredService<Application.Analysis.AnalysisOptions>();
 
         Assert.Equal(["Address"], options.EffectiveIntegrationKeyHints);   // o binder não soma aos padrões
         Assert.Equal("hom", Application.Analysis.EnvironmentNames.Classify("Uat", options.EffectiveEnvironmentAliases));
         Assert.Null(Application.Analysis.EnvironmentNames.Classify("Staging", options.EffectiveEnvironmentAliases));
+        Assert.Equal(["qa"], options.EffectiveEnvPlaceholderValues);   // spec 017: também substitui, não soma a dev/hom/prod
     }
 
     [Fact]

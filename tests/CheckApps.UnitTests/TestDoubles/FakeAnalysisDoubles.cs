@@ -117,3 +117,27 @@ public class FakeContentSource : IRepositoryContentSource
         return Task.FromResult(_vanished.Contains(path) ? null : files.GetValueOrDefault(path));
     }
 }
+
+/// <summary>Vínculos host→app em memória (spec 017); a chave do host é comparada em minúsculas, como no SQLite.</summary>
+public class FakeHostLinkRepository : IHostLinkRepository
+{
+    private readonly List<HostLink> _links = [];
+
+    public IReadOnlyList<HostLink> Links => _links;
+
+    public Task<IReadOnlyList<HostLink>> ListAsync(CancellationToken ct = default) =>
+        Task.FromResult<IReadOnlyList<HostLink>>(_links.OrderBy(l => l.HostKey, StringComparer.Ordinal).ThenBy(l => l.AppId, StringComparer.Ordinal).ToList());
+
+    public Task<HostLink?> GetAsync(string hostKey, string appId, CancellationToken ct = default) =>
+        Task.FromResult(_links.FirstOrDefault(l => l.HostKey == hostKey.ToLowerInvariant() && l.AppId == appId));
+
+    public Task UpsertAsync(HostLink link, CancellationToken ct = default)
+    {
+        _links.RemoveAll(l => l.HostKey == link.HostKey.ToLowerInvariant() && l.AppId == link.AppId);
+        _links.Add(link with { HostKey = link.HostKey.ToLowerInvariant() });
+        return Task.CompletedTask;
+    }
+
+    public Task<bool> DeleteAsync(string hostKey, string appId, CancellationToken ct = default) =>
+        Task.FromResult(_links.RemoveAll(l => l.HostKey == hostKey.ToLowerInvariant() && l.AppId == appId) > 0);
+}
