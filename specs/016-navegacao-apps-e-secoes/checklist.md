@@ -2,7 +2,7 @@
 
 Critério de "concluído". A spec só muda para `Implementada` quando tudo abaixo estiver marcado. Cada item deve ser verificável por alguém que não escreveu o código.
 
-Status: **implementada** em 2026-10-27 (decisões do usuário no mesmo dia: menu em dois itens, tela Apps com lista geral, só Pacotes e Integrações recolhíveis e fechadas; plano aprovado em plan mode). Resta a confirmação do usuário na tela.
+Status: **implementada** em 2026-10-27 (decisões do usuário no mesmo dia: menu em dois itens, tela Apps com lista geral, só Pacotes e Integrações recolhíveis e fechadas; plano aprovado em plan mode). **Confirmada pelo usuário na tela em 2026-11-02.**
 
 ## Qualidade da spec (antes de codar)
 
@@ -31,7 +31,7 @@ Status: **implementada** em 2026-10-27 (decisões do usuário no mesmo dia: menu
 - [x] `npx ng build` sem erros
 - [x] `curl` em `GET /api/apps`: sem filtro (13 apps em 2 squads), `qualityLevel=A` (filtra), `qualityLevel=Z` (400), `qualityLevel=` vazio (todos)
 - [x] Navegador (Playwright, banco isolado, 39 checagens): tela Apps (busca, filtros, inativos, vazio, link ao detalhe), menu (Apps, Pacotes, Integrações, `aria-current`, recolhido, celular), redirecionamento de `/dependencies`, seções fechadas por padrão, abrir/fechar, estado lembrado após recarregar, armazenamento bloqueado, intervalo igual entre cartões; zero erros de console
-- [ ] Confirmação do usuário na tela
+- [x] Confirmação do usuário na tela (2026-11-02)
 
 ## Encerramento (skill `close-spec`)
 

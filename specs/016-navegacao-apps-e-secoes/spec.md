@@ -1,6 +1,6 @@
 # Spec 016: Navegação — Apps no menu, "Pacotes" e seções recolhíveis no detalhe do app
 
-**Status**: Implementada (2026-10-27); aguarda a confirmação do usuário na tela
+**Status**: Implementada (2026-10-27); confirmada pelo usuário na tela em 2026-11-02
 **Criada em**: 2026-10-27
 **Origem**: revisão do usuário depois de conferir as telas da spec 014 (2026-10-27): (1) Integrações também são um tipo de dependência, então o menu precisa de uma organização mais clara; (2) só os Apps ficaram sem item no menu principal, acessíveis apenas por dentro de uma squad; (3) os cartões Dependências e Integrações do detalhe do app ficaram colados e o detalhe ganhou muita informação. A numeração pula a 015, reservada à leitura de código (interfaces Refit e `AddHttpClient`).
 

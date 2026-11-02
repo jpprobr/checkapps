@@ -1,6 +1,6 @@
 # STATE.md — estado atual do projeto
 
-> Reescrito (não anexado) ao fim de cada sessão de trabalho. Se este arquivo estiver desatualizado em relação ao `git log`, o git está certo. Última atualização: **2026-10-27**, ao implementar a spec 014 (integrações declaradas em `appsettings*.json`, fatia 1 das integrações entre apps), com a spec 013 já commitada (`7a3e0b7`). **A spec 014 está fechada: verificada em banco isolado (build sem avisos, 350 unitários + 78 de integração, `curl` e 31 checagens no navegador), analisada de verdade no GitHub com dois repositórios de demonstração e confirmada pelo usuário na tela. Está commitada (veja o `git log`). A spec 016 (Apps no menu, "Pacotes" e seções recolhíveis) está implementada e verificada em banco isolado, mas NÃO commitada; falta a confirmação do usuário na tela.**
+> Reescrito (não anexado) ao fim de cada sessão de trabalho. Se este arquivo estiver desatualizado em relação ao `git log`, o git está certo. Última atualização: **2026-10-27**, ao implementar a spec 014 (integrações declaradas em `appsettings*.json`, fatia 1 das integrações entre apps), com a spec 013 já commitada (`7a3e0b7`). **A spec 014 está fechada: verificada em banco isolado (build sem avisos, 350 unitários + 78 de integração, `curl` e 31 checagens no navegador), analisada de verdade no GitHub com dois repositórios de demonstração e confirmada pelo usuário na tela. Está commitada (veja o `git log`). A spec 016 (Apps no menu, "Pacotes" e seções recolhíveis) está fechada: implementada, verificada em banco isolado, confirmada pelo usuário na tela e commitada (veja o `git log`).**
 
 ## Onde estamos
 
@@ -69,7 +69,7 @@ Os críticos estão em `AGENTS.md` e nas regras. Os que mais mordem hoje:
 
 ## Próximos passos (em ordem)
 
-1. **Fechar a spec 016**: o usuário confirmar na tela (Apps no menu, Pacotes, seções recolhíveis fechadas com resumo, estado lembrado). Em seguida, commitar (nada da 016 está commitado; `rascunho.md` fica de fora).
+1. **Fatia 2 das integrações**: apelidos host→app e confirmação humana (tabela de vínculos sugerido/confirmado/rejeitado, "não visto na última análise"), casando o modelo `{env}` com `dev`/`hom`/`prod`. Depois, a **spec 015** (Refit e `AddHttpClient`, via DI e classe de configuração; fixtures inventadas até haver um exemplo real) e o mapa de aplicações.
 2. **Spec 015: interfaces Refit e `AddHttpClient` no código** — liga a seção de configuração à interface de mesmo nome e conta as rotas; pede um ADR (analisador de sintaxe × busca textual) e um modelo real de interface do time.
 3. **Fatia 2 das integrações: apelidos host→app e confirmação humana** (tabela de vínculos sugerido/confirmado/rejeitado, "não visto na última análise"); depois o **mapa de aplicações**.
 4. **Detecção automática de status nas Checagens** a partir dos fatos das specs 013 e 014 (versão do .NET, pacote mínimo).
