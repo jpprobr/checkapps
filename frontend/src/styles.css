@@ -267,3 +267,45 @@ button.secondary,
   font-size: 0.9rem;
   color: var(--text-secondary);
 }
+
+/* Seção recolhível (spec 016): <details> nativo. O indicador é um caractere, nunca só cor. */
+.collapsible > summary {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 0.25rem 0.75rem;
+  cursor: pointer;
+  list-style: none;
+}
+
+.collapsible > summary::-webkit-details-marker {
+  display: none;
+}
+
+.collapsible > summary::before {
+  content: '▸';
+  color: var(--text-secondary);
+}
+
+.collapsible[open] > summary::before {
+  content: '▾';
+}
+
+.collapsible > summary h2 {
+  margin: 0;
+}
+
+.collapsible > summary:focus-visible {
+  outline: 2px solid var(--series-1);
+  outline-offset: 4px;
+  border-radius: 6px;
+}
+
+.collapsible .summary-text {
+  color: var(--text-secondary);
+  font-size: 0.9rem;
+}
+
+.collapsible[open] > summary {
+  margin-bottom: 0.5rem;
+}

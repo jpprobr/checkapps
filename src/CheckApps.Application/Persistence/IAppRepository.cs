@@ -11,6 +11,9 @@ public interface IAppRepository
 
     Task<IReadOnlyList<App>> ListByQualityLevelAsync(QualityLevel level, CancellationToken cancellationToken = default);
 
+    /// <summary>Todos os apps de todas as squads (inclusive inativos e sem snapshot), com o estado de qualidade corrente.</summary>
+    Task<IReadOnlyList<App>> ListAllAsync(CancellationToken cancellationToken = default);
+
     Task<IReadOnlyList<Repository>> GetRepositoriesAsync(string appId, CancellationToken cancellationToken = default);
 
     Task<IReadOnlyList<SonarProject>> GetSonarProjectsAsync(string appId, CancellationToken cancellationToken = default);

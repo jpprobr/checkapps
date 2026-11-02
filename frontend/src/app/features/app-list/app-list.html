@@ -1,6 +1,11 @@
 <main class="page">
-  <p class="breadcrumb"><a routerLink="/squads">Squads</a> / <a [routerLink]="['/squads', squadId]">{{ currentSquad.squadName() ?? squadId }}</a></p>
+  @if (squadId; as id) {
+    <p class="breadcrumb"><a routerLink="/squads">Squads</a> / <a [routerLink]="['/squads', id]">{{ currentSquad.squadName() ?? id }}</a></p>
+  }
   <h1>Apps</h1>
+  @if (isGlobal) {
+    <p class="subtitle">Os apps de todas as squads. Para criar um app, entre na squad dele.</p>
+  }
 
   @if (loading()) {
     <p>Carregando…</p>
@@ -16,11 +21,22 @@
         <input type="checkbox" [checked]="showInactive()" (change)="showInactive.set(!showInactive())" />
         Mostrar inativos
       </label>
-      <a [routerLink]="['/squads', squadId, 'apps', 'new']" class="button-secondary">+ Novo App</a>
+      @if (squadId; as id) {
+        <a [routerLink]="['/squads', id, 'apps', 'new']" class="button-secondary">+ Novo App</a>
+      }
     </div>
 
     <div class="filters">
       <input type="search" placeholder="Buscar por nome…" [ngModel]="search()" (ngModelChange)="search.set($event)" />
+
+      @if (isGlobal) {
+        <select aria-label="Squad" [ngModel]="squadFilter()" (ngModelChange)="squadFilter.set($event)">
+          <option value="">Todas as squads</option>
+          @for (squad of currentSquad.squads(); track squad.id) {
+            <option [value]="squad.id">{{ squad.name }}</option>
+          }
+        </select>
+      }
 
       <select [ngModel]="qualityLevelFilter()" (ngModelChange)="qualityLevelFilter.set($event)">
         <option value="">Todos os Quality Levels</option>
@@ -35,42 +51,46 @@
       </select>
     </div>
 
-    <table>
-      <thead>
-        <tr>
-          <th>App</th>
-          <th>Criticidade</th>
-          <th>Quality Level</th>
-          <th>Último snapshot</th>
-          <th></th>
-        </tr>
-      </thead>
-      <tbody>
-        @for (app of filteredApps(); track app.id) {
-          <tr [class.inactive]="app.status === 'inactive'">
-            <td>
-              <a [routerLink]="['/apps', app.id]">{{ app.name }}</a>
-              @if (app.status === 'inactive') {
-                <span class="tag">inativo</span>
-              }
-            </td>
-            <td>{{ app.criticality ?? '—' }}</td>
-            <td><app-quality-badge [level]="app.currentQualityLevel" /></td>
-            <td>{{ app.lastSnapshotAt ? (app.lastSnapshotAt | date: 'MMM/yyyy' : 'UTC') : '—' }}</td>
-            <td class="row-actions">
-              <a [routerLink]="['/apps', app.id, 'edit']" class="button-secondary">Editar</a>
-              <button type="button" class="secondary" (click)="toggleStatus(app)">
-                {{ app.status === 'inactive' ? 'Ativar' : 'Inativar' }}
-              </button>
-              <button type="button" class="danger" (click)="remove(app)">Remover</button>
-            </td>
-          </tr>
-        } @empty {
+    <div class="table-scroll">
+      <table>
+        <thead>
           <tr>
-            <td colspan="5">Nenhum app encontrado.</td>
+            <th>App</th>
+            @if (isGlobal) { <th>Squad</th> }
+            <th>Criticidade</th>
+            <th>Quality Level</th>
+            <th>Último snapshot</th>
+            <th></th>
           </tr>
-        }
-      </tbody>
-    </table>
+        </thead>
+        <tbody>
+          @for (app of filteredApps(); track app.id) {
+            <tr [class.inactive]="app.status === 'inactive'">
+              <td>
+                <a [routerLink]="['/apps', app.id]">{{ app.name }}</a>
+                @if (app.status === 'inactive') {
+                  <span class="tag">inativo</span>
+                }
+              </td>
+              @if (isGlobal) { <td>{{ squadName(app) }}</td> }
+              <td>{{ app.criticality ?? '—' }}</td>
+              <td><app-quality-badge [level]="app.currentQualityLevel" /></td>
+              <td>{{ app.lastSnapshotAt ? (app.lastSnapshotAt | date: 'MMM/yyyy' : 'UTC') : '—' }}</td>
+              <td class="row-actions">
+                <a [routerLink]="['/apps', app.id, 'edit']" class="button-secondary">Editar</a>
+                <button type="button" class="secondary" (click)="toggleStatus(app)">
+                  {{ app.status === 'inactive' ? 'Ativar' : 'Inativar' }}
+                </button>
+                <button type="button" class="danger" (click)="remove(app)">Remover</button>
+              </td>
+            </tr>
+          } @empty {
+            <tr>
+              <td [attr.colspan]="isGlobal ? 6 : 5">Nenhum app encontrado.</td>
+            </tr>
+          }
+        </tbody>
+      </table>
+    </div>
   }
 </main>

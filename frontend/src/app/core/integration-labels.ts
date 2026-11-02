@@ -1,4 +1,4 @@
-import { Integration, IntegrationState } from './models';
+import { AppIntegrations, Integration, IntegrationState } from './models';
 
 /** Estado do endereço, sempre em texto (nunca só por cor). */
 export const INTEGRATION_STATE_LABELS: Record<IntegrationState, string> = {
@@ -43,4 +43,36 @@ export function isNote(warning: string): boolean {
 
 export function noteText(warning: string): string {
   return isNote(warning) ? warning.slice(NOTE_PREFIX.length) : warning;
+}
+
+/** Resumo de uma linha da seção "Integrações" do app, mostrado também com a seção fechada (spec 016). */
+export function integrationsSummary(data: AppIntegrations): string {
+  const repositories = data.repositories;
+  if (repositories.length === 0) {
+    return 'sem repositórios cadastrados';
+  }
+
+  const analyzed = repositories.filter((r) => r.analysis);
+  const failed = repositories.some((r) => r.lastFailure);
+  if (analyzed.length === 0) {
+    return failed ? 'a última tentativa de análise falhou' : 'ainda não analisado';
+  }
+
+  const sections = analyzed.flatMap((r) => r.sections);
+  const integrations = sections.flatMap((s) => s.integrations);
+  if (integrations.length === 0) {
+    return analyzed.every((r) => r.analysis!.status === 'sem-scanner') ? 'nenhum scanner se aplica' : 'nenhuma integração declarada';
+  }
+
+  const parts = [
+    `${integrations.length} ${integrations.length === 1 ? 'integração' : 'integrações'} em ${sections.length} ${sections.length === 1 ? 'seção' : 'seções'}`,
+  ];
+  const unresolved = integrations.filter((i) => i.state === 'nao-resolvida').length;
+  if (unresolved > 0) {
+    parts.push(`${unresolved} ${unresolved === 1 ? 'não resolvida' : 'não resolvidas'}`);
+  }
+  if (failed) {
+    parts.push('última tentativa falhou');
+  }
+  return parts.join(' · ');
 }

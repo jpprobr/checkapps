@@ -60,6 +60,9 @@ public class FakeAppRepository : IAppRepository
     public Task<IReadOnlyList<App>> ListBySquadAsync(string squadId, CancellationToken ct = default) =>
         Task.FromResult<IReadOnlyList<App>>(_apps.Values.Where(a => a.SquadId == squadId).ToList());
 
+    public Task<IReadOnlyList<App>> ListAllAsync(CancellationToken ct = default) =>
+        Task.FromResult<IReadOnlyList<App>>(_apps.Values.ToList());
+
     public Task<IReadOnlyList<App>> ListByQualityLevelAsync(QualityLevel level, CancellationToken ct = default) =>
         Task.FromResult<IReadOnlyList<App>>(_apps.Values.Where(a => a.CurrentQualityLevel == level).ToList());
 

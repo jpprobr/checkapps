@@ -113,6 +113,9 @@ public class AppService(
     public Task<IReadOnlyList<App>> ListByQualityLevelAsync(QualityLevel level, CancellationToken cancellationToken = default) =>
         apps.ListByQualityLevelAsync(level, cancellationToken);
 
+    public Task<IReadOnlyList<App>> ListAllAsync(CancellationToken cancellationToken = default) =>
+        apps.ListAllAsync(cancellationToken);
+
     public Task<IReadOnlyList<QualitySnapshot>> GetQualityHistoryAsync(
         string appId, DateTimeOffset? from = null, DateTimeOffset? to = null, CancellationToken cancellationToken = default) =>
         snapshots.GetHistoryAsync(appId, from, to, cancellationToken);

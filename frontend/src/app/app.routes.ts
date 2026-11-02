@@ -31,10 +31,14 @@ export const routes: Routes = [
   { path: 'squads/:squadId', component: SquadDashboard },
   { path: 'squads/:squadId/apps', component: AppList },
   { path: 'squads/:squadId/apps/new', component: AppForm },
+  // Lista geral de apps (spec 016); `apps/:appId` é outro caminho, sem conflito.
+  { path: 'apps', component: AppList },
   { path: 'apps/:appId/edit', component: AppForm },
   { path: 'apps/:appId', component: AppDetail },
   { path: 'repositories', component: Repositories },
-  { path: 'dependencies', component: Dependencies },
+  { path: 'packages', component: Dependencies },
+  // Nome antigo da tela ("Dependências", antes de virar "Pacotes"): favoritos continuam funcionando.
+  { path: 'dependencies', redirectTo: 'packages', pathMatch: 'full' },
   { path: 'integrations', component: Integrations },
   // Nome antigo da tela ("Descobertos"): favoritos continuam funcionando.
   { path: 'discovered', redirectTo: 'repositories', pathMatch: 'full' },

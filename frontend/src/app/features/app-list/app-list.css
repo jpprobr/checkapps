@@ -1,1 +1,6 @@
 /* filtros e tabela usam as classes globais definidas em styles.css */
+
+/* Com a coluna Squad (lista geral) a tabela fica larga: rola dentro da página, sem alargar a tela no celular. */
+.table-scroll {
+  overflow-x: auto;
+}

@@ -46,6 +46,30 @@ public class RepositoriesTests(SqliteFixture fixture) : IClassFixture<SqliteFixt
     }
 
     [Fact]
+    public async Task ListAll_ReturnsAppsOfEverySquad_IncludingInactiveAndThoseWithoutSnapshot()
+    {
+        var squadA = $"sq-{Guid.NewGuid():N}";
+        var squadB = $"sq-{Guid.NewGuid():N}";
+        await _squads.SaveAsync(new Squad { Id = squadA, Name = "Squad A" });
+        await _squads.SaveAsync(new Squad { Id = squadB, Name = "Squad B" });
+
+        var withSnapshot = await SeedAppWithSnapshotAsync(squadA, coverage: 85, reliability: "A", maintainability: "A", security: "A");
+        var otherSquad = await SeedAppWithSnapshotAsync(squadB, coverage: 40, reliability: "D", maintainability: "D", security: "D");
+        var noSnapshot = $"app-{Guid.NewGuid():N}";
+        var inactive = $"app-{Guid.NewGuid():N}";
+        await _apps.SaveAsync(new App { Id = noSnapshot, SquadId = squadA, Name = "sem snapshot" });
+        await _apps.SaveAsync(new App { Id = inactive, SquadId = squadB, Name = "inativo", Status = "inactive" });
+
+        var all = await _apps.ListAllAsync();
+
+        Assert.Contains(all, a => a.Id == withSnapshot && a.CurrentQualityLevel == QualityLevel.A);
+        Assert.Contains(all, a => a.Id == otherSquad && a.SquadId == squadB);   // de outra squad
+        Assert.Contains(all, a => a.Id == noSnapshot && a.CurrentQualityLevel is null);
+        Assert.Contains(all, a => a.Id == inactive && a.Status == "inactive");   // quem esconde inativos é a tela
+        Assert.Equal(all.Select(a => a.Id).Distinct().Count(), all.Count);        // uma linha por app
+    }
+
+    [Fact]
     public async Task GetHistory_WithDateRange_ReturnsOnlySnapshotsInRange_OrderedByTime()
     {
         var appId = $"app-{Guid.NewGuid():N}";

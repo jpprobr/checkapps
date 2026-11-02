@@ -1,11 +1,11 @@
 <main class="page">
-  <h1>Dependências</h1>
+  <h1>Pacotes</h1>
   <p class="subtitle">
     O que os repositórios catalogados usam, segundo a última análise de cada um. Só dependências diretas, com a versão
     como está declarada. A análise roda no terminal (<code>CheckApps.Analyze</code>); esta tela só lê.
   </p>
 
-  <div class="tabs" role="tablist" aria-label="Visões de dependências">
+  <div class="tabs" role="tablist" aria-label="Visões de pacotes">
     <button type="button" role="tab" class="tab" [class.active]="tab() === 'packages'"
       [attr.aria-selected]="tab() === 'packages'" (click)="showTab('packages')">Quem usa o pacote</button>
     <button type="button" role="tab" class="tab" [class.active]="tab() === 'frameworks'"

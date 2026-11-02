@@ -1,12 +1,14 @@
 import { DatePipe } from '@angular/common';
-import { Component, effect, inject, input, signal } from '@angular/core';
+import { Component, computed, effect, inject, input, signal } from '@angular/core';
 
 import { ANALYSIS_STATUS_LABELS, CONFIDENCE_LABELS, shortSha } from '../../core/dependency-labels';
 import { IntegrationsApiService } from '../../core/integrations-api.service';
+import { SectionStateService } from '../../core/section-state.service';
 import {
   INTEGRATION_STATE_LABELS,
   environmentLabel,
   integrationAddress,
+  integrationsSummary,
   isNote,
   mechanismLabel,
   noteText,
@@ -27,11 +29,25 @@ import { AppIntegrations, Integration } from '../../core/models';
 export class AppIntegrationsSection {
   private readonly api = inject(IntegrationsApiService);
 
+  private readonly sections = inject(SectionStateService);
+
   readonly appId = input.required<string>();
+
+  /** Fechada por padrão; a escolha da pessoa é lembrada no navegador (por seção, não por app). */
+  protected readonly open = signal(this.sections.isOpen('integracoes'));
 
   protected readonly data = signal<AppIntegrations | null>(null);
   protected readonly loading = signal(true);
   protected readonly failed = signal(false);
+
+  /** Resumo da linha fechada, derivado dos dados que o componente já carrega ao montar. */
+  protected readonly summary = computed(() => {
+    const data = this.data();
+    if (this.loading() || !data) {
+      return this.failed() ? 'não foi possível carregar' : 'Carregando…';
+    }
+    return integrationsSummary(data);
+  });
 
   protected readonly confidenceLabels = CONFIDENCE_LABELS;
   protected readonly statusLabels = ANALYSIS_STATUS_LABELS;
@@ -59,6 +75,12 @@ export class AppIntegrationsSection {
         },
       });
     });
+  }
+
+  protected onToggle(event: Event): void {
+    const open = (event.target as HTMLDetailsElement).open;
+    this.open.set(open);
+    this.sections.setOpen('integracoes', open);
   }
 
   /** A confiança só precisa de explicação quando não é alta: o motivo vem da API, em texto. */

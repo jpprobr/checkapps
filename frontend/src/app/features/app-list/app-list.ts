@@ -11,6 +11,11 @@ import { QualityBadge } from '../../shared/quality-badge/quality-badge';
 
 type SortKey = 'name' | 'qualityLevel';
 
+/**
+ * Lista de apps. Com `squadId` na rota (`/squads/:squadId/apps`) mostra os apps da squad e permite criar; sem ele
+ * (`/apps`, spec 016) mostra os apps de todas as squads, com a squad em cada linha e um filtro de squad. O detalhe do
+ * app é o mesmo nos dois caminhos.
+ */
 @Component({
   selector: 'app-app-list',
   imports: [RouterLink, QualityBadge, DatePipe, FormsModule],
@@ -23,7 +28,9 @@ export class AppList {
   private readonly appsApi = inject(AppsApiService);
   protected readonly currentSquad = inject(CurrentSquadService);
 
-  protected readonly squadId = this.route.snapshot.paramMap.get('squadId')!;
+  /** Nulo na lista geral de apps (`/apps`). */
+  protected readonly squadId = this.route.snapshot.paramMap.get('squadId');
+  protected readonly isGlobal = this.squadId === null;
   protected readonly apps = signal<AppSummary[]>([]);
   protected readonly loading = signal(true);
   protected readonly error = signal(false);
@@ -31,6 +38,7 @@ export class AppList {
 
   protected readonly search = signal('');
   protected readonly qualityLevelFilter = signal<QualityLevel | ''>('');
+  protected readonly squadFilter = signal('');
   protected readonly sortKey = signal<SortKey>('name');
   protected readonly showInactive = signal(false);
 
@@ -39,6 +47,7 @@ export class AppList {
   protected readonly filteredApps = computed(() => {
     const term = this.search().trim().toLowerCase();
     const level = this.qualityLevelFilter();
+    const squad = this.squadFilter();
     const sortKey = this.sortKey();
     const showInactive = this.showInactive();
 
@@ -46,6 +55,7 @@ export class AppList {
       .filter((app) => showInactive || app.status !== 'inactive')
       .filter((app) => !term || app.name.toLowerCase().includes(term))
       .filter((app) => !level || app.currentQualityLevel === level)
+      .filter((app) => !squad || app.squadId === squad)
       .sort((a, b) => {
         if (sortKey === 'qualityLevel') {
           return (a.currentQualityLevel ?? 'Z').localeCompare(b.currentQualityLevel ?? 'Z');
@@ -55,13 +65,16 @@ export class AppList {
   });
 
   constructor() {
-    this.currentSquad.set(this.squadId);
+    if (this.squadId) {
+      this.currentSquad.set(this.squadId);
+    }
     this.reload();
   }
 
   private reload(): void {
     this.loading.set(true);
-    this.squadsApi.listApps(this.squadId).subscribe({
+    const request = this.squadId ? this.squadsApi.listApps(this.squadId) : this.appsApi.list();
+    request.subscribe({
       next: (apps) => {
         this.apps.set(apps);
         this.loading.set(false);
@@ -71,6 +84,10 @@ export class AppList {
         this.loading.set(false);
       },
     });
+  }
+
+  protected squadName(app: AppSummary): string {
+    return this.currentSquad.squads().find((s) => s.id === app.squadId)?.name ?? '—';
   }
 
   protected toggleStatus(app: AppSummary): void {

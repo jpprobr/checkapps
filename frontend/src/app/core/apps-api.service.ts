@@ -25,6 +25,11 @@ export class AppsApiService {
     return this.http.get<AppDetail>(`${API_BASE_URL}/apps/${appId}`);
   }
 
+  /** Todos os apps de todas as squads (spec 016); a tela filtra por squad, nível e nome. */
+  list(): Observable<AppSummary[]> {
+    return this.http.get<AppSummary[]>(`${API_BASE_URL}/apps`);
+  }
+
   listByQualityLevel(level: QualityLevel): Observable<AppSummary[]> {
     return this.http.get<AppSummary[]>(`${API_BASE_URL}/apps`, { params: { qualityLevel: level } });
   }

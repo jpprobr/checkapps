@@ -83,7 +83,7 @@ dotnet run --project tools/CheckApps.Analyze -- --sigla ab1 --dry-run
 dotnet run --project tools/CheckApps.Analyze -- --sigla ab1,cd2 --source fake --force
 ```
 
-O resultado aparece na seção **Dependências** do app e na tela **Dependências** do menu; os endereços que o repositório declara chamar (`appsettings*.json`) aparecem na seção **Integrações** do app e na tela **Integrações**. Detalhes e configuração em [`docs/leitor-github.md`](docs/leitor-github.md).
+O resultado aparece na seção **Pacotes** do app e na tela **Pacotes** do menu; os endereços que o repositório declara chamar (`appsettings*.json`) aparecem na seção **Integrações** do app e na tela **Integrações**. Detalhes e configuração em [`docs/leitor-github.md`](docs/leitor-github.md).
 
 ## Testes
 

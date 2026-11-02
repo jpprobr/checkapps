@@ -1,5 +1,9 @@
 <section class="card">
-  <h2>Dependências</h2>
+  <details class="collapsible" [open]="open()" (toggle)="onToggle($event)">
+    <summary>
+      <h2>Pacotes</h2>
+      <span class="summary-text">{{ summary() }}</span>
+    </summary>
   <p class="subtitle small">
     Versão do .NET e pacotes <strong>diretos</strong>, como estão declarados nos projetos (dependências transitivas não
     são incluídas). O que o CheckApps não consegue resolver aparece com a confiança e o motivo.
@@ -113,4 +117,5 @@
       </p>
     }
   }
+  </details>
 </section>

@@ -52,6 +52,9 @@ public class AppRepository(SqliteConnectionFactory connectionFactory) : IAppRepo
         QueryAppsAsync($"{SelectAppWithCurrentQuality} WHERE a.squad_id = @squadId ORDER BY a.id",
             new { squadId }, cancellationToken);
 
+    public Task<IReadOnlyList<App>> ListAllAsync(CancellationToken cancellationToken = default) =>
+        QueryAppsAsync($"{SelectAppWithCurrentQuality} ORDER BY a.id", new { }, cancellationToken);
+
     public Task<IReadOnlyList<App>> ListByQualityLevelAsync(QualityLevel level, CancellationToken cancellationToken = default) =>
         QueryAppsAsync($"{SelectAppWithCurrentQuality} WHERE s.quality_level = @level ORDER BY a.id",
             new { level = level.ToString() }, cancellationToken);

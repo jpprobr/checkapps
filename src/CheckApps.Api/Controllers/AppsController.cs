@@ -12,11 +12,15 @@ namespace CheckApps.Api.Controllers;
 [Route("api/apps")]
 public class AppsController(AppService appService, QualitySnapshotService snapshotService, CheckService checkService) : ControllerBase
 {
+    /// <param name="qualityLevel">Filtra pelo Quality Level corrente. Sem ele, lista **todos** os apps de todas as squads
+    /// (spec 016); um valor que não é nível devolve 400.</param>
     [HttpGet]
-    public async Task<ActionResult<IReadOnlyList<AppSummaryDto>>> ListByQualityLevel(
-        [FromQuery] QualityLevel qualityLevel, CancellationToken cancellationToken)
+    public async Task<ActionResult<IReadOnlyList<AppSummaryDto>>> List(
+        [FromQuery] QualityLevel? qualityLevel, CancellationToken cancellationToken)
     {
-        var apps = await appService.ListByQualityLevelAsync(qualityLevel, cancellationToken);
+        var apps = qualityLevel is { } level
+            ? await appService.ListByQualityLevelAsync(level, cancellationToken)
+            : await appService.ListAllAsync(cancellationToken);
         return Ok(apps.Select(a => a.ToSummaryDto()).ToList());
     }
 

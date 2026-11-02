@@ -1,5 +1,9 @@
 <section class="card">
-  <h2>Integrações</h2>
+  <details class="collapsible" [open]="open()" (toggle)="onToggle($event)">
+    <summary>
+      <h2>Integrações</h2>
+      <span class="summary-text">{{ summary() }}</span>
+    </summary>
   <p class="subtitle small">
     Endereços que o repositório <strong>declara</strong> chamar, lidos dos arquivos <code>appsettings*.json</code> (base e
     por ambiente). O CheckApps ainda não diz a que app do catálogo cada endereço pertence, e não lê o código (interfaces
@@ -104,4 +108,5 @@
       </div>
     }
   }
+  </details>
 </section>
