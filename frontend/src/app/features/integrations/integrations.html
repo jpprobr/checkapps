@@ -3,8 +3,9 @@
   <p class="subtitle">
     Os endereços que os repositórios catalogados <strong>declaram</strong> chamar, segundo a última análise de cada um
     (hoje lidos dos arquivos <code>appsettings*.json</code>). Um host com <code>{{ '{env}' }}</code> é um modelo: o ambiente só se
-    sabe pelo arquivo. O CheckApps ainda não diz a que app do catálogo cada host pertence. A análise roda no terminal
-    (<code>CheckApps.Analyze</code>); esta tela só lê.
+    sabe pelo arquivo. Quem diz a que app do catálogo cada host pertence é uma pessoa: abra um host e confirme ou rejeite
+    o app. Um vínculo feito no modelo <code>{{ '{env}' }}</code> vale para <code>dev</code>, <code>hom</code> e <code>prod</code>. A análise
+    roda no terminal (<code>CheckApps.Analyze</code>).
   </p>
 
   <form class="card search-form" (ngSubmit)="search()">
@@ -19,6 +20,15 @@
         <option value="">Todas</option>
         @for (squad of squads(); track squad.id) {
           <option [value]="squad.id">{{ squad.name }}</option>
+        }
+      </select>
+    </label>
+    <label>
+      Vínculo
+      <select name="linkStatus" [ngModel]="linkStatus()" (ngModelChange)="linkStatus.set($event)">
+        <option value="">Todos</option>
+        @for (status of linkStatuses; track status) {
+          <option [value]="status">{{ linkLabels[status] }}</option>
         }
       </select>
     </label>
@@ -54,7 +64,8 @@
           <thead>
             <tr>
               <th>Host</th>
-              <th>Apps</th>
+              <th>App</th>
+              <th>Apps que chamam</th>
               <th>Repositórios</th>
               <th>Squads</th>
               <th>Seções</th>
@@ -68,6 +79,10 @@
                   <button type="button" class="link-button" [attr.aria-pressed]="selectedKey() === h.key"
                     [attr.aria-label]="'Ver quem chama ' + h.key" (click)="select(h.key)">{{ h.key }}</button>
                   @if (h.isTemplate) { <span class="tag">modelo</span> }
+                </td>
+                <td>
+                  {{ linkText(h.link) }}
+                  @if (h.link.confirmed?.via === 'template') { <span class="tag">pelo modelo</span> }
                 </td>
                 <td>{{ h.appCount }}</td>
                 <td>{{ h.repositoryCount }}</td>
@@ -92,6 +107,63 @@
             {{ d.key }}
             @if (d.isTemplate) { <span class="tag">modelo</span> }
           </h2>
+
+          <div class="link-panel">
+            <h3>App deste host</h3>
+            @if (d.link.confirmed; as c) {
+              <p>
+                <strong>→ {{ c.appName }}</strong> (confirmado
+                {{ c.via === 'template' ? 'pelo modelo ' + c.template : 'neste host' }},
+                {{ c.decidedAt | date: 'dd/MM/yyyy HH:mm' }})
+                @if (c.note) { <span class="note">{{ c.note }}</span> }
+              </p>
+              @if (c.via === 'template') {
+                <p class="note">Vale para dev, hom e prod. Remover apaga o vínculo do modelo para todos os ambientes.</p>
+              }
+              <button type="button" class="secondary" [disabled]="saving()" (click)="remove(c)">Remover vínculo</button>
+            } @else {
+              <p>Nenhum app confirmado para este host.</p>
+            }
+
+            @if (d.link.rejected.length > 0) {
+              <ul class="rejected">
+                @for (r of d.link.rejected; track r.linkId) {
+                  <li>
+                    Rejeitado: {{ r.appName }} ({{ r.decidedAt | date: 'dd/MM/yyyy HH:mm' }})
+                    @if (r.via === 'template') { <span class="tag">pelo modelo</span> }
+                    <button type="button" class="link-button" [disabled]="saving()" (click)="remove(r)">desfazer</button>
+                  </li>
+                }
+              </ul>
+            }
+
+            <div class="link-form">
+              <label>
+                App
+                <select name="linkApp" [ngModel]="linkAppId()" (ngModelChange)="linkAppId.set($event)">
+                  <option value="">Escolha um app…</option>
+                  @for (app of apps(); track app.id) {
+                    <option [value]="app.id">{{ app.name }}</option>
+                  }
+                </select>
+              </label>
+              <label>
+                Nota (opcional)
+                <input type="text" name="linkNote" maxlength="500" autocomplete="off"
+                  [ngModel]="linkNote()" (ngModelChange)="linkNote.set($event)" />
+              </label>
+              <button type="button" [disabled]="saving() || !linkAppId()" (click)="decide('confirmado')">Confirmar</button>
+              <button type="button" class="secondary" [disabled]="saving() || !linkAppId()" (click)="decide('rejeitado')">Rejeitar</button>
+            </div>
+            @if (d.isTemplate) {
+              <p class="note">Este host é um modelo: a decisão vale para dev, hom e prod.</p>
+            } @else {
+              <p class="note">A decisão vale só para este host (ela vence um vínculo feito no modelo).</p>
+            }
+            @if (actionError(); as message) {
+              <p class="error" role="alert">{{ message }}</p>
+            }
+          </div>
           <div class="table-scroll">
             <table>
               <thead>

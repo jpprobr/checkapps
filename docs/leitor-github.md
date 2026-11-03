@@ -147,11 +147,11 @@ A mesma análise do scanner .NET lê os arquivos `appsettings*.json` (o base e o
 - **Reanalisar**: as análises feitas antes da spec 014 não têm integrações; rode `CheckApps.Analyze --sigla <sigla> --force` (ou espere um commit novo).
 - **Onde ver**: seção **Integrações** no detalhe do app e o item **Integrações** do menu (lista de hosts, com quem os chama). A API só lê.
 - **Vínculo host→app** (spec 017, veja abaixo): dizer a que app um host pertence é decisão de pessoa.
-- **O que não cobre ainda**: interfaces Refit e `AddHttpClient` no código (spec 015), a tela para confirmar vínculos e o mapa de aplicações.
+- **O que não cobre ainda**: interfaces Refit e `AddHttpClient` no código (spec 015), o selo do app destino no detalhe do app e o mapa de aplicações.
 
 ### Vínculo host→app (spec 017)
 
-O host `empresa.{env}.exemplo.com` é o app "Pagamentos"? Quem responde é uma pessoa; o CheckApps só guarda a decisão e a aplica. Hoje por API (a tela de confirmação é a próxima fatia):
+O host `empresa.{env}.exemplo.com` é o app "Pagamentos"? Quem responde é uma pessoa; o CheckApps só guarda a decisão e a aplica. Pela tela **Integrações** (spec 018): filtre por "Sem app", abra o host, escolha o app e confirme ou rejeite; "Remover vínculo" desfaz (o de um modelo vale para os três ambientes). A API por trás:
 
 - `PUT /api/integrations/hosts/{host}/link` com `{ "appId": "...", "state": "confirmado" | "rejeitado", "note": "..." }` (o `{host}` vai codificado na URL: o modelo tem `{env}`). Um host só pode ter **um** app confirmado (o segundo dá 409; remova o anterior); rejeitos podem ser vários.
 - `DELETE /api/integrations/hosts/{host}/link/{appId}` remove; `GET /api/integrations/links` lista tudo, com `seen` = se alguma análise corrente ainda chama o host.

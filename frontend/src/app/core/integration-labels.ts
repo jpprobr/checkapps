@@ -1,4 +1,4 @@
-import { AppIntegrations, Integration, IntegrationState } from './models';
+import { AppIntegrations, HostLinkInfo, HostLinkStatus, Integration, IntegrationState } from './models';
 
 /** Estado do endereço, sempre em texto (nunca só por cor). */
 export const INTEGRATION_STATE_LABELS: Record<IntegrationState, string> = {
@@ -75,4 +75,22 @@ export function integrationsSummary(data: AppIntegrations): string {
     parts.push('última tentativa falhou');
   }
   return parts.join(' · ');
+}
+
+/** Rótulos do filtro "Vínculo" da lista de hosts (spec 017). */
+export const LINK_STATUS_LABELS: Record<HostLinkStatus, string> = {
+  'sem-vinculo': 'Sem app',
+  confirmado: 'Confirmado',
+  rejeitado: 'Só rejeitado',
+};
+
+/** Texto da coluna "App": sempre em palavras, nunca só por cor. */
+export function linkSummary(link: HostLinkInfo): string {
+  if (link.confirmed) {
+    return `→ ${link.confirmed.appName}`;
+  }
+  if (link.rejected.length > 0) {
+    return `rejeitado: ${link.rejected.map((r) => r.appName).join(', ')}`;
+  }
+  return 'sem app';
 }

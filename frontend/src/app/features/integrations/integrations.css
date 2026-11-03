@@ -81,3 +81,35 @@ code {
   padding: 0.1rem 0.4rem;
   font-size: 0.85rem;
 }
+
+.link-panel {
+  margin-bottom: 1rem;
+  padding-bottom: 1rem;
+  border-bottom: 1px solid var(--gridline);
+}
+
+.link-panel h3 {
+  margin: 0 0 0.5rem;
+  font-size: 0.95rem;
+}
+
+.link-form {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: end;
+  gap: 0.75rem;
+  margin-top: 0.75rem;
+}
+
+.link-form label {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+  font-size: 0.9rem;
+  min-width: 0;
+}
+
+.rejected {
+  margin: 0.5rem 0 0;
+  padding-left: 1.25rem;
+}

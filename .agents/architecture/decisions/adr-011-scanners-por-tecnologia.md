@@ -43,3 +43,11 @@ O vínculo "este host é o app Y" (Y **recebe** a chamada) **não é um fato lid
 - **Regras no serviço** (SQL portável, sem índice parcial): par `(host_key, app_id)` único; no máximo **um `confirmado` por host** (o segundo é conflito, 409); vários `rejeitado`. O vínculo **exato** vence o do modelo.
 - **"Não visto na última análise"** é derivado (nenhuma integração corrente casa), nunca gravado.
 - **Limite aceito**: um vínculo por **host**, não por seção nem por caminho. Um gateway com vários serviços atrás do mesmo host não se expressa. A evolução (host + caminho base) acrescenta uma coluna sem quebrar a tabela.
+
+### Por que o host não é um app (pergunta recorrente)
+
+- **Natureza**: host é um endereço de texto **lido** das análises (fato, muda a cada rodada); app é uma entidade **cadastrada** por pessoas (squad, repositórios, histórico, checagens).
+- **Cardinalidade**: um serviço tem vários hosts (modelo `{env}`, `dev`, `hom`, `prod`); um host pode ser de serviço **fora do catálogo** (terceiro, legado). Tratar cada host como app encheria o catálogo de itens sem dono e poluiria as telas de qualidade e checagem.
+- **Ciclo de vida**: o fato vem e vai com a análise; a decisão humana "este host é aquele app" não pode se perder, por isso o **vínculo** é a ponte, em tabela própria.
+- **Alternativa não adotada**: cadastrar em cada app os seus endereços (direção inversa). Mais simples de pensar, mas exige digitar endereços antes de saber quais existem e perde a fila de "hosts que ninguém ligou". Pode ser revista.
+- **Quem chama não é limitado**: o vínculo diz só quem **recebe**; um app pode chamar vários hosts (um destino por integração) e um host pode ser chamado por vários apps.

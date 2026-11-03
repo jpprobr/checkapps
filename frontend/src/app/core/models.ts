@@ -449,6 +449,8 @@ export interface Integration {
 export interface IntegrationSection {
   reference: string;
   integrations: Integration[];
+  /** App destino por id de integração; só as confirmadas (spec 017). */
+  destinations: Record<string, HostLinkMatch>;
 }
 
 export interface RepositoryIntegrations {
@@ -488,6 +490,7 @@ export interface HostSummary {
   references: string[];
   environmentKinds: string[];
   latestAnalyzedAt: string;
+  link: HostLinkInfo;
 }
 
 export interface HostList {
@@ -513,4 +516,37 @@ export interface HostDetail {
   port: number | null;
   isTemplate: boolean;
   usages: HostUsage[];
+  link: HostLinkInfo;
+}
+
+// ---- Vínculo host→app (spec 017): decisão humana de que um host é o app que recebe a chamada ---------------------------
+
+export type HostLinkState = 'confirmado' | 'rejeitado';
+/** Filtro da lista de hosts; 'sem-vinculo' = nenhum vínculo (nem rejeito). */
+export type HostLinkStatus = 'sem-vinculo' | HostLinkState;
+
+export interface HostLinkMatch {
+  linkId: string;
+  hostKey: string;
+  appId: string;
+  appName: string;
+  state: HostLinkState;
+  /** 'exact' = vínculo feito neste host; 'template' = feito no modelo {env} que o cobre. */
+  via: 'exact' | 'template';
+  /** O modelo usado, quando via é 'template'. */
+  template: string | null;
+  decidedAt: string;
+  note: string | null;
+}
+
+export interface HostLinkInfo {
+  status: HostLinkStatus;
+  confirmed: HostLinkMatch | null;
+  rejected: HostLinkMatch[];
+}
+
+export interface SetHostLinkRequest {
+  appId: string;
+  state: HostLinkState;
+  note: string | null;
 }
