@@ -161,4 +161,42 @@ public class HostKeyMatcherTests
 
         Assert.Equal("app-removido", info.Confirmed!.AppName);
     }
+
+
+    private static HostExternal External(string key, string? name = null) =>
+        new() { Id = $"e-{key}", HostKey = key, Name = name, DecidedAt = DateTimeOffset.UnixEpoch };
+
+    [Fact]
+    public void Resolve_ExternalMark_CoversByExactAndByTemplate_ExactWins()
+    {
+        var resolver = new HostLinkResolver(
+            [], new Dictionary<string, string>(), Env,
+            [External("svc.{env}.outra.com", "Modelo"), External("svc.hom.outra.com", "Exato")]);
+
+        var exact = resolver.Resolve("svc.hom.outra.com").External!;
+        Assert.Equal("Exato", exact.Name);
+        Assert.Equal(HostKeyMatcher.ViaExact, exact.Via);
+
+        var template = resolver.Resolve("svc.dev.outra.com").External!;
+        Assert.Equal("Modelo", template.Name);
+        Assert.Equal(HostKeyMatcher.ViaTemplate, template.Via);
+        Assert.Equal("svc.{env}.outra.com", template.Template);
+
+        Assert.Null(resolver.Resolve("svc.qa.outra.com").External);   // nunca por palpite
+    }
+
+    [Fact]
+    public void Status_ConfirmedBeatsExternal_ExternalBeatsRejectedAndNone()
+    {
+        var link = Link("a.exemplo.com", "pag", HostLinkStates.Confirmed);
+        var rejected = Link("a.exemplo.com", "fat", HostLinkStates.Rejected);
+        var names = new Dictionary<string, string> { ["pag"] = "Pagamentos", ["fat"] = "Faturas" };
+        var external = new[] { External("a.exemplo.com") };
+
+        Assert.Equal(LinkStatuses.Confirmed, new HostLinkResolver([link], names, Env, external).Resolve("a.exemplo.com").Status);
+        Assert.Equal(LinkStatuses.External, new HostLinkResolver([rejected], names, Env, external).Resolve("a.exemplo.com").Status);
+        Assert.Equal(LinkStatuses.External, new HostLinkResolver([], names, Env, external).Resolve("a.exemplo.com").Status);
+        Assert.Equal(LinkStatuses.Rejected, new HostLinkResolver([rejected], names, Env).Resolve("a.exemplo.com").Status);
+        Assert.Equal(LinkStatuses.None, new HostLinkResolver([], names, Env).Resolve("a.exemplo.com").Status);
+    }
 }

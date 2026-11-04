@@ -141,3 +141,24 @@ public class FakeHostLinkRepository : IHostLinkRepository
     public Task<bool> DeleteAsync(string hostKey, string appId, CancellationToken ct = default) =>
         Task.FromResult(_links.RemoveAll(l => l.HostKey == hostKey.ToLowerInvariant() && l.AppId == appId) > 0);
 }
+
+/// <summary>Hosts externos ao catálogo em memória (spec 019); a chave do host é comparada em minúsculas, como no SQLite.</summary>
+public class FakeHostExternalRepository : IHostExternalRepository
+{
+    private readonly List<HostExternal> _externals = [];
+
+    public IReadOnlyList<HostExternal> Externals => _externals;
+
+    public Task<IReadOnlyList<HostExternal>> ListAsync(CancellationToken ct = default) =>
+        Task.FromResult<IReadOnlyList<HostExternal>>(_externals.OrderBy(e => e.HostKey, StringComparer.Ordinal).ToList());
+
+    public Task UpsertAsync(HostExternal external, CancellationToken ct = default)
+    {
+        _externals.RemoveAll(e => e.HostKey == external.HostKey.ToLowerInvariant());
+        _externals.Add(external with { HostKey = external.HostKey.ToLowerInvariant() });
+        return Task.CompletedTask;
+    }
+
+    public Task<bool> DeleteAsync(string hostKey, CancellationToken ct = default) =>
+        Task.FromResult(_externals.RemoveAll(e => e.HostKey == hostKey.ToLowerInvariant()) > 0);
+}

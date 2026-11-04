@@ -51,3 +51,10 @@ O vínculo "este host é o app Y" (Y **recebe** a chamada) **não é um fato lid
 - **Ciclo de vida**: o fato vem e vai com a análise; a decisão humana "este host é aquele app" não pode se perder, por isso o **vínculo** é a ponte, em tabela própria.
 - **Alternativa não adotada**: cadastrar em cada app os seus endereços (direção inversa). Mais simples de pensar, mas exige digitar endereços antes de saber quais existem e perde a fila de "hosts que ninguém ligou". Pode ser revista.
 - **Quem chama não é limitado**: o vínculo diz só quem **recebe**; um app pode chamar vários hosts (um destino por integração) e um host pode ser chamado por vários apps.
+
+## Adendo (2026-11-03, spec 019): host externo ao catálogo e decisão em lote
+
+- **Host externo** = decisão humana de que o host é de um serviço que ninguém vai cadastrar como app (outra squad, terceiro, legado). Tira o host da fila "sem app" sem inventar um app. Fica na tabela própria `host_externals` (e não como estado de `host_links`) porque `host_links.app_id` é obrigatório com FK, e afrouxar isso exigiria recriar a tabela no SQLite. Mesmas regras do vínculo: fora das análises, sem FK para integrações, chave `host[:porta]` em minúsculas (pode ser modelo `{env}`), nome livre opcional.
+- **Exclusão mútua** (regra do serviço, 409): um host exato não é `confirmado` e `externo` ao mesmo tempo; rejeitos convivem com externo. Status efetivo: `confirmado` > `externo` > `rejeitado` > `sem-vinculo`. O contrato da 017 foi preservado (`destinations` igual; `externals` e `link.external` são campos novos).
+- **Lote**: `POST /api/integrations/links/batch` aplica a mesma decisão (`confirmado`, `rejeitado` ou `externo`) a vários hosts, com sucesso parcial (cada host segue as regras individuais; um 409 não desfaz os outros). Motivo: nos projetos reais só existem hosts concretos, um por ambiente.
+- **Limite**: externos "não vistos" na última análise não aparecem na lista de vínculos não vistos (só vínculos de app).

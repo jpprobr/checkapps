@@ -78,14 +78,26 @@ public record HostLinkMatch(
     string LinkId, string HostKey, string AppId, string AppName, string State, string Via, string? Template,
     DateTimeOffset DecidedAt, string? Note);
 
-/// <summary>O que vale para um host: o app confirmado (se houver) e os apps rejeitados.</summary>
-public record HostLinkInfo(HostLinkMatch? Confirmed, IReadOnlyList<HostLinkMatch> Rejected)
+/// <summary>A marca "externo ao catálogo" que vale para um host (spec 019), com o caminho (<c>exact</c> ou <c>template</c>).</summary>
+/// <param name="Template">A chave do modelo quando <paramref name="Via"/> é <c>template</c>; nula no exato.</param>
+public record HostExternalMatch(
+    string ExternalId, string HostKey, string? Name, string Via, string? Template, DateTimeOffset DecidedAt, string? Note);
+
+/// <summary>O que vale para um host: o app confirmado (se houver), os apps rejeitados e a marca de externo (spec 019).</summary>
+public record HostLinkInfo(
+    HostLinkMatch? Confirmed, IReadOnlyList<HostLinkMatch> Rejected, HostExternalMatch? External = null)
 {
     public static readonly HostLinkInfo None = new(null, []);
 
-    /// <summary><c>confirmado</c>, <c>rejeitado</c> (só rejeitos) ou <c>sem-vinculo</c>; é o que o filtro <c>linkStatus</c> compara.</summary>
+    /// <summary>
+    /// <c>confirmado</c>, <c>externo</c>, <c>rejeitado</c> (só rejeitos) ou <c>sem-vinculo</c>; é o que o filtro
+    /// <c>linkStatus</c> compara. Nessa ordem de precedência.
+    /// </summary>
     public string Status =>
-        Confirmed is not null ? LinkStatuses.Confirmed : Rejected.Count > 0 ? LinkStatuses.Rejected : LinkStatuses.None;
+        Confirmed is not null ? LinkStatuses.Confirmed
+        : External is not null ? LinkStatuses.External
+        : Rejected.Count > 0 ? LinkStatuses.Rejected
+        : LinkStatuses.None;
 }
 
 public static class LinkStatuses
@@ -94,7 +106,10 @@ public static class LinkStatuses
     public const string Confirmed = HostLinkStates.Confirmed;
     public const string Rejected = HostLinkStates.Rejected;
 
-    public static readonly string[] All = [None, Confirmed, Rejected];
+    /// <summary>O host é de um serviço externo ao catálogo (spec 019): sai da fila "sem vínculo".</summary>
+    public const string External = "externo";
+
+    public static readonly string[] All = [None, Confirmed, External, Rejected];
 }
 
 /// <summary>
@@ -102,7 +117,8 @@ public static class LinkStatuses
 /// vence o modelo; vínculos do mesmo tipo desempatam pela chave, para o resultado ser estável.
 /// </summary>
 public class HostLinkResolver(
-    IReadOnlyList<HostLink> links, IReadOnlyDictionary<string, string> appNames, IReadOnlyList<string> envValues)
+    IReadOnlyList<HostLink> links, IReadOnlyDictionary<string, string> appNames, IReadOnlyList<string> envValues,
+    IReadOnlyList<HostExternal>? externals = null)
 {
     public IReadOnlyList<HostLink> Links => links;
 
@@ -132,6 +148,29 @@ public class HostLinkResolver(
             .OrderBy(m => m.AppName, StringComparer.OrdinalIgnoreCase)
             .ToList();
 
-        return new HostLinkInfo(confirmed, rejected);
+        return new HostLinkInfo(confirmed, rejected, ResolveExternal(hostKey));
+    }
+
+    /// <summary>A marca de externo que cobre o host; a do host exato vence a do modelo (desempate pela chave).</summary>
+    private HostExternalMatch? ResolveExternal(string hostKey)
+    {
+        HostExternalMatch? best = null;
+        foreach (var external in (externals ?? []).OrderBy(e => e.HostKey, StringComparer.Ordinal))
+        {
+            if (HostKeyMatcher.Cover(external.HostKey, hostKey, envValues) is not { } via)
+            {
+                continue;
+            }
+
+            var match = new HostExternalMatch(
+                external.Id, external.HostKey, external.Name, via,
+                via == HostKeyMatcher.ViaTemplate ? external.HostKey : null, external.DecidedAt, external.Note);
+            if (best is null || (via == HostKeyMatcher.ViaExact && best.Via != HostKeyMatcher.ViaExact))
+            {
+                best = match;
+            }
+        }
+
+        return best;
     }
 }

@@ -27,7 +27,7 @@ public class IntegrationsController(IntegrationService integrationService, HostL
     }
 
     /// <param name="host">Trecho do host, sem diferença de caixa; vazio lista todos.</param>
-    /// <param name="linkStatus"><c>sem-vinculo</c> | <c>confirmado</c> | <c>rejeitado</c> (spec 017); vazio traz todos; outro valor → 400.</param>
+    /// <param name="linkStatus"><c>sem-vinculo</c> | <c>confirmado</c> | <c>externo</c> | <c>rejeitado</c> (specs 017 e 019); vazio traz todos; outro valor → 400.</param>
     [HttpGet("api/integrations/hosts")]
     public async Task<ActionResult<HostListDto>> Hosts(
         [FromQuery] string? host, [FromQuery] string? squadId, [FromQuery] string? linkStatus, CancellationToken cancellationToken)
@@ -104,6 +104,68 @@ public class IntegrationsController(IntegrationService integrationService, HostL
         catch (KeyNotFoundException ex)
         {
             return NotFound(ex.Message);
+        }
+    }
+
+    // ---- Host externo ao catálogo e decisão em lote (spec 019) ---------------------------------------------------------
+
+    /// <summary>
+    /// Marca o host (ou o modelo) como serviço externo ao catálogo: sai da fila "sem app". 400 para host inválido, 409 se
+    /// o host já está confirmado para um app.
+    /// </summary>
+    [HttpPut("api/integrations/hosts/{host}/external")]
+    public async Task<ActionResult<HostExternalMatchDto>> SetExternal(
+        string host, [FromBody] SetHostExternalRequest request, CancellationToken cancellationToken)
+    {
+        try
+        {
+            return Ok((await hostLinkService.SetExternalAsync(host, request.Name, request.Note, cancellationToken)).ToDto());
+        }
+        catch (ArgumentException ex)
+        {
+            return BadRequest(ex.Message);
+        }
+        catch (DomainConflictException ex)
+        {
+            return Conflict(ex.Message);
+        }
+    }
+
+    [HttpDelete("api/integrations/hosts/{host}/external")]
+    public async Task<IActionResult> RemoveExternal(string host, CancellationToken cancellationToken)
+    {
+        try
+        {
+            await hostLinkService.RemoveExternalAsync(host, cancellationToken);
+            return NoContent();
+        }
+        catch (ArgumentException ex)
+        {
+            return BadRequest(ex.Message);
+        }
+        catch (KeyNotFoundException ex)
+        {
+            return NotFound(ex.Message);
+        }
+    }
+
+    /// <summary>
+    /// Aplica a mesma decisão (<c>confirmado</c>, <c>rejeitado</c> ou <c>externo</c>) a vários hosts. Sempre 200 com o
+    /// resultado de cada host (uma falha, como o 409, não desfaz os outros); 400 só se o próprio pedido é inválido.
+    /// </summary>
+    [HttpPost("api/integrations/links/batch")]
+    public async Task<ActionResult<IReadOnlyList<BatchHostResultDto>>> Batch(
+        [FromBody] BatchHostLinkRequest request, CancellationToken cancellationToken)
+    {
+        try
+        {
+            var results = await hostLinkService.ApplyBatchAsync(
+                request.HostKeys, request.State, request.AppId, request.Name, request.Note, cancellationToken);
+            return Ok(results.Select(r => r.ToDto()).ToList());
+        }
+        catch (ArgumentException ex)
+        {
+            return BadRequest(ex.Message);
         }
     }
 }

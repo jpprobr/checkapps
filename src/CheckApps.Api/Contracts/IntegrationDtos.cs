@@ -13,8 +13,10 @@ public record IntegrationDto(
     string Confidence, string? ConfidenceNote, string ScannerId, string ScannerVersion);
 
 /// <param name="Destinations">Por id da integração: o app destino, só quando o host tem vínculo <c>confirmado</c> (spec 017).</param>
+/// <param name="Externals">Por id da integração: a marca de externo (host de serviço fora do catálogo, sem app), spec 019.</param>
 public record IntegrationSectionDto(
-    string Reference, IReadOnlyList<IntegrationDto> Integrations, IReadOnlyDictionary<string, HostLinkMatchDto> Destinations);
+    string Reference, IReadOnlyList<IntegrationDto> Integrations, IReadOnlyDictionary<string, HostLinkMatchDto> Destinations,
+    IReadOnlyDictionary<string, HostExternalMatchDto> Externals);
 
 /// <param name="Analysis">A corrente; nula se o repositório nunca foi analisado.</param>
 /// <param name="LastFailure">Tentativa que falhou depois da corrente.</param>
@@ -49,9 +51,16 @@ public record HostLinkMatchDto(
     string LinkId, string HostKey, string AppId, string AppName, string State, string Via, string? Template,
     DateTimeOffset DecidedAt, string? Note);
 
-/// <param name="Status"><c>confirmado</c>, <c>rejeitado</c> (só há rejeitos) ou <c>sem-vinculo</c>.</param>
+/// <param name="Status"><c>confirmado</c>, <c>externo</c>, <c>rejeitado</c> (só há rejeitos) ou <c>sem-vinculo</c>.</param>
 /// <param name="Confirmed">O app confirmado para o host (o exato vence o modelo); nulo se não há.</param>
-public record HostLinkInfoDto(string Status, HostLinkMatchDto? Confirmed, IReadOnlyList<HostLinkMatchDto> Rejected);
+/// <param name="External">A marca de "serviço externo ao catálogo" que vale para o host (spec 019); nula se não há.</param>
+public record HostLinkInfoDto(
+    string Status, HostLinkMatchDto? Confirmed, IReadOnlyList<HostLinkMatchDto> Rejected, HostExternalMatchDto? External);
+
+/// <param name="Name">Nome livre do serviço externo; opcional.</param>
+/// <param name="Template">A chave do modelo quando <c>Via</c> é <c>template</c>.</param>
+public record HostExternalMatchDto(
+    string ExternalId, string HostKey, string? Name, string Via, string? Template, DateTimeOffset DecidedAt, string? Note);
 
 /// <param name="Seen"><c>false</c> = nenhuma integração das análises correntes casa com o vínculo ("não visto na última análise").</param>
 public record HostLinkDto(
@@ -59,3 +68,11 @@ public record HostLinkDto(
     DateTimeOffset DecidedAt, string? Note, bool Seen);
 
 public record SetHostLinkRequest(string? AppId, string? State, string? Note);
+
+public record SetHostExternalRequest(string? Name, string? Note);
+
+/// <param name="State"><c>confirmado</c>, <c>rejeitado</c> ou <c>externo</c>; <c>AppId</c> é obrigatório salvo em <c>externo</c>.</param>
+public record BatchHostLinkRequest(IReadOnlyList<string>? HostKeys, string? State, string? AppId, string? Name, string? Note);
+
+/// <param name="Error">O texto do erro quando <c>Ok</c> é <c>false</c> (um host do lote pode falhar sem desfazer os outros).</param>
+public record BatchHostResultDto(string HostKey, bool Ok, string? Error);

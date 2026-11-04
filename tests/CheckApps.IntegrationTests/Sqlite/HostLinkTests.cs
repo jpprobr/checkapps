@@ -19,11 +19,12 @@ public class HostLinkTests(SqliteFixture fixture) : IClassFixture<SqliteFixture>
     private readonly AppRepository _apps = new(fixture.ConnectionFactory);
     private readonly AnalysisRepository _analyses = new(fixture.ConnectionFactory);
     private readonly HostLinkRepository _links = new(fixture.ConnectionFactory);
+    private readonly HostExternalRepository _externals = new(fixture.ConnectionFactory);
     private readonly AnalysisOptions _options = new();
 
-    private HostLinkService Links() => new(_apps, _links, _analyses, _options, TimeProvider.System);
+    private HostLinkService Links() => new(_apps, _links, _externals, _analyses, _options, TimeProvider.System);
 
-    private IntegrationService Integrations() => new(_apps, _analyses, _links, _options);
+    private IntegrationService Integrations() => new(_apps, _analyses, _links, _externals, _options);
 
     private async Task<string> SeedSquadAsync()
     {
@@ -239,5 +240,72 @@ public class HostLinkTests(SqliteFixture fixture) : IClassFixture<SqliteFixture>
 
         Assert.Equal(LinkStatuses.Confirmed, hosts[$"q-{marker}.qa.exemplo.com"].Link.Status);
         Assert.Equal(LinkStatuses.None, hosts[$"q-{marker}.dev.exemplo.com"].Link.Status);   // o padrão foi substituído
+    }
+
+
+    // ---- Host externo (spec 019) com o SQLite de verdade ----------------------------------------------------------------
+
+    [Fact]
+    public async Task ExternalRepository_Upsert_KeepsOneRowPerHost_AndDeleteReports()
+    {
+        var host = $"ext-{Marker()}.outra.com";
+
+        await _externals.UpsertAsync(new HostExternal { Id = "e-1", HostKey = host.ToUpperInvariant(), Name = "antes", DecidedAt = T1 });
+        await _externals.UpsertAsync(new HostExternal { Id = "e-2", HostKey = host, Name = null, DecidedAt = T1.AddHours(1), Note = "depois" });
+
+        var stored = Assert.Single(await _externals.ListAsync(), e => e.HostKey == host);
+        Assert.Equal("e-1", stored.Id);                    // a linha existente é preservada
+        Assert.Null(stored.Name);
+        Assert.Equal("depois", stored.Note);
+        Assert.Equal(HostLinkOrigins.Human, stored.Origin);
+        Assert.Equal(T1.AddHours(1), stored.DecidedAt);
+
+        Assert.True(await _externals.DeleteAsync(host));
+        Assert.False(await _externals.DeleteAsync(host));
+    }
+
+    [Fact]
+    public async Task ExternalHost_LeavesTheQueue_AppearsAsExterno_AndSurvivesReanalysis()
+    {
+        var marker = Marker();
+        var (callee, _) = await SeedAppAsync(await SeedSquadAsync(), "Pagamentos");
+        var (_, caller) = await SeedAppAsync(await SeedSquadAsync(), "Checkout");
+        await AnalyzeAsync(caller, $"x-{marker}.hom.exemplo.com", $"x-{marker}.prod.exemplo.com", $"livre-{marker}.exemplo.com");
+
+        await Links().SetExternalAsync($"x-{marker}.{{env}}.exemplo.com", "API da squad X", null);     // o modelo cobre hom e prod
+        await Links().SetAsync($"livre-{marker}.exemplo.com", callee, HostLinkStates.Confirmed, null);
+
+        var hosts = (await Integrations().ListHostsAsync(marker, null)).Hosts.ToDictionary(h => h.Key);
+        var hom = hosts[$"x-{marker}.hom.exemplo.com"].Link;
+        Assert.Equal(LinkStatuses.External, hom.Status);
+        Assert.Equal("API da squad X", hom.External!.Name);
+        Assert.Equal(HostKeyMatcher.ViaTemplate, hom.External.Via);
+
+        Assert.Empty((await Integrations().ListHostsAsync(marker, null, LinkStatuses.None)).Hosts);
+        Assert.Equal(2, (await Integrations().ListHostsAsync(marker, null, LinkStatuses.External)).Hosts.Count);
+
+        await AnalyzeAsync(caller, $"x-{marker}.hom.exemplo.com");     // reanálise não apaga a decisão
+        Assert.Contains(await _externals.ListAsync(), e => e.HostKey == $"x-{marker}.{{env}}.exemplo.com");
+    }
+
+    [Fact]
+    public async Task AppIntegrations_CarryTheExternalMark_ButOnlyWhereThereIsNoApp()
+    {
+        var marker = Marker();
+        var (callee, _) = await SeedAppAsync(await SeedSquadAsync(), "Pagamentos");
+        var (callerApp, callerRepo) = await SeedAppAsync(await SeedSquadAsync(), "Checkout");
+        await AnalyzeAsync(callerRepo, $"ext-{marker}.exemplo.com", $"app-{marker}.exemplo.com", $"nada-{marker}.exemplo.com");
+
+        await Links().SetExternalAsync($"ext-{marker}.exemplo.com", "Terceiro", null);
+        await Links().SetAsync($"app-{marker}.exemplo.com", callee, HostLinkStates.Confirmed, null);
+
+        var section = Assert.Single((await Integrations().GetForAppAsync(callerApp)).Repositories.Single().Sections);
+        var byHost = section.Integrations.ToDictionary(i => i.Host!);
+
+        Assert.Equal("Terceiro", section.Externals[byHost[$"ext-{marker}.exemplo.com"].Id].Name);
+        Assert.DoesNotContain(byHost[$"ext-{marker}.exemplo.com"].Id, section.Destinations.Keys);
+        Assert.Equal(callee, section.Destinations[byHost[$"app-{marker}.exemplo.com"].Id].AppId);
+        Assert.DoesNotContain(byHost[$"app-{marker}.exemplo.com"].Id, section.Externals.Keys);
+        Assert.DoesNotContain(byHost[$"nada-{marker}.exemplo.com"].Id, section.Externals.Keys);
     }
 }

@@ -94,6 +94,9 @@ Revistos para SQL em 2026-10-12. Os ⚠️ da versão DynamoDB (partição únic
 | 46 | Filtro por trecho do host | `lower(host) LIKE @pattern ESCAPE '\'` | ✅ | Curingas digitados (`%`, `_`) são escapados; índice `(lower(host))` serve ao igual, o "contém" varre as correntes (volume pequeno) |
 | 48 | Vínculos host→app (todos) | `host_links` ordenado por `host_key, app_id`; nome do app e "visto" calculados no serviço | ✅ | Tabela pequena (decisões humanas); lida inteira e resolvida em memória |
 | 49 | Gravar/trocar o vínculo de um par (host, app) | `UPDATE` pelo par e, se nada mudou, `INSERT` | ✅ | Portável (sem `ON CONFLICT`); preserva o id da linha existente |
+| 51 | Hosts externos (todos) | `host_externals` ordenado por `host_key`; resolvidos em memória junto com os vínculos | ✅ | Tabela pequena (decisões humanas) |
+| 52 | Marcar/trocar o externo de um host | `UPDATE` por `host_key` e, se nada mudou, `INSERT` | ✅ | Portável (sem `ON CONFLICT`); preserva o id da linha existente |
+| 53 | Remover a marca de externo | `DELETE ... WHERE host_key = @k` | ✅ | `false` → 404 |
 | 50 | Remover o vínculo de um par | `DELETE ... WHERE host_key = @k AND app_id = @a` | ✅ | `false` → 404 |
 | 47 | Quem chama o host X (detalhe) | o mesmo SQL do #45 filtrado por trecho; o serviço compara a chave exata (`host[:porta]`) | ✅ | Host inexistente → 404 |
 

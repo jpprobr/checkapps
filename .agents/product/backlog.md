@@ -128,6 +128,12 @@ Fase 3 é onde a IA tem papel real: descrever o que o app faz, inferir o tipo qu
 - **Densidade no desktop**: os valores das colunas ficam espremidos (sobretudo a tabela de usos do detalhe, com o endereço quebrando em várias linhas). Reduzir um pouco a fonte e/ou rever larguras e colunas.
 - **Modelo × hosts concretos**: a lista mostra o modelo `empresa.{env}.exemplo.com` e, logo abaixo, os hosts concretos (`hom`, `prod`) como linhas separadas, o que confunde. Elas existem porque cada host é a chave literal lida dos arquivos (o base traz o modelo; os arquivos por ambiente trazem o host concreto). Rever a apresentação, por exemplo agrupar os concretos sob o modelo que os cobre ou explicar a relação na tela.
 
+### Achados do usuário ao confirmar a 018 (2026-11-03) que mudam a parte 2 da 2b (tratados na spec 019: o backend, 019a, está implementado; a tela, 019b, falta)
+
+- **Nos projetos da squad, em geral só existem hosts concretos** (um por arquivo de ambiente), sem modelo `{env}` no arquivo base: o atalho do modelo ajuda pouco e cada host precisa do seu vínculo. Por isso a parte 2 inclui **ligar vários hosts ao mesmo app de uma vez** (seleção em lote).
+- **Muitas integrações são de apps de outras squads que talvez nunca sejam cadastrados**: o host fica "sem app" para sempre e a fila nunca esvazia (rejeitar diz "não é o app X", não "é de fora"). Por isso a parte 2 inclui **marcar o host como externo/ignorado** (nome opcional do serviço), que sai da fila e vira nó à parte no mapa. Exige tabela/estado novo, pois hoje o vínculo sempre aponta para um app.
+- **Mapa por ambiente**: o ambiente da aresta vem do `environmentKind` da **integração** (arquivo de origem), nunca do nome do host. Decidir antes do mapa: integração do arquivo base (sem ambiente) aparece em todos os ambientes ou num grupo "sem ambiente"; nome de ambiente desconhecido (ex.: `qa`) fica sem categoria.
+
 ## Mapa de aplicações
 
 Também visto na iniciativa de leitura de repositórios citada no item anterior (lá, construído a partir de repositórios). Depende do leitor de GitHub: sem fonte automática de ligações, vira planilha desenhada.

@@ -259,3 +259,16 @@ CREATE TABLE IF NOT EXISTS host_links (
 
 CREATE INDEX IF NOT EXISTS ix_host_links_app
     ON host_links (app_id);
+
+-- Host externo ao catálogo (spec 019): decisão HUMANA de que o host é de um serviço que ninguém vai cadastrar como app
+-- (outra squad, terceiro, legado). Tabela própria porque host_links.app_id é obrigatório. Mesmas regras do vínculo: fora
+-- das análises, sem FK para integrações, host_key = host[:porta] em minúsculas (pode ser modelo com {env}), um por host.
+-- Exclusão mútua com um vínculo confirmado é regra do serviço.
+CREATE TABLE IF NOT EXISTS host_externals (
+    id         TEXT PRIMARY KEY,
+    host_key   TEXT NOT NULL UNIQUE,
+    name       TEXT NULL,
+    origin     TEXT NOT NULL,
+    decided_at TEXT NOT NULL,
+    note       TEXT NULL
+);

@@ -91,7 +91,7 @@ public class SchemaEvolutionTests : IDisposable
         await bootstrapper.EnsureSchemaAsync(); // idempotente
 
         using var check = _factory.Create();
-        foreach (var table in new[] { "repository_analyses", "repository_dependencies", "repository_integrations", "host_links" })
+        foreach (var table in new[] { "repository_analyses", "repository_dependencies", "repository_integrations", "host_links", "host_externals" })
         {
             Assert.Equal(1, check.ExecuteScalar<int>(
                 $"SELECT COUNT(*) FROM sqlite_master WHERE type = 'table' AND name = '{table}'"));
@@ -133,6 +133,18 @@ public class SchemaEvolutionTests : IDisposable
         Assert.Equal(1, check.ExecuteScalar<int>("SELECT COUNT(*) FROM host_links"));
         check.Execute("DELETE FROM apps WHERE id = 'app-1'");
         Assert.Equal(0, check.ExecuteScalar<int>("SELECT COUNT(*) FROM host_links"));
+
+        // O host externo (spec 019) também é decisão humana, fora das análises: um por host.
+        check.Execute(
+            """
+            INSERT INTO host_externals (id, host_key, name, origin, decided_at)
+            VALUES ('x-1', 'api.outra.com', 'Terceiro', 'HUMAN', '2026-11-03T12:00:00.0000000+00:00');
+            """);
+        Assert.Throws<SqliteException>(() => check.Execute(
+            """
+            INSERT INTO host_externals (id, host_key, origin, decided_at)
+            VALUES ('x-2', 'api.outra.com', 'HUMAN', '2026-11-03T12:00:00.0000000+00:00');
+            """));
     }
 
     public void Dispose()

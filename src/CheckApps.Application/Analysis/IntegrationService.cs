@@ -11,15 +11,17 @@ namespace CheckApps.Application.Analysis;
 /// pertence vem do vínculo feito por pessoa (spec 017), resolvido pelo <see cref="HostLinkResolver"/>: nunca por palpite.
 /// </summary>
 public class IntegrationService(
-    IAppRepository apps, IAnalysisRepository analyses, IHostLinkRepository hostLinks, AnalysisOptions options)
+    IAppRepository apps, IAnalysisRepository analyses, IHostLinkRepository hostLinks, IHostExternalRepository hostExternals,
+    AnalysisOptions options)
 {
     private async Task<HostLinkResolver> BuildResolverAsync(CancellationToken cancellationToken)
     {
         var links = await hostLinks.ListAsync(cancellationToken);
+        var externals = await hostExternals.ListAsync(cancellationToken);
         var names = links.Count == 0
             ? new Dictionary<string, string>()
             : (await apps.ListAllAsync(cancellationToken)).ToDictionary(a => a.Id, a => a.Name);
-        return new HostLinkResolver(links, names, options.EffectiveEnvPlaceholderValues);
+        return new HostLinkResolver(links, names, options.EffectiveEnvPlaceholderValues, externals);
     }
 
     /// <exception cref="KeyNotFoundException">O app não existe.</exception>
@@ -43,7 +45,8 @@ public class IntegrationService(
                      .ThenBy(i => i.Environment, StringComparer.OrdinalIgnoreCase)
                      .ThenBy(i => i.ConfigKey, StringComparer.Ordinal)
                      .ToList(),
-                    DestinationsOf(g, resolver)))
+                    DestinationsOf(g, resolver),
+                    ExternalsOf(g, resolver)))
                 .ToList())).ToList();
 
         return new AppIntegrations(appId, repositories);
@@ -63,6 +66,23 @@ public class IntegrationService(
         }
 
         return destinations;
+    }
+
+    /// <summary>A marca de externo (spec 019) de cada integração com host, pelo id da integração.</summary>
+    private static IReadOnlyDictionary<string, HostExternalMatch> ExternalsOf(
+        IEnumerable<RepositoryIntegration> integrations, HostLinkResolver resolver)
+    {
+        var result = new Dictionary<string, HostExternalMatch>();
+        foreach (var integration in integrations.Where(i => i.Host is not null))
+        {
+            var info = resolver.Resolve(HostKey(integration));
+            if (info.Confirmed is null && info.External is { } external)
+            {
+                result[integration.Id] = external;
+            }
+        }
+
+        return result;
     }
 
     /// <param name="hostText">Trecho do host, sem diferença de caixa; vazio lista todos.</param>
@@ -148,8 +168,10 @@ public class IntegrationService(
 
 /// <summary>As integrações de uma seção de configuração (ex.: <c>IPagamentosServiceCliente</c>), com o arquivo base primeiro.</summary>
 /// <param name="Destinations">Por id da integração: o app destino quando o host tem vínculo confirmado (spec 017).</param>
+/// <param name="Externals">Por id da integração: a marca de externo quando o host é de um serviço fora do catálogo e não tem app (spec 019).</param>
 public record IntegrationSection(
-    string Reference, IReadOnlyList<RepositoryIntegration> Integrations, IReadOnlyDictionary<string, HostLinkMatch> Destinations);
+    string Reference, IReadOnlyList<RepositoryIntegration> Integrations, IReadOnlyDictionary<string, HostLinkMatch> Destinations,
+    IReadOnlyDictionary<string, HostExternalMatch> Externals);
 
 /// <param name="Analysis">A corrente; nula se o repositório nunca foi analisado.</param>
 /// <param name="LastFailure">Tentativa que falhou depois da corrente.</param>

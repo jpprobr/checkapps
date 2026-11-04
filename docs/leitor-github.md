@@ -157,6 +157,7 @@ O host `empresa.{env}.exemplo.com` é o app "Pagamentos"? Quem responde é uma p
 - `DELETE /api/integrations/hosts/{host}/link/{appId}` remove; `GET /api/integrations/links` lista tudo, com `seen` = se alguma análise corrente ainda chama o host.
 - Um vínculo no **modelo** (`empresa.{env}.exemplo.com`) vale para `empresa.dev…`, `empresa.hom…` e `empresa.prod…` (a lista é `Analysis:EnvPlaceholderValues`, padrão `dev`, `hom`, `prod`; configurar **substitui** o padrão). Um vínculo no host exato vence o do modelo. Outros valores (`qa`) **não** casam, a menos que estejam na lista.
 - A lista de hosts traz o vínculo de cada um (`link`, com `via` = `exact` ou `template`) e aceita `?linkStatus=sem-vinculo|confirmado|rejeitado`; as integrações de um app trazem o app destino quando o host está confirmado.
+- **Host externo e lote (spec 019)**: um host de serviço que ninguém vai cadastrar como app (outra squad, terceiro) é marcado como **externo** (`PUT /api/integrations/hosts/{host}/external`, corpo `{ "name": "...", "note": "..." }`; `DELETE` desfaz) e sai da fila "sem app". Não convive com um app confirmado no mesmo host (409; remova a decisão anterior). Para decidir vários hosts de uma vez: `POST /api/integrations/links/batch` com `{ "hostKeys": [...], "state": "confirmado" | "rejeitado" | "externo", "appId": "...", "name": "..." }`; a resposta traz `ok`/`error` por host (um 409 não desfaz os outros). O filtro `?linkStatus=externo` lista os externos e as integrações de um app trazem `externals` ao lado de `destinations`.
 
 ## 7. Problemas comuns
 

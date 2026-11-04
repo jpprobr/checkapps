@@ -13,7 +13,8 @@ public static class IntegrationDtoMapping
             r.Analysis?.ToDto(), r.LastFailure?.ToDto(),
             r.Sections.Select(s => new IntegrationSectionDto(
                 s.Reference, s.Integrations.Select(i => i.ToDto()).ToList(),
-                s.Destinations.ToDictionary(d => d.Key, d => d.Value.ToDto()))).ToList())).ToList());
+                s.Destinations.ToDictionary(d => d.Key, d => d.Value.ToDto()),
+                s.Externals.ToDictionary(d => d.Key, d => d.Value.ToDto()))).ToList())).ToList());
 
     public static IntegrationDto ToDto(this RepositoryIntegration i) => new(
         i.Id, i.Mechanism, i.Scheme, i.Host, i.Port, i.BasePath, i.Reference, i.ConfigKey, i.Environment, i.EnvironmentKind,
@@ -32,7 +33,12 @@ public static class IntegrationDtoMapping
         m.LinkId, m.HostKey, m.AppId, m.AppName, m.State, m.Via, m.Template, m.DecidedAt, m.Note);
 
     public static HostLinkInfoDto ToDto(this HostLinkInfo info) => new(
-        info.Status, info.Confirmed?.ToDto(), info.Rejected.Select(r => r.ToDto()).ToList());
+        info.Status, info.Confirmed?.ToDto(), info.Rejected.Select(r => r.ToDto()).ToList(), info.External?.ToDto());
+
+    public static HostExternalMatchDto ToDto(this HostExternalMatch m) => new(
+        m.ExternalId, m.HostKey, m.Name, m.Via, m.Template, m.DecidedAt, m.Note);
+
+    public static BatchHostResultDto ToDto(this HostBatchResult r) => new(r.HostKey, r.Ok, r.Error);
 
     public static HostLinkDto ToDto(this HostLinkListItem l) => new(
         l.Id, l.HostKey, l.IsTemplate, l.AppId, l.AppName, l.State, l.Origin, l.DecidedAt, l.Note, l.Seen);

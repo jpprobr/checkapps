@@ -18,7 +18,7 @@ public class IntegrationServiceTests(SqliteFixture fixture) : IClassFixture<Sqli
     private readonly AppRepository _apps = new(fixture.ConnectionFactory);
     private readonly AnalysisRepository _analyses = new(fixture.ConnectionFactory);
 
-    private IntegrationService Sut() => new(_apps, _analyses, new HostLinkRepository(fixture.ConnectionFactory), new AnalysisOptions());
+    private IntegrationService Sut() => new(_apps, _analyses, new HostLinkRepository(fixture.ConnectionFactory), new HostExternalRepository(fixture.ConnectionFactory), new AnalysisOptions());
 
     private async Task<string> SeedSquadAsync(string name)
     {
