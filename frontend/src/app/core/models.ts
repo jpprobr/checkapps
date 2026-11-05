@@ -577,6 +577,20 @@ export interface HostLinkInfo {
   external: HostExternalMatch | null;
 }
 
+/** Um vínculo gravado, com se o host ainda aparece nas análises correntes (spec 017). */
+export interface HostLinkRecord {
+  id: string;
+  hostKey: string;
+  isTemplate: boolean;
+  appId: string;
+  appName: string;
+  state: HostLinkState;
+  origin: string;
+  decidedAt: string;
+  note: string | null;
+  seen: boolean;
+}
+
 export interface SetHostExternalRequest {
   name: string | null;
   note: string | null;

@@ -6,8 +6,9 @@
     </summary>
   <p class="subtitle small">
     Endereços que o repositório <strong>declara</strong> chamar, lidos dos arquivos <code>appsettings*.json</code> (base e
-    por ambiente). O CheckApps ainda não diz a que app do catálogo cada endereço pertence, e não lê o código (interfaces
-    Refit e <code>HttpClient</code>).
+    por ambiente). A coluna "Destino" mostra o que uma pessoa decidiu na tela Integrações: o app que recebe a chamada, um
+    serviço externo ou "sem app" (ainda sem decisão). O CheckApps não lê o código (interfaces Refit e
+    <code>HttpClient</code>).
   </p>
 
   @if (loading()) {
@@ -69,6 +70,7 @@
                       <th>Ambiente</th>
                       <th>Endereço</th>
                       <th>Estado</th>
+                      <th>Destino</th>
                       <th>Confiança</th>
                     </tr>
                   </thead>
@@ -82,6 +84,17 @@
                         <td>{{ environment(integration) }}</td>
                         <td class="address">{{ address(integration) }}</td>
                         <td>{{ stateLabels[integration.state] }}</td>
+                        <td>
+                          @if (section.destinations[integration.id]; as dest) {
+                            <a [routerLink]="['/apps', dest.appId]">→ {{ dest.appName }}</a>
+                            @if (dest.via === 'template') { <span class="tag">pelo modelo</span> }
+                          } @else if (section.externals[integration.id]; as ext) {
+                            externo{{ ext.name ? ': ' + ext.name : '' }}
+                            @if (ext.via === 'template') { <span class="tag">pelo modelo</span> }
+                          } @else {
+                            sem app
+                          }
+                        </td>
                         <td>
                           <span class="confidence" [class.low]="integration.confidence === 'baixa'">{{ confidenceLabels[integration.confidence] }}</span>
                           @if (needsNote(integration)) { <span class="note">{{ integration.confidenceNote }}</span> }

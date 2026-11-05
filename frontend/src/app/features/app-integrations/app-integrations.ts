@@ -1,5 +1,6 @@
 import { DatePipe } from '@angular/common';
 import { Component, computed, effect, inject, input, signal } from '@angular/core';
+import { RouterLink } from '@angular/router';
 
 import { ANALYSIS_STATUS_LABELS, CONFIDENCE_LABELS, shortSha } from '../../core/dependency-labels';
 import { IntegrationsApiService } from '../../core/integrations-api.service';
@@ -18,11 +19,11 @@ import { AppIntegrations, Integration } from '../../core/models';
 /**
  * Seção "Integrações" do detalhe do app (spec 014): por repositório e por seção de configuração, os endereços que ele
  * declara chamar, de qual arquivo vêm e o quanto o CheckApps confia. Só lê: a análise roda pela ferramenta
- * CheckApps.Analyze. Não diz a que app do catálogo cada endereço pertence (isso é de outra fase).
+ * CheckApps.Analyze. O destino de cada endereço (app, externo ou sem app) vem das decisões da tela Integrações (specs 017 e 019).
  */
 @Component({
   selector: 'app-app-integrations',
-  imports: [DatePipe],
+  imports: [DatePipe, RouterLink],
   templateUrl: './app-integrations.html',
   styleUrl: './app-integrations.css',
 })

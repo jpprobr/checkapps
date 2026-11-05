@@ -9,6 +9,7 @@ import {
   BatchHostResult,
   HostDetail,
   HostExternalMatch,
+  HostLinkRecord,
   HostLinkMatch,
   HostLinkStatus,
   HostList,
@@ -51,6 +52,11 @@ export class IntegrationsApiService {
 
   removeLink(hostKey: string, appId: string): Observable<void> {
     return this.http.delete<void>(`${API_BASE_URL}/integrations/hosts/${encodeURIComponent(hostKey)}/link/${appId}`);
+  }
+
+  /** Todos os vínculos gravados; `seen` diz se o host ainda aparece nas análises correntes. */
+  links(): Observable<HostLinkRecord[]> {
+    return this.http.get<HostLinkRecord[]>(`${API_BASE_URL}/integrations/links`);
   }
 
   /** Marca o host como serviço de fora do catálogo (spec 019). 409 se já está confirmado para um app. */

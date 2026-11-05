@@ -29,16 +29,16 @@ Status: **019a (backend) implementada** em 2026-11-03 (plano aprovado em plan mo
 - [x] `curl` em banco isolado (e2e.db): lote confirmando hosts, lote com sucesso parcial (409 + chave inválida), externo em lote com nome (modelo cobre os concretos), filtro `externo` (e 400 inválido), `externals` nas integrações do app, 400 de lote vazio / sem app / estado inválido, `PUT`/`DELETE` do externo (200, 400, 409 nos dois sentidos, 204, 404)
 - [x] Confirmação do usuário sobre o contrato dos endpoints (exemplos de resposta) — confirmado em 2026-11-03
 
-## 019b — Frontend (pendente)
+## 019b — Frontend
 
 - [x] Seleção em lote, "Marcar como externo", filtro "Externo", painel do host com o externo (019b1, `ng build` limpo; confirmado pelo usuário na tela em 2026-11-04)
-- [ ] Bloco "vínculos não vistos"
-- [ ] Coluna "Destino" na seção Integrações do app
-- [ ] `npx ng build` sem erros nem avisos; roteiro no navegador em banco isolado
-- [ ] Confirmação do usuário na tela (AAAA-MM-DD)
+- [x] Bloco "vínculos não vistos" (recolhível, só aparece se houver; remover) — 019b2
+- [x] Coluna "Destino" na seção Integrações do app (→ App X, externo: Nome, sem app, "pelo modelo")
+- [x] `npx ng build` sem erros nem avisos; roteiro no navegador em banco isolado (feito pelo usuário na tela)
+- [x] Confirmação do usuário na tela (2026-11-05); ele fará uma validação final com repositórios e vínculos reais
 
 ## Encerramento (`close-spec`)
 
-- [ ] `Status` da spec `Implementada` (só após a 019b)
+- [x] `Status` da spec `Implementada`
 - [x] `.agents/project/STATE.md` reescrito (próximo passo = 019b)
 - [x] Mapa do `AGENTS.md` e contagem de testes

@@ -1,6 +1,6 @@
 # Spec 019: Decisão em lote, host externo e destino no app (fatia 2b, parte 2)
 
-**Status**: Em implementação. **019a (backend)** implementada e verificada (2026-11-03), aguarda a confirmação do usuário sobre o contrato; **019b (frontend)** ainda não começou
+**Status**: Implementada. 019a (backend) e 019b (frontend) validadas pelo usuário em 2026-11-03/05; falta uma última validação com repositórios e vínculos reais
 **Criada em**: 2026-11-03
 **Origem**: achados do usuário ao confirmar a spec 018 (registrados no `backlog.md`): nos projetos da squad só existem hosts concretos (um por arquivo de ambiente), então cada serviço pede três confirmações do mesmo app; e muitas integrações vão para apps de outras squads que talvez nunca sejam cadastrados, então o host fica "sem app" para sempre e a fila não esvazia. Decisões do usuário: só pessoa decide (sem sugestão automática); trabalho em duas sessões (019a backend, 019b frontend).
 

@@ -22,6 +22,7 @@ import {
   HostDetail,
   HostExternalMatch,
   HostLinkMatch,
+  HostLinkRecord,
   HostLinkState,
   HostLinkStatus,
   HostList,
@@ -76,6 +77,9 @@ export class Integrations {
 
   protected readonly externalName = signal('');
 
+  /** Vínculos cujo host não aparece mais nas análises correntes (spec 019): ficam aqui para serem revistos ou removidos. */
+  protected readonly unseen = signal<HostLinkRecord[]>([]);
+
   // Decisão em lote (spec 019): hosts marcados na lista e o resultado de cada um.
   protected readonly checked = signal<ReadonlySet<string>>(new Set());
   protected readonly batchAppId = signal('');
@@ -87,6 +91,7 @@ export class Integrations {
   constructor() {
     this.squadsApi.list().subscribe((squads) => this.squads.set(squads));
     this.appsApi.list().subscribe((apps) => this.apps.set([...apps].sort((a, b) => a.name.localeCompare(b.name))));
+    this.loadUnseen();
     this.search();
   }
 
@@ -260,8 +265,21 @@ export class Integrations {
     });
   }
 
+  private loadUnseen(): void {
+    this.api.links().subscribe((links) => this.unseen.set(links.filter((l) => !l.seen)));
+  }
+
+  /** Remove um vínculo que não aparece mais nas análises. */
+  protected removeUnseen(link: HostLinkRecord): void {
+    if (this.saving()) {
+      return;
+    }
+    this.runAction(this.api.removeLink(link.hostKey, link.appId));
+  }
+
   /** Atualiza a lista com os filtros atuais sem fechar o host aberto. */
   private refreshList(): void {
+    this.loadUnseen();
     this.api.hosts(this.host(), this.squadId() || null, this.linkStatus()).subscribe((result) => this.result.set(result));
   }
 

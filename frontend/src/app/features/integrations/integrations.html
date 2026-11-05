@@ -284,4 +284,31 @@
       </section>
     }
   }
+
+  @if (unseen().length > 0) {
+    <section class="card">
+      <details class="collapsible">
+        <summary>
+          <h2>Vínculos sem host nas análises</h2>
+          <span class="summary-text">{{ unseen().length }}</span>
+        </summary>
+        <p class="subtitle small">
+          Vínculos que você decidiu, mas cujo host não aparece mais nas análises mais recentes (o endereço mudou ou foi
+          removido). Revise e remova os que não valem mais.
+        </p>
+        <ul class="rejected">
+          @for (l of unseen(); track l.id) {
+            <li>
+              {{ l.hostKey }} → {{ l.appName }} ({{ l.state === 'confirmado' ? 'confirmado' : 'rejeitado' }},
+              {{ l.decidedAt | date: 'dd/MM/yyyy' }})
+              <button type="button" class="link-button" [disabled]="saving()" (click)="removeUnseen(l)">remover</button>
+            </li>
+          }
+        </ul>
+        @if (actionError(); as message) {
+          <p class="error" role="alert">{{ message }}</p>
+        }
+      </details>
+    </section>
+  }
 </main>
