@@ -2,7 +2,7 @@
 
 Critério de "concluído". Cada item deve ser verificável por alguém que não escreveu o código.
 
-Status: **020a (backend) implementada** em 2026-11-05 (plano aprovado em plan mode no mesmo dia). Falta a confirmação do contrato pelo usuário e a **020b (tela)**.
+Status: **020a (backend) implementada e confirmada** (2026-11-05). **020b (tela) implementada, verificada e validada pelo usuário** (2026-11-05).
 
 ## Qualidade da spec (antes de codar)
 
@@ -19,15 +19,15 @@ Status: **020a (backend) implementada** em 2026-11-05 (plano aprovado em plan mo
 - [x] `curl` em banco isolado: arestas por ambiente (hom/prod), externo nomeado, nó "Sem app", laço (`selfLoop`), cobertura com `noScannerRepositories`, squad inexistente → grafo vazio
 - [x] Confirmação do usuário sobre o contrato do endpoint (exemplo de resposta) — confirmado em 2026-11-05
 
-## 020b — Tela (pendente)
+## 020b — Tela
 
-- [ ] Menu "Mapa", grafo em SVG com layout automático, filtros e legenda em texto
-- [ ] Tabela "Quem chama quem" e painel de cobertura ("scanner indisponível", "não analisado")
-- [ ] `npx ng build` sem erros nem avisos; roteiro no navegador em banco isolado
-- [ ] Confirmação do usuário na tela (AAAA-MM-DD)
+- [x] Menu "Mapa", grafo em SVG com layout automático (`@dagrejs/dagre`, rota carregada sob demanda), filtros e legenda em texto
+- [x] Tabela "Quem chama quem" e painel de cobertura ("scanner indisponível", "não analisado")
+- [x] `npx ng build` sem erros nem avisos; roteiro no navegador em banco isolado (Playwright do assistente, 12 verificações, 2026-11-05)
+- [x] Confirmação do usuário na tela (2026-11-05)
 
 ## Encerramento (`close-spec`)
 
-- [ ] `Status` da spec `Implementada` (só após a 020b)
+- [x] `Status` da spec `Implementada`
 - [x] `.agents/project/STATE.md` reescrito (próximo passo = confirmar o contrato e 020b)
 - [x] Mapa do `AGENTS.md` e contagem de testes

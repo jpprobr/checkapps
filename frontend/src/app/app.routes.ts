@@ -40,6 +40,8 @@ export const routes: Routes = [
   // Nome antigo da tela ("Dependências", antes de virar "Pacotes"): favoritos continuam funcionando.
   { path: 'dependencies', redirectTo: 'packages', pathMatch: 'full' },
   { path: 'integrations', component: Integrations },
+  // Carregado sob demanda: o layout do grafo (dagre) não pesa no bundle inicial.
+  { path: 'map', loadComponent: () => import('./features/map/map').then((m) => m.AppMapPage) },
   // Nome antigo da tela ("Descobertos"): favoritos continuam funcionando.
   { path: 'discovered', redirectTo: 'repositories', pathMatch: 'full' },
   { path: 'checks', component: CheckList },

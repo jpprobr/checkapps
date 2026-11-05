@@ -601,3 +601,48 @@ export interface SetHostLinkRequest {
   state: HostLinkState;
   note: string | null;
 }
+
+// ---- Mapa de aplicações (spec 020): grafo "quem chama quem", derivado das integrações e das decisões humanas ---------------
+
+/** 'sem-app' é um nó só, que reúne todos os hosts sem decisão. */
+export type MapNodeKind = 'app' | 'externo' | 'sem-app';
+
+export interface MapNode {
+  id: string;
+  kind: MapNodeKind;
+  label: string;
+  squadId: string | null;
+  squadName: string | null;
+  qualityLevel: QualityLevel | null;
+}
+
+export interface MapEdge {
+  fromId: string;
+  toId: string;
+  /** dev, hom, prod; nulo = arquivo base ou ambiente desconhecido (vale para todos). */
+  environmentKind: string | null;
+  count: number;
+  hosts: string[];
+  /** O app chama o próprio host. */
+  selfLoop: boolean;
+}
+
+export interface NoScannerRepository {
+  repositoryId: string;
+  repositoryName: string;
+  appId: string;
+  appName: string;
+}
+
+export interface MapCoverage {
+  unanalyzedRepositories: number;
+  latestAnalyzedAt: string | null;
+  /** Repositórios para os quais nenhum scanner se aplica: o mapa não os enxerga. */
+  noScannerRepositories: NoScannerRepository[];
+}
+
+export interface AppMap {
+  nodes: MapNode[];
+  edges: MapEdge[];
+  coverage: MapCoverage;
+}

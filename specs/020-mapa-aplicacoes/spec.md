@@ -1,6 +1,6 @@
 # Spec 020: Mapa de aplicações (fase 3, fatia 3 — primeira versão, só leitura)
 
-**Status**: Em implementação. **020a (backend, `GET /api/map`)** implementada e verificada (2026-11-05); aguarda a confirmação do contrato pelo usuário. **020b (tela)** ainda não começou.
+**Status**: Implementada. **020a (backend)** confirmada pelo usuário (2026-11-05); **020b (tela)** implementada, verificada e validada pelo usuário na tela (2026-11-05).
 **Criada em**: 2026-11-05
 **Origem**: com as decisões humanas host→app da spec 017 e da spec 019 já existem ligações app A → app B confiáveis; o mapa é a primeira visão que as usa (backlog, "Mapa de aplicações").
 
