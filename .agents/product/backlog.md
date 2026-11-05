@@ -137,6 +137,8 @@ Fase 3 é onde a IA tem papel real: descrever o que o app faz, inferir o tipo qu
 
 ## Mapa de aplicações
 
+**Primeira versão (só leitura) em andamento: `specs/020-mapa-aplicacoes/`** (020a backend feita em 2026-11-05; tela na 020b). Continuam fora dela: Solução, ligações inferidas/IaC e a tabela de ligações.
+
 Também visto na iniciativa de leitura de repositórios citada no item anterior (lá, construído a partir de repositórios). Depende do leitor de GitHub: sem fonte automática de ligações, vira planilha desenhada.
 
 - **Mapa de apps, não de repositórios.** Um App agrega N repositórios (legado + novo, componentes); o mapa mostra a arquitetura lógica, não a dispersão de repos.

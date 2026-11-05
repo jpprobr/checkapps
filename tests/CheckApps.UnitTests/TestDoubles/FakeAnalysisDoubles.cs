@@ -51,6 +51,9 @@ public class FakeAnalysisRepository : IAnalysisRepository
         throw new NotSupportedException();
 
     public Task<AnalysisCoverage> GetCoverageAsync(CancellationToken ct = default) => throw new NotSupportedException();
+
+    public Task<IReadOnlyList<NoScannerRepositoryRow>> ListNoScannerRepositoriesAsync(string? squadId, CancellationToken ct = default) =>
+        throw new NotSupportedException();
 }
 
 /// <summary>

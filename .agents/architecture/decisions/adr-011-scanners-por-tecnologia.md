@@ -58,3 +58,9 @@ O vínculo "este host é o app Y" (Y **recebe** a chamada) **não é um fato lid
 - **Exclusão mútua** (regra do serviço, 409): um host exato não é `confirmado` e `externo` ao mesmo tempo; rejeitos convivem com externo. Status efetivo: `confirmado` > `externo` > `rejeitado` > `sem-vinculo`. O contrato da 017 foi preservado (`destinations` igual; `externals` e `link.external` são campos novos).
 - **Lote**: `POST /api/integrations/links/batch` aplica a mesma decisão (`confirmado`, `rejeitado` ou `externo`) a vários hosts, com sucesso parcial (cada host segue as regras individuais; um 409 não desfaz os outros). Motivo: nos projetos reais só existem hosts concretos, um por ambiente.
 - **Limite**: externos "não vistos" na última análise não aparecem na lista de vínculos não vistos (só vínculos de app).
+
+## Adendo (2026-11-05, spec 020): o mapa de aplicações é derivado, não armazenado
+
+- O mapa é calculado a cada leitura (`GET /api/map`) a partir das integrações das análises correntes e das decisões humanas host→app (specs 017 e 019). **Não há tabela de ligações**: guardar o grafo duplicaria um fato que já tem fonte e envelheceria; se algum dia houver ligação que não vem de uma integração (cadastrada à mão, IaC, IA), aí nasce a tabela de ligações com origem e confiança (backlog).
+- O **ambiente** de uma aresta é o `environmentKind` da integração (arquivo de origem), nunca do nome do host. Arquivo base e ambiente desconhecido têm ambiente nulo e valem para todos. A inferência por nome de arquivo (`appsettings.{Nome}.json`) é do scanner **.NET**; outras tecnologias só entram quando tiverem scanner, e até lá o repositório aparece como "scanner indisponível" na cobertura do mapa.
+- O destino sem decisão é um nó único "Sem app": o mapa nunca desenha uma ligação que nenhuma pessoa decidiu.

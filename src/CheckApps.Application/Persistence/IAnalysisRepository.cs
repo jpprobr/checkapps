@@ -45,7 +45,16 @@ public interface IAnalysisRepository
     Task<IReadOnlyList<FrameworkUsageRow>> ListFrameworkUsageAsync(CancellationToken cancellationToken = default);
 
     Task<AnalysisCoverage> GetCoverageAsync(CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// Repositórios cuja análise corrente tem a situação <c>sem-scanner</c> (nenhum scanner se aplica), com o app.
+    /// <paramref name="squadId"/> restringe aos apps da squad; nulo traz todos.
+    /// </summary>
+    Task<IReadOnlyList<NoScannerRepositoryRow>> ListNoScannerRepositoriesAsync(
+        string? squadId, CancellationToken cancellationToken = default);
 }
+
+public record NoScannerRepositoryRow(string RepositoryId, string RepositoryName, string AppId, string AppName);
 
 /// <param name="Current">Nula se o repositório nunca teve uma análise que não falhou.</param>
 /// <param name="LastFailure">A tentativa que falhou depois da corrente (ou sem nenhuma corrente); nula se não há.</param>

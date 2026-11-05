@@ -14,7 +14,7 @@ public class IntegrationService(
     IAppRepository apps, IAnalysisRepository analyses, IHostLinkRepository hostLinks, IHostExternalRepository hostExternals,
     AnalysisOptions options)
 {
-    private async Task<HostLinkResolver> BuildResolverAsync(CancellationToken cancellationToken)
+    internal async Task<HostLinkResolver> BuildResolverAsync(CancellationToken cancellationToken)
     {
         var links = await hostLinks.ListAsync(cancellationToken);
         var externals = await hostExternals.ListAsync(cancellationToken);

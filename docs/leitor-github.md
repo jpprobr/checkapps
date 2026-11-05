@@ -147,7 +147,7 @@ A mesma análise do scanner .NET lê os arquivos `appsettings*.json` (o base e o
 - **Reanalisar**: as análises feitas antes da spec 014 não têm integrações; rode `CheckApps.Analyze --sigla <sigla> --force` (ou espere um commit novo).
 - **Onde ver**: seção **Integrações** no detalhe do app e o item **Integrações** do menu (lista de hosts, com quem os chama). A API só lê.
 - **Vínculo host→app** (spec 017, veja abaixo): dizer a que app um host pertence é decisão de pessoa.
-- **O que não cobre ainda**: interfaces Refit e `AddHttpClient` no código (spec 015), o selo do app destino no detalhe do app e o mapa de aplicações.
+- **O que não cobre ainda**: interfaces Refit e `AddHttpClient` no código (spec 015), o mapa de aplicações já tem a API (seção abaixo; a tela vem na spec 020b).
 
 ### Vínculo host→app (spec 017)
 
@@ -158,6 +158,10 @@ O host `empresa.{env}.exemplo.com` é o app "Pagamentos"? Quem responde é uma p
 - Um vínculo no **modelo** (`empresa.{env}.exemplo.com`) vale para `empresa.dev…`, `empresa.hom…` e `empresa.prod…` (a lista é `Analysis:EnvPlaceholderValues`, padrão `dev`, `hom`, `prod`; configurar **substitui** o padrão). Um vínculo no host exato vence o do modelo. Outros valores (`qa`) **não** casam, a menos que estejam na lista.
 - A lista de hosts traz o vínculo de cada um (`link`, com `via` = `exact` ou `template`) e aceita `?linkStatus=sem-vinculo|confirmado|rejeitado`; as integrações de um app trazem o app destino quando o host está confirmado.
 - **Host externo e lote (spec 019)**: um host de serviço que ninguém vai cadastrar como app (outra squad, terceiro) é marcado como **externo** (`PUT /api/integrations/hosts/{host}/external`, corpo `{ "name": "...", "note": "..." }`; `DELETE` desfaz) e sai da fila "sem app". Não convive com um app confirmado no mesmo host (409; remova a decisão anterior). Para decidir vários hosts de uma vez: `POST /api/integrations/links/batch` com `{ "hostKeys": [...], "state": "confirmado" | "rejeitado" | "externo", "appId": "...", "name": "..." }`; a resposta traz `ok`/`error` por host (um 409 não desfaz os outros). O filtro `?linkStatus=externo` lista os externos e as integrações de um app trazem `externals` ao lado de `destinations`.
+
+### Mapa de aplicações (spec 020)
+
+`GET /api/map` (opcional `?squadId=`) devolve o grafo "quem chama quem", **calculado na hora** a partir das análises correntes e das decisões da tela Integrações; só lê. `nodes` são apps (`kind: app`), serviços externos (`externo`, nome informado ou o host) e um nó único `sem-app`; `edges` agregam por origem, destino e ambiente (`environmentKind` da integração: `dev`, `hom`, `prod` ou nulo = arquivo base/ambiente desconhecido, que vale para todos), com `count`, `hosts` e `selfLoop` (app chamando o próprio host). `coverage` traz os repositórios não analisados e os `noScannerRepositories` (nenhum scanner se aplica; hoje só há o scanner .NET, então o ambiente vem de `appsettings.{Nome}.json`). Quanto menos hosts decididos, mais arestas para `sem-app`.
 
 ## 7. Problemas comuns
 

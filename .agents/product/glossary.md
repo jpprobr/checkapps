@@ -74,7 +74,7 @@ Vocabulário do CheckApps. Serve a pessoas de squads diferentes (para que um ter
 | **Pacote interno** | Definido | Pacote cujo nome começa com o prefixo da empresa (configuração local, não versionada). Marcação calculada na leitura. É o sinal mais forte de acoplamento entre apps. |
 | **Dependência de biblioteca** | Definido (na tela: **Pacotes**) | Pacote declarado num manifesto (`PackageReference` do `.csproj`, `package.json`…), com a versão **declarada** (só diretas; transitivas ficam de fora por ora). Guardada como fato de uma análise, portanto como snapshot. |
 | **Ligação** (dependência entre apps) | Em aberto | Aresta do mapa: o app A depende do app B. Sempre com origem (manual, IaC, inferida por IA) e confiança. **Diferente** de dependência de biblioteca. |
-| **Mapa de aplicações** | Em aberto | Grafo de **apps** (não de repositórios) e suas ligações, colorível por Quality Level, versão, vulnerabilidade ou status de checagem. |
+| **Mapa de aplicações** | Em andamento (spec 020) | Grafo de **apps** (não de repositórios) e suas ligações "quem chama quem", por ambiente, **derivado** das integrações declaradas e das decisões humanas host→app (sem tabela própria). O nó "Sem app" reúne os hosts sem decisão; "externo" é um serviço fora do catálogo. A cobertura lista o que o mapa não enxerga (repositórios `sem-scanner` e não analisados). Colorível por squad ou Quality Level. |
 
 ## Personas
 

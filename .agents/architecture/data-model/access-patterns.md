@@ -98,6 +98,7 @@ Revistos para SQL em 2026-10-12. Os ⚠️ da versão DynamoDB (partição únic
 | 52 | Marcar/trocar o externo de um host | `UPDATE` por `host_key` e, se nada mudou, `INSERT` | ✅ | Portável (sem `ON CONFLICT`); preserva o id da linha existente |
 | 53 | Remover a marca de externo | `DELETE ... WHERE host_key = @k` | ✅ | `false` → 404 |
 | 50 | Remover o vínculo de um par | `DELETE ... WHERE host_key = @k AND app_id = @a` | ✅ | `false` → 404 |
+| 54 | Repositórios `sem-scanner` das análises correntes (com o app, opcionalmente de uma squad) | `repositories` ⨝ `apps` ⨝ análise corrente (subconsulta `CurrentIdFor`) com `status = 'sem-scanner'`, ordenado por app e repositório | ✅ | Alimenta a cobertura do mapa (spec 020); o grafo em si é derivado em memória das linhas do padrão de integrações com host mais os vínculos |
 | 47 | Quem chama o host X (detalhe) | o mesmo SQL do #45 filtrado por trecho; o serviço compara a chave exata (`host[:porta]`) | ✅ | Host inexistente → 404 |
 
 ## Fora de escopo hoje — agora por decisão de produto, não de banco

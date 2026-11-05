@@ -290,6 +290,24 @@ public class AnalysisRepository(SqliteConnectionFactory connectionFactory) : IAn
         return new AnalysisCoverage(unanalyzed, latest is null ? null : IsoTimestamp.Parse(latest));
     }
 
+    public async Task<IReadOnlyList<NoScannerRepositoryRow>> ListNoScannerRepositoriesAsync(
+        string? squadId, CancellationToken cancellationToken = default)
+    {
+        using var connection = connectionFactory.Create();
+        var rows = await connection.QueryAsync<NoScannerRepositoryRow>(new CommandDefinition(
+            $"""
+            SELECT r.id AS RepositoryId, r.name AS RepositoryName, a.id AS AppId, a.name AS AppName
+            FROM repositories r
+            JOIN apps a ON a.id = r.app_id
+            JOIN repository_analyses an ON an.id = {CurrentIdFor("r.id")}
+            WHERE an.status = '{AnalysisStatuses.NoScanner}'
+              AND (@squadId IS NULL OR a.squad_id = @squadId)
+            ORDER BY a.name, r.name
+            """,
+            new { squadId }, cancellationToken: cancellationToken));
+        return rows.ToList();
+    }
+
     private sealed class AnalysisRow
     {
         public string Id { get; set; } = "";
