@@ -31,7 +31,7 @@ Status: **019a (backend) implementada** em 2026-11-03 (plano aprovado em plan mo
 
 ## 019b — Frontend (pendente)
 
-- [ ] Seleção em lote, "Marcar como externo", filtro "Externo", painel do host com o externo
+- [x] Seleção em lote, "Marcar como externo", filtro "Externo", painel do host com o externo (019b1, `ng build` limpo; confirmado pelo usuário na tela em 2026-11-04)
 - [ ] Bloco "vínculos não vistos"
 - [ ] Coluna "Destino" na seção Integrações do app
 - [ ] `npx ng build` sem erros nem avisos; roteiro no navegador em banco isolado

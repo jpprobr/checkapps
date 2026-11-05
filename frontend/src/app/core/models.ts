@@ -451,6 +451,8 @@ export interface IntegrationSection {
   integrations: Integration[];
   /** App destino por id de integração; só as confirmadas (spec 017). */
   destinations: Record<string, HostLinkMatch>;
+  /** Serviço externo por id de integração, onde não há app confirmado (spec 019). */
+  externals: Record<string, HostExternalMatch>;
 }
 
 export interface RepositoryIntegrations {
@@ -523,7 +525,36 @@ export interface HostDetail {
 
 export type HostLinkState = 'confirmado' | 'rejeitado';
 /** Filtro da lista de hosts; 'sem-vinculo' = nenhum vínculo (nem rejeito). */
-export type HostLinkStatus = 'sem-vinculo' | HostLinkState;
+export type HostLinkStatus = 'sem-vinculo' | 'externo' | HostLinkState;
+
+/** Host decidido como serviço de fora do catálogo (spec 019). */
+export interface HostExternalMatch {
+  externalId: string;
+  hostKey: string;
+  name: string | null;
+  via: 'exact' | 'template';
+  template: string | null;
+  decidedAt: string;
+  note: string | null;
+}
+
+export type BatchHostState = HostLinkState | 'externo';
+
+export interface BatchHostLinkRequest {
+  hostKeys: string[];
+  state: BatchHostState;
+  /** Obrigatório, exceto em 'externo'. */
+  appId: string | null;
+  /** Nome do serviço externo (só em 'externo'). */
+  name: string | null;
+  note: string | null;
+}
+
+export interface BatchHostResult {
+  hostKey: string;
+  ok: boolean;
+  error: string | null;
+}
 
 export interface HostLinkMatch {
   linkId: string;
@@ -543,6 +574,12 @@ export interface HostLinkInfo {
   status: HostLinkStatus;
   confirmed: HostLinkMatch | null;
   rejected: HostLinkMatch[];
+  external: HostExternalMatch | null;
+}
+
+export interface SetHostExternalRequest {
+  name: string | null;
+  note: string | null;
 }
 
 export interface SetHostLinkRequest {

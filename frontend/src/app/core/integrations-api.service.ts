@@ -3,7 +3,18 @@ import { Injectable, inject } from '@angular/core';
 import { Observable } from 'rxjs';
 
 import { API_BASE_URL } from './api-config';
-import { AppIntegrations, HostDetail, HostLinkMatch, HostLinkStatus, HostList, SetHostLinkRequest } from './models';
+import {
+  AppIntegrations,
+  BatchHostLinkRequest,
+  BatchHostResult,
+  HostDetail,
+  HostExternalMatch,
+  HostLinkMatch,
+  HostLinkStatus,
+  HostList,
+  SetHostExternalRequest,
+  SetHostLinkRequest,
+} from './models';
 
 /** A análise roda pela ferramenta CheckApps.Analyze, nunca por esta API; aqui só se leem os fatos e se gravam os vínculos host→app (decisão humana). */
 @Injectable({ providedIn: 'root' })
@@ -40,5 +51,19 @@ export class IntegrationsApiService {
 
   removeLink(hostKey: string, appId: string): Observable<void> {
     return this.http.delete<void>(`${API_BASE_URL}/integrations/hosts/${encodeURIComponent(hostKey)}/link/${appId}`);
+  }
+
+  /** Marca o host como serviço de fora do catálogo (spec 019). 409 se já está confirmado para um app. */
+  setExternal(hostKey: string, request: SetHostExternalRequest): Observable<HostExternalMatch> {
+    return this.http.put<HostExternalMatch>(`${API_BASE_URL}/integrations/hosts/${encodeURIComponent(hostKey)}/external`, request);
+  }
+
+  removeExternal(hostKey: string): Observable<void> {
+    return this.http.delete<void>(`${API_BASE_URL}/integrations/hosts/${encodeURIComponent(hostKey)}/external`);
+  }
+
+  /** Decide vários hosts de uma vez; sucesso parcial: cada host traz seu resultado (spec 019). */
+  batch(request: BatchHostLinkRequest): Observable<BatchHostResult[]> {
+    return this.http.post<BatchHostResult[]>(`${API_BASE_URL}/integrations/links/batch`, request);
   }
 }

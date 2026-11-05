@@ -125,6 +125,7 @@ Fase 3 é onde a IA tem papel real: descrever o que o app faz, inferir o tipo qu
 ## Tela de vínculos host→app: melhorias de UX (apontadas pelo usuário ao confirmar a spec 018, 2026-11-03)
 
 - **Celular**: a tela Integrações com o painel de vínculo não está boa em 390 px (a página não estoura, mas a leitura e o formulário ficam ruins). Rever o layout do painel e das tabelas no celular.
+- **Aparência geral (2026-11-04, ao validar a 019b1)**: a interface funciona, mas tem cara de sistema corporativo legado. Fazer uma spec própria de redesign visual para deixá-la mais agradável e fluída (hierarquia, espaçamento, barra de lote, feedback de ações), cobrindo também celular e densidade.
 - **Densidade no desktop**: os valores das colunas ficam espremidos (sobretudo a tabela de usos do detalhe, com o endereço quebrando em várias linhas). Reduzir um pouco a fonte e/ou rever larguras e colunas.
 - **Modelo × hosts concretos**: a lista mostra o modelo `empresa.{env}.exemplo.com` e, logo abaixo, os hosts concretos (`hom`, `prod`) como linhas separadas, o que confunde. Elas existem porque cada host é a chave literal lida dos arquivos (o base traz o modelo; os arquivos por ambiente trazem o host concreto). Rever a apresentação, por exemplo agrupar os concretos sob o modelo que os cobre ou explicar a relação na tela.
 

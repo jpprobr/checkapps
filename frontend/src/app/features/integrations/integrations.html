@@ -4,7 +4,8 @@
     Os endereços que os repositórios catalogados <strong>declaram</strong> chamar, segundo a última análise de cada um
     (hoje lidos dos arquivos <code>appsettings*.json</code>). Um host com <code>{{ '{env}' }}</code> é um modelo: o ambiente só se
     sabe pelo arquivo. Quem diz a que app do catálogo cada host pertence é uma pessoa: abra um host e confirme ou rejeite
-    o app. Um vínculo feito no modelo <code>{{ '{env}' }}</code> vale para <code>dev</code>, <code>hom</code> e <code>prod</code>. A análise
+    o app, ou marque vários hosts na lista e decida todos de uma vez. Host de serviço que não está no catálogo pode ser
+    marcado como externo. Um vínculo feito no modelo <code>{{ '{env}' }}</code> vale para <code>dev</code>, <code>hom</code> e <code>prod</code>. A análise
     roda no terminal (<code>CheckApps.Analyze</code>).
   </p>
 
@@ -59,10 +60,53 @@
     @if (r.hosts.length === 0) {
       <p role="status">Nenhum host encontrado nas análises mais recentes.</p>
     } @else {
+      @if (checked().size > 0) {
+        <div class="card batch-bar">
+          <strong>{{ checked().size }} {{ checked().size === 1 ? 'host marcado' : 'hosts marcados' }}</strong>
+          <label>
+            App
+            <select name="batchApp" [ngModel]="batchAppId()" (ngModelChange)="batchAppId.set($event)">
+              <option value="">Escolha um app…</option>
+              @for (app of apps(); track app.id) {
+                <option [value]="app.id">{{ app.name }}</option>
+              }
+            </select>
+          </label>
+          <button type="button" [disabled]="batchRunning() || !batchAppId()" (click)="runBatch('confirmado')">Confirmar</button>
+          <button type="button" class="secondary" [disabled]="batchRunning() || !batchAppId()" (click)="runBatch('rejeitado')">Rejeitar</button>
+          <label>
+            Nome do serviço externo (opcional)
+            <input type="text" name="batchName" maxlength="200" autocomplete="off"
+              [ngModel]="batchName()" (ngModelChange)="batchName.set($event)" />
+          </label>
+          <button type="button" class="secondary" [disabled]="batchRunning()" (click)="runBatch('externo')">Marcar como externo</button>
+        </div>
+      }
+      @if (batchResults(); as results) {
+        <p role="status">
+          {{ batchOkCount(results) }} de {{ results.length }} {{ results.length === 1 ? 'host decidido' : 'hosts decididos' }}.
+          @if (batchFailures(results).length > 0) { Os que falharam continuam marcados. }
+        </p>
+        @if (batchFailures(results).length > 0) {
+          <ul class="error" role="alert">
+            @for (f of batchFailures(results); track f.hostKey) {
+              <li><strong>{{ f.hostKey }}</strong>: {{ f.error }}</li>
+            }
+          </ul>
+        }
+      }
+      @if (batchError(); as message) {
+        <p class="error" role="alert">{{ message }}</p>
+      }
+
       <div class="table-scroll">
         <table>
           <thead>
             <tr>
+              <th>
+                <input type="checkbox" aria-label="Marcar todos os hosts da lista"
+                  [checked]="allChecked(r.hosts)" (change)="toggleAll(r.hosts, $any($event.target).checked)" />
+              </th>
               <th>Host</th>
               <th>App</th>
               <th>Apps que chamam</th>
@@ -76,13 +120,17 @@
             @for (h of r.hosts; track h.key) {
               <tr [class.selected]="selectedKey() === h.key">
                 <td>
+                  <input type="checkbox" [attr.aria-label]="'Marcar ' + h.key"
+                    [checked]="checked().has(h.key)" (change)="toggleChecked(h.key, $any($event.target).checked)" />
+                </td>
+                <td>
                   <button type="button" class="link-button" [attr.aria-pressed]="selectedKey() === h.key"
                     [attr.aria-label]="'Ver quem chama ' + h.key" (click)="select(h.key)">{{ h.key }}</button>
                   @if (h.isTemplate) { <span class="tag">modelo</span> }
                 </td>
                 <td>
                   {{ linkText(h.link) }}
-                  @if (h.link.confirmed?.via === 'template') { <span class="tag">pelo modelo</span> }
+                  @if ((h.link.confirmed ?? h.link.external)?.via === 'template') { <span class="tag">pelo modelo</span> }
                 </td>
                 <td>{{ h.appCount }}</td>
                 <td>{{ h.repositoryCount }}</td>
@@ -125,6 +173,19 @@
               <p>Nenhum app confirmado para este host.</p>
             }
 
+            @if (d.link.external; as e) {
+              <p>
+                <strong>Externo{{ e.name ? ': ' + e.name : '' }}</strong> (serviço fora do catálogo, marcado
+                {{ e.via === 'template' ? 'pelo modelo ' + e.template : 'neste host' }},
+                {{ e.decidedAt | date: 'dd/MM/yyyy HH:mm' }})
+                @if (e.note) { <span class="note">{{ e.note }}</span> }
+              </p>
+              @if (e.via === 'template') {
+                <p class="note">Vale para dev, hom e prod. Remover apaga a marca do modelo para todos os ambientes.</p>
+              }
+              <button type="button" class="secondary" [disabled]="saving()" (click)="removeExternal(e)">Remover marca de externo</button>
+            }
+
             @if (d.link.rejected.length > 0) {
               <ul class="rejected">
                 @for (r of d.link.rejected; track r.linkId) {
@@ -155,6 +216,17 @@
               <button type="button" [disabled]="saving() || !linkAppId()" (click)="decide('confirmado')">Confirmar</button>
               <button type="button" class="secondary" [disabled]="saving() || !linkAppId()" (click)="decide('rejeitado')">Rejeitar</button>
             </div>
+            @if (!d.link.external) {
+              <div class="link-form">
+                <label>
+                  Nome do serviço externo (opcional)
+                  <input type="text" name="externalName" maxlength="200" autocomplete="off"
+                    [ngModel]="externalName()" (ngModelChange)="externalName.set($event)" />
+                </label>
+                <button type="button" class="secondary" [disabled]="saving()" (click)="markExternal()">Marcar como externo</button>
+              </div>
+              <p class="note">Externo = o host pertence a um serviço que não está no catálogo (por exemplo, de outra squad).</p>
+            }
             @if (d.isTemplate) {
               <p class="note">Este host é um modelo: a decisão vale para dev, hom e prod.</p>
             } @else {

@@ -81,6 +81,7 @@ export function integrationsSummary(data: AppIntegrations): string {
 export const LINK_STATUS_LABELS: Record<HostLinkStatus, string> = {
   'sem-vinculo': 'Sem app',
   confirmado: 'Confirmado',
+  externo: 'Externo',
   rejeitado: 'Só rejeitado',
 };
 
@@ -88,6 +89,9 @@ export const LINK_STATUS_LABELS: Record<HostLinkStatus, string> = {
 export function linkSummary(link: HostLinkInfo): string {
   if (link.confirmed) {
     return `→ ${link.confirmed.appName}`;
+  }
+  if (link.external) {
+    return link.external.name ? `externo: ${link.external.name}` : 'externo';
   }
   if (link.rejected.length > 0) {
     return `rejeitado: ${link.rejected.map((r) => r.appName).join(', ')}`;

@@ -15,7 +15,18 @@ import {
   integrationAddress,
   linkSummary,
 } from '../../core/integration-labels';
-import { AppSummary, HostDetail, HostLinkMatch, HostLinkState, HostLinkStatus, HostList, Squad } from '../../core/models';
+import {
+  AppSummary,
+  BatchHostResult,
+  BatchHostState,
+  HostDetail,
+  HostExternalMatch,
+  HostLinkMatch,
+  HostLinkState,
+  HostLinkStatus,
+  HostList,
+  Squad,
+} from '../../core/models';
 import { SquadsApiService } from '../../core/squads-api.service';
 
 /**
@@ -63,6 +74,16 @@ export class Integrations {
   protected readonly saving = signal(false);
   protected readonly actionError = signal<string | null>(null);
 
+  protected readonly externalName = signal('');
+
+  // Decisão em lote (spec 019): hosts marcados na lista e o resultado de cada um.
+  protected readonly checked = signal<ReadonlySet<string>>(new Set());
+  protected readonly batchAppId = signal('');
+  protected readonly batchName = signal('');
+  protected readonly batchRunning = signal(false);
+  protected readonly batchResults = signal<BatchHostResult[] | null>(null);
+  protected readonly batchError = signal<string | null>(null);
+
   constructor() {
     this.squadsApi.list().subscribe((squads) => this.squads.set(squads));
     this.appsApi.list().subscribe((apps) => this.apps.set([...apps].sort((a, b) => a.name.localeCompare(b.name))));
@@ -74,6 +95,9 @@ export class Integrations {
     this.failed.set(false);
     this.selectedKey.set(null);
     this.detail.set(null);
+    this.checked.set(new Set());
+    this.batchResults.set(null);
+    this.batchError.set(null);
     this.api.hosts(this.host(), this.squadId() || null, this.linkStatus()).subscribe({
       next: (result) => {
         this.result.set(result);
@@ -91,6 +115,7 @@ export class Integrations {
     this.actionError.set(null);
     this.linkAppId.set('');
     this.linkNote.set('');
+    this.externalName.set('');
     this.detail.set(null);
     this.detailLoading.set(true);
     this.detailFailed.set(false);
@@ -127,6 +152,92 @@ export class Integrations {
       return;
     }
     this.runAction(this.api.removeLink(match.hostKey, match.appId));
+  }
+
+  /** Marca o host aberto como serviço de fora do catálogo. */
+  protected markExternal(): void {
+    const key = this.selectedKey();
+    if (!key || this.saving()) {
+      return;
+    }
+    this.runAction(
+      this.api.setExternal(key, { name: this.externalName().trim() || null, note: this.linkNote().trim() || null }),
+      () => {
+        this.externalName.set('');
+        this.linkNote.set('');
+      },
+    );
+  }
+
+  protected removeExternal(match: HostExternalMatch): void {
+    if (this.saving()) {
+      return;
+    }
+    this.runAction(this.api.removeExternal(match.hostKey));
+  }
+
+  protected toggleChecked(key: string, on: boolean): void {
+    const next = new Set(this.checked());
+    if (on) {
+      next.add(key);
+    } else {
+      next.delete(key);
+    }
+    this.checked.set(next);
+  }
+
+  protected allChecked(hosts: { key: string }[]): boolean {
+    return hosts.length > 0 && hosts.every((h) => this.checked().has(h.key));
+  }
+
+  /** Marca ou desmarca todos os hosts visíveis (a lista já respeita os filtros). */
+  protected toggleAll(hosts: { key: string }[], on: boolean): void {
+    this.checked.set(on ? new Set(hosts.map((h) => h.key)) : new Set());
+  }
+
+  /** Aplica a mesma decisão aos hosts marcados; cada host responde por si (um conflito não desfaz os outros). */
+  protected runBatch(state: BatchHostState): void {
+    const hostKeys = [...this.checked()];
+    if (hostKeys.length === 0 || this.batchRunning() || (state !== 'externo' && !this.batchAppId())) {
+      return;
+    }
+    this.batchRunning.set(true);
+    this.batchResults.set(null);
+    this.batchError.set(null);
+    this.api
+      .batch({
+        hostKeys,
+        state,
+        appId: state === 'externo' ? null : this.batchAppId(),
+        name: state === 'externo' ? this.batchName().trim() || null : null,
+        note: null,
+      })
+      .subscribe({
+        next: (results) => {
+          this.batchResults.set(results);
+          this.batchRunning.set(false);
+          // Os que deram certo saem da seleção; as falhas ficam marcadas para nova tentativa.
+          this.checked.set(new Set(results.filter((r) => !r.ok).map((r) => r.hostKey)));
+          this.batchName.set('');
+          this.refreshList();
+          const open = this.selectedKey();
+          if (open) {
+            this.reloadDetail(open);
+          }
+        },
+        error: (err: HttpErrorResponse) => {
+          this.batchError.set(typeof err.error === 'string' && err.error ? err.error : 'Não foi possível aplicar a decisão em lote.');
+          this.batchRunning.set(false);
+        },
+      });
+  }
+
+  protected batchOkCount(results: BatchHostResult[]): number {
+    return results.filter((r) => r.ok).length;
+  }
+
+  protected batchFailures(results: BatchHostResult[]): BatchHostResult[] {
+    return results.filter((r) => !r.ok);
   }
 
   private runAction(request: Observable<unknown>, onDone?: () => void): void {
