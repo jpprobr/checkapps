@@ -1,0 +1,30 @@
+openapi: 3.0.3
+info:
+  title: Com segredos
+  version: '1'
+  description: SEGREDO-DESCRICAO
+servers:
+  - url: https://usuario:SEGREDO-SERVER@interno.exemplo.com
+x-amazon-apigateway-policy: SEGREDO-EXTENSAO
+paths:
+  /pagamentos:
+    post:
+      description: SEGREDO-OPERACAO
+      x-amazon-apigateway-integration:
+        uri: https://SEGREDO-INTEGRACAO.exemplo.com
+        type: http
+      requestBody:
+        content:
+          application/json:
+            example: { token: SEGREDO-EXEMPLO-MIDIA }
+            schema:
+              type: object
+              example: { token: SEGREDO-EXEMPLO-ESQUEMA }
+              properties:
+                token:
+                  type: string
+                  description: SEGREDO-CAMPO
+                  default: SEGREDO-PADRAO
+                  example: SEGREDO-EXEMPLO
+      responses:
+        '200': { description: SEGREDO-RESPOSTA }

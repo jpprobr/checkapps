@@ -9,8 +9,10 @@ namespace CheckApps.Infrastructure.Sqlite;
 /// SQL explícito e portável (ADR-009). A "análise corrente" de um repositório é a subconsulta
 /// <see cref="CurrentIdFor"/>: a mais recente que não falhou. Avisos são guardados como texto, um por linha.
 /// </summary>
-public class AnalysisRepository(SqliteConnectionFactory connectionFactory) : IAnalysisRepository
+public class AnalysisRepository(SqliteConnectionFactory connectionFactory, IEnumerable<IAnalysisFactWriter> factWriters) : IAnalysisRepository
 {
+    private readonly Dictionary<Type, IAnalysisFactWriter> _writers = factWriters.ToDictionary(w => w.FactType);
+
     private const string FactColumns =
         """
         d.id AS Id, d.analysis_id AS AnalysisId, d.ecosystem AS Ecosystem, d.kind AS Kind, d.name AS Name,
@@ -42,9 +44,8 @@ public class AnalysisRepository(SqliteConnectionFactory connectionFactory) : IAn
          ORDER BY x.analyzed_at DESC, x.id DESC LIMIT 1)
         """;
 
-    public async Task AddAsync(
-        RepositoryAnalysis analysis, IReadOnlyList<RepositoryDependency> facts,
-        IReadOnlyList<RepositoryIntegration>? integrations = null, CancellationToken cancellationToken = default)
+    public async Task SaveAsync(
+        RepositoryAnalysis analysis, IReadOnlyList<IAnalysisFact> facts, CancellationToken cancellationToken = default)
     {
         using var connection = connectionFactory.Create();
         using var transaction = connection.BeginTransaction();
@@ -66,34 +67,15 @@ public class AnalysisRepository(SqliteConnectionFactory connectionFactory) : IAn
             },
             transaction, cancellationToken: cancellationToken));
 
-        foreach (var fact in facts)
+        foreach (var group in facts.GroupBy(f => f.GetType()))
         {
-            await connection.ExecuteAsync(new CommandDefinition(
-                """
-                INSERT INTO repository_dependencies
-                    (id, analysis_id, ecosystem, kind, name, version, project_path, source_file, origin,
-                     confidence, confidence_note, scanner_id, scanner_version)
-                VALUES
-                    (@Id, @AnalysisId, @Ecosystem, @Kind, @Name, @Version, @ProjectPath, @SourceFile, @Origin,
-                     @Confidence, @ConfidenceNote, @ScannerId, @ScannerVersion)
-                """,
-                fact, transaction, cancellationToken: cancellationToken));
-        }
+            // Sem escritor, o fato se perderia em silêncio: a exceção desfaz a transação inteira.
+            if (!_writers.TryGetValue(group.Key, out var writer))
+            {
+                throw new InvalidOperationException($"Não há escritor registrado para fatos do tipo {group.Key.Name}.");
+            }
 
-        foreach (var integration in integrations ?? [])
-        {
-            await connection.ExecuteAsync(new CommandDefinition(
-                """
-                INSERT INTO repository_integrations
-                    (id, analysis_id, mechanism, scheme, host, port, base_path, reference, config_key, environment,
-                     environment_kind, state, project_path, source_file, origin, confidence, confidence_note,
-                     scanner_id, scanner_version)
-                VALUES
-                    (@Id, @AnalysisId, @Mechanism, @Scheme, @Host, @Port, @BasePath, @Reference, @ConfigKey, @Environment,
-                     @EnvironmentKind, @State, @ProjectPath, @SourceFile, @Origin, @Confidence, @ConfidenceNote,
-                     @ScannerId, @ScannerVersion)
-                """,
-                integration, transaction, cancellationToken: cancellationToken));
+            await writer.WriteAsync(connection, transaction, group.ToList(), cancellationToken);
         }
 
         transaction.Commit();
@@ -191,6 +173,139 @@ public class AnalysisRepository(SqliteConnectionFactory connectionFactory) : IAn
         return loaded.Select(l => new RepositoryIntegrationsView(
             l.Repository, l.Current, l.LastFailure,
             l.Current is null ? [] : integrations.Where(i => i.AnalysisId == l.Current.Id).ToList())).ToList();
+    }
+
+    public async Task<IReadOnlyList<RepositoryContractsView>> GetCurrentContractsByAppAsync(
+        string appId, CancellationToken cancellationToken = default)
+    {
+        using var connection = connectionFactory.Create();
+        var loaded = await LoadCurrentAsync(connection, appId, cancellationToken);
+
+        var analysisIds = loaded.Where(l => l.Current is not null).Select(l => l.Current!.Id).ToArray();
+        var endpoints = await LoadEndpointsAsync(connection, analysisIds, cancellationToken);
+
+        return loaded.Select(l => new RepositoryContractsView(
+            l.Repository, l.Current, l.LastFailure,
+            l.Current is null ? [] : endpoints.Where(e => e.AnalysisId == l.Current.Id).ToList())).ToList();
+    }
+
+    public async Task<ContractSnapshot?> GetContractBaselineAsync(
+        string repositoryId, string currentCommitSha, CancellationToken cancellationToken = default)
+    {
+        using var connection = connectionFactory.Create();
+        var row = await connection.QueryFirstOrDefaultAsync<AnalysisRow>(new CommandDefinition(
+            $"""
+            SELECT {AnalysisColumns} FROM repository_analyses an
+            WHERE an.repository_id = @repositoryId
+              AND an.status <> '{AnalysisStatuses.Failed}'
+              AND an.commit_sha IS NOT NULL
+              AND an.commit_sha <> @currentCommitSha
+              AND EXISTS (SELECT 1 FROM repository_api_endpoints e WHERE e.analysis_id = an.id)
+            ORDER BY an.analyzed_at DESC, an.id DESC
+            LIMIT 1
+            """,
+            new { repositoryId, currentCommitSha }, cancellationToken: cancellationToken));
+
+        if (row is null)
+        {
+            return null;
+        }
+
+        var analysis = row.ToEntity();
+        return new ContractSnapshot(analysis, await LoadEndpointsAsync(connection, [analysis.Id], cancellationToken));
+    }
+
+    private static async Task<IReadOnlyList<RepositoryApiEndpoint>> LoadEndpointsAsync(
+        System.Data.IDbConnection connection, string[] analysisIds, CancellationToken cancellationToken)
+    {
+        if (analysisIds.Length == 0)
+        {
+            return [];
+        }
+
+        var endpoints = (await connection.QueryAsync<ApiEndpointRow>(new CommandDefinition(
+            """
+            SELECT e.id AS Id, e.analysis_id AS AnalysisId, e.mechanism AS Mechanism, e.method AS Method, e.path AS Path,
+                   e.path_key AS PathKey, e.declared_id AS DeclaredId, e.summary AS Summary, e.tags AS Tags,
+                   e.security AS Security, e.deprecated AS Deprecated, e.api_title AS ApiTitle, e.api_version AS ApiVersion,
+                   e.source_file AS SourceFile, e.origin AS Origin, e.confidence AS Confidence,
+                   e.confidence_note AS ConfidenceNote, e.scanner_id AS ScannerId, e.scanner_version AS ScannerVersion
+            FROM repository_api_endpoints e
+            WHERE e.analysis_id IN @analysisIds
+            ORDER BY e.path, e.method, e.source_file
+            """,
+            new { analysisIds }, cancellationToken: cancellationToken))).ToList();
+
+        // Pela análise, e não por uma lista de ids de endpoint: um contrato grande estouraria o limite de parâmetros.
+        var fields = (await connection.QueryAsync<ApiFieldRow>(new CommandDefinition(
+            """
+            SELECT f.id AS Id, f.endpoint_id AS EndpointId, f.location AS Location, f.status_code AS StatusCode,
+                   f.media_type AS MediaType, f.path AS Path, f.type AS Type, f.format AS Format, f.required AS Required,
+                   f.enum_values AS EnumValues, f.note AS Note
+            FROM repository_api_fields f
+            JOIN repository_api_endpoints e ON e.id = f.endpoint_id
+            WHERE e.analysis_id IN @analysisIds
+            ORDER BY f.location, f.status_code, f.media_type, f.path
+            """,
+            new { analysisIds }, cancellationToken: cancellationToken)))
+            .ToLookup(f => f.EndpointId);
+
+        return endpoints.Select(e => e.ToEntity(fields[e.Id].Select(f => f.ToEntity()).ToList())).ToList();
+    }
+
+    private static IReadOnlyList<string> LinesOf(string? value) => string.IsNullOrEmpty(value) ? [] : value.Split('\n');
+
+    private sealed class ApiEndpointRow
+    {
+        public string Id { get; set; } = "";
+        public string AnalysisId { get; set; } = "";
+        public string Mechanism { get; set; } = "";
+        public string Method { get; set; } = "";
+        public string Path { get; set; } = "";
+        public string PathKey { get; set; } = "";
+        public string? DeclaredId { get; set; }
+        public string? Summary { get; set; }
+        public string? Tags { get; set; }
+        public string? Security { get; set; }
+        public long Deprecated { get; set; }
+        public string? ApiTitle { get; set; }
+        public string? ApiVersion { get; set; }
+        public string SourceFile { get; set; } = "";
+        public string Origin { get; set; } = "";
+        public string Confidence { get; set; } = "";
+        public string? ConfidenceNote { get; set; }
+        public string ScannerId { get; set; } = "";
+        public string ScannerVersion { get; set; } = "";
+
+        public RepositoryApiEndpoint ToEntity(IReadOnlyList<RepositoryApiField> fields) => new()
+        {
+            Id = Id, AnalysisId = AnalysisId, Mechanism = Mechanism, Method = Method, Path = Path, PathKey = PathKey,
+            DeclaredId = DeclaredId, Summary = Summary, Tags = LinesOf(Tags), Security = LinesOf(Security),
+            Deprecated = Deprecated != 0, ApiTitle = ApiTitle, ApiVersion = ApiVersion, SourceFile = SourceFile, Origin = Origin,
+            Confidence = Confidence, ConfidenceNote = ConfidenceNote, ScannerId = ScannerId, ScannerVersion = ScannerVersion,
+            Fields = fields
+        };
+    }
+
+    private sealed class ApiFieldRow
+    {
+        public string Id { get; set; } = "";
+        public string EndpointId { get; set; } = "";
+        public string Location { get; set; } = "";
+        public string? StatusCode { get; set; }
+        public string? MediaType { get; set; }
+        public string Path { get; set; } = "";
+        public string? Type { get; set; }
+        public string? Format { get; set; }
+        public long Required { get; set; }
+        public string? EnumValues { get; set; }
+        public string? Note { get; set; }
+
+        public RepositoryApiField ToEntity() => new()
+        {
+            Id = Id, EndpointId = EndpointId, Location = Location, StatusCode = StatusCode, MediaType = MediaType, Path = Path,
+            Type = Type, Format = Format, Required = Required != 0, EnumValues = LinesOf(EnumValues), Note = Note
+        };
     }
 
     public async Task<IReadOnlyList<IntegrationUsageRow>> ListIntegrationRowsAsync(

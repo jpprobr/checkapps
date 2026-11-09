@@ -1,0 +1,25 @@
+swagger: 2.0
+info: { title: Legado, version: '1' }
+securityDefinitions:
+  chave: { type: apiKey, name: x-chave, in: header }
+paths:
+  /simulacoes:
+    post:
+      operationId: criarSimulacao
+      security: [ { chave: [] } ]
+      parameters:
+        - in: body
+          name: corpo
+          required: true
+          schema: { $ref: '#/definitions/Pedido' }
+        - { in: query, name: pagina, type: integer }
+      responses:
+        200:
+          description: ok
+          schema: { $ref: '#/definitions/Pedido' }
+definitions:
+  Pedido:
+    type: object
+    required: [valor]
+    properties:
+      valor: { type: number }

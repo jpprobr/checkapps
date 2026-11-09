@@ -16,7 +16,7 @@ public class DependencyServiceTests(SqliteFixture fixture) : IClassFixture<Sqlit
 
     private readonly SquadRepository _squads = new(fixture.ConnectionFactory);
     private readonly AppRepository _apps = new(fixture.ConnectionFactory);
-    private readonly AnalysisRepository _analyses = new(fixture.ConnectionFactory);
+    private readonly AnalysisRepository _analyses = new(fixture.ConnectionFactory, TestAnalysisWriters.All);
 
     private DependencyService Sut(params string[] internalPrefixes) =>
         new(_apps, _analyses, new AnalysisOptions { InternalPackagePrefixes = internalPrefixes });

@@ -30,7 +30,7 @@ public sealed record RepositoryAnalysis
 /// versão de framework e, no futuro, a pacote npm. Toda linha diz de onde veio (<see cref="Origin"/>,
 /// scanner e arquivo) e o quanto o CheckApps confia nela (<see cref="Confidence"/>).
 /// </summary>
-public sealed record RepositoryDependency
+public sealed record RepositoryDependency : IAnalysisFact
 {
     public required string Id { get; init; }
     public required string AnalysisId { get; init; }

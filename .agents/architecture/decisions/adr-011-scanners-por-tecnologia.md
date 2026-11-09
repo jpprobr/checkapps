@@ -64,3 +64,11 @@ O vínculo "este host é o app Y" (Y **recebe** a chamada) **não é um fato lid
 - O mapa é calculado a cada leitura (`GET /api/map`) a partir das integrações das análises correntes e das decisões humanas host→app (specs 017 e 019). **Não há tabela de ligações**: guardar o grafo duplicaria um fato que já tem fonte e envelheceria; se algum dia houver ligação que não vem de uma integração (cadastrada à mão, IaC, IA), aí nasce a tabela de ligações com origem e confiança (backlog).
 - O **ambiente** de uma aresta é o `environmentKind` da integração (arquivo de origem), nunca do nome do host. Arquivo base e ambiente desconhecido têm ambiente nulo e valem para todos. A inferência por nome de arquivo (`appsettings.{Nome}.json`) é do scanner **.NET**; outras tecnologias só entram quando tiverem scanner, e até lá o repositório aparece como "scanner indisponível" na cobertura do mapa.
 - O destino sem decisão é um nó único "Sem app": o mapa nunca desenha uma ligação que nenhuma pessoa decidiu.
+
+## Adendo (2026-11-05, spec 021): contratos como terceiro tipo de fato
+
+- **Cada tipo de fato tem processador e escritor próprios.** O scanner devolve saídas (`IScannerOutput`); `IAnalysisFactProcessor` (Application) transforma a saída bruta em fatos, com avisos e notas; `IAnalysisFactWriter` (Infrastructure) grava o tipo na transação da análise. O `AnalysisService` e o `SaveAsync` deixam de conhecer os tipos. Tipo sem escritor lança exceção e desfaz a transação. Tabela, API e tela continuam específicas de cada tipo: não há framework genérico.
+- **Endpoints e campos declarados** ganham tabelas próprias, `repository_api_endpoints` e `repository_api_fields`, com a proveniência de sempre. O termo é **endpoint**, porque **Operação** é termo de negócio.
+- **Parser**: `Microsoft.OpenApi`, na mesma versão da API, com YAML convertido para JSON pelo YamlDotNet. `$ref` externo nunca é buscado.
+- **A comparação entre commits é derivada, não armazenada.** A base é a análise não falhada mais recente de commit diferente que tenha endpoints. Numa análise parcial, o que sumiu nunca é classificado como quebra.
+- **O que é declarado não é o que está implementado.** O contrato pode estar desatualizado; `mechanism = openapi` deixa espaço para comparar os dois depois.

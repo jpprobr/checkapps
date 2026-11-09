@@ -12,14 +12,17 @@ namespace CheckApps.Application.Analysis;
 /// escolhe os scanners pela lista de caminhos, lê só o que eles pedem e grava uma análise por repositório.
 ///
 /// Regras: a falha de um repositório não interrompe os outros; um commit já analisado não gera nada de novo (salvo
-/// com <c>force</c>); o volume lido é limitado; e **nenhum conteúdo de arquivo é guardado** — só os fatos, as
-/// integrações já normalizadas (spec 014) e os avisos. Os candidatos a integração chegam brutos do scanner e passam
-/// pelo <see cref="IntegrationNormalizer"/> antes de qualquer gravação.
+/// com <c>force</c>); o volume lido é limitado; e **nenhum conteúdo de arquivo é guardado** — só os fatos e os
+/// avisos. As saídas chegam brutas do scanner e passam pelo <see cref="IAnalysisFactProcessor"/> do tipo delas antes de
+/// qualquer gravação; este serviço não conhece nenhum tipo de fato (spec 021).
 /// </summary>
 public class AnalysisService(
-    IRepositoryContentSource source, ScannerRegistry scanners, IAppRepository apps, IAnalysisRepository analyses,
-    AnalysisOptions options, ScanOptions scanOptions, TimeProvider timeProvider)
+    IRepositoryContentSource source, ScannerRegistry scanners, IEnumerable<IAnalysisFactProcessor> factProcessors,
+    IAppRepository apps, IAnalysisRepository analyses, AnalysisOptions options, ScanOptions scanOptions,
+    TimeProvider timeProvider)
 {
+    private readonly IReadOnlyList<IAnalysisFactProcessor> _processors = factProcessors.ToList();
+
     /// <summary>O que falta para a fonte funcionar, ou <c>null</c>. Sem valores de configuração.</summary>
     public string? ConfigurationProblem => source.ConfigurationProblem;
 
@@ -54,7 +57,7 @@ public class AnalysisService(
         var repository = catalog.Repository;
         if (!source.CanRead(repository))
         {
-            return new AnalysisItem(catalog, AnalysisOutcome.Skipped, null, 0, ["esta fonte não lê repositórios desse provedor"]);
+            return new AnalysisItem(catalog, AnalysisOutcome.Skipped, null, ["esta fonte não lê repositórios desse provedor"]);
         }
 
         RepositoryTree tree;
@@ -70,7 +73,7 @@ public class AnalysisService(
         var current = await analyses.GetCurrentAsync(repository.Id, cancellationToken);
         if (!force && current is not null && current.CommitSha == tree.CommitSha)
         {
-            return new AnalysisItem(catalog, AnalysisOutcome.Unchanged, current.Status, 0, []);
+            return new AnalysisItem(catalog, AnalysisOutcome.Unchanged, current.Status, []);
         }
 
         var warnings = new List<string>();
@@ -82,8 +85,7 @@ public class AnalysisService(
 
         var paths = tree.Files.Select(f => f.Path).ToList();
         var applicable = scanners.Applicable(paths);
-        var facts = new List<RepositoryDependency>();
-        var integrations = new List<RepositoryIntegration>();
+        var factsByProcessor = _processors.ToDictionary(p => p, _ => new List<IAnalysisFact>());
 
         var analysis = new RepositoryAnalysis
         {
@@ -98,9 +100,7 @@ public class AnalysisService(
         {
             foreach (var scanner in applicable)
             {
-                var run = await RunScannerAsync(scanner, repository, tree, analysis.Id, warnings, notes, cancellationToken);
-                facts.AddRange(run.Facts);
-                integrations.AddRange(run.Integrations);
+                await RunScannerAsync(scanner, repository, tree, analysis.Id, factsByProcessor, warnings, notes, cancellationToken);
             }
         }
         catch (RepositorySourceException ex)
@@ -118,19 +118,19 @@ public class AnalysisService(
 
         if (!dryRun)
         {
-            await analyses.AddAsync(analysis, facts, integrations, cancellationToken);
+            await analyses.SaveAsync(analysis, factsByProcessor.Values.SelectMany(f => f).ToList(), cancellationToken);
         }
 
-        return new AnalysisItem(catalog, AnalysisOutcome.Analyzed, status, facts.Count, stored, integrations.Count);
+        var counts = _processors.Select(p => new AnalysisFactCount(p.Label, factsByProcessor[p].Count)).ToList();
+        return new AnalysisItem(catalog, AnalysisOutcome.Analyzed, status, stored, counts);
     }
 
     /// <summary>Prefixo das notas informativas dentro da lista de avisos da análise.</summary>
     public const string NotePrefix = "nota: ";
 
-    private sealed record ScannerRun(IReadOnlyList<RepositoryDependency> Facts, IReadOnlyList<RepositoryIntegration> Integrations);
-
-    private async Task<ScannerRun> RunScannerAsync(
+    private async Task RunScannerAsync(
         IRepositoryScanner scanner, Repository repository, RepositoryTree tree, string analysisId,
+        Dictionary<IAnalysisFactProcessor, List<IAnalysisFact>> factsByProcessor,
         List<string> warnings, List<string> notes, CancellationToken cancellationToken)
     {
         var sizes = tree.Files.ToDictionary(f => f.Path, f => f.Size, StringComparer.OrdinalIgnoreCase);
@@ -170,37 +170,21 @@ public class AnalysisService(
         {
             // Um scanner com defeito não derruba a execução; só o tipo da exceção, nunca o conteúdo lido.
             warnings.Add($"o scanner {scanner.Id} falhou ({ex.GetType().Name}); os fatos dele foram descartados.");
-            return new ScannerRun([], []);
+            return;
         }
 
         warnings.AddRange(result.Warnings);
         notes.AddRange(result.Notes);
 
-        // Redação no núcleo (spec 014): o valor bruto do candidato morre aqui; só o endereço normalizado segue adiante.
-        var normalized = IntegrationNormalizer.Normalize(
-            result.Integrations, analysisId, scanner.Id, scanner.Version, options.EffectiveEnvironmentAliases,
-            () => Guid.NewGuid().ToString("n"));
-        warnings.AddRange(normalized.Warnings);
-        notes.AddRange(normalized.Notes);
-
-        var facts = result.Facts.Select(fact => new RepositoryDependency
+        // Redação no núcleo (specs 014 e 021): nada do que o scanner devolveu é gravado sem passar pelo processador do tipo.
+        var context = new AnalysisFactContext(analysisId, scanner.Id, scanner.Version);
+        foreach (var processor in _processors)
         {
-            Id = Guid.NewGuid().ToString("n"),
-            AnalysisId = analysisId,
-            Ecosystem = fact.Ecosystem,
-            Kind = fact.Kind,
-            Name = fact.Name,
-            Version = fact.Version,
-            ProjectPath = fact.ProjectPath,
-            SourceFile = fact.SourceFile,
-            Origin = FactOrigins.Parser,
-            Confidence = fact.Confidence,
-            ConfidenceNote = fact.ConfidenceNote,
-            ScannerId = scanner.Id,
-            ScannerVersion = scanner.Version
-        }).ToList();
-
-        return new ScannerRun(facts, normalized.Items);
+            var batch = processor.Process(result, context);
+            factsByProcessor[processor].AddRange(batch.Facts);
+            warnings.AddRange(batch.Warnings ?? []);
+            notes.AddRange(batch.Notes ?? []);
+        }
     }
 
     /// <summary>A falha fica no histórico (a tela mostra "última tentativa falhou"), mas não vira a análise corrente.</summary>
@@ -209,17 +193,17 @@ public class AnalysisService(
     {
         if (!dryRun)
         {
-            await analyses.AddAsync(new RepositoryAnalysis
+            await analyses.SaveAsync(new RepositoryAnalysis
             {
                 Id = Guid.NewGuid().ToString("n"),
                 RepositoryId = catalog.Repository.Id,
                 AnalyzedAt = timeProvider.GetUtcNow(),
                 Status = AnalysisStatuses.Failed,
                 Warnings = [message]
-            }, [], null, cancellationToken);
+            }, [], cancellationToken);
         }
 
-        return new AnalysisItem(catalog, AnalysisOutcome.Failed, AnalysisStatuses.Failed, 0, [message]);
+        return new AnalysisItem(catalog, AnalysisOutcome.Failed, AnalysisStatuses.Failed, [message]);
     }
 }
 
@@ -240,9 +224,17 @@ public enum AnalysisOutcome
 
 /// <param name="Status">A situação da análise (<see cref="AnalysisStatuses"/>); nula se foi pulado.</param>
 /// <param name="Warnings">Avisos e notas (estas com o prefixo <see cref="AnalysisService.NotePrefix"/>); nunca trazem valor de arquivo.</param>
+/// <param name="FactCounts">Quantos fatos de cada tipo a análise produziu; vazio se não houve análise nova.</param>
 public record AnalysisItem(
-    CatalogRepository Catalog, AnalysisOutcome Outcome, string? Status, int FactCount, IReadOnlyList<string> Warnings,
-    int IntegrationCount = 0);
+    CatalogRepository Catalog, AnalysisOutcome Outcome, string? Status, IReadOnlyList<string> Warnings,
+    IReadOnlyList<AnalysisFactCount>? FactCounts = null)
+{
+    public int FactCount => CountOf(DependencyFactProcessor.FactLabel);
+
+    public int IntegrationCount => CountOf(IntegrationFactProcessor.FactLabel);
+
+    private int CountOf(string label) => FactCounts?.FirstOrDefault(c => c.Label == label)?.Count ?? 0;
+}
 
 public record AnalysisReport(bool DryRun, IReadOnlyList<AnalysisItem> Items)
 {

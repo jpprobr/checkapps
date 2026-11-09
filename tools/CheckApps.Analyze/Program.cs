@@ -12,7 +12,7 @@ using Microsoft.Extensions.DependencyInjection;
 // App, nunca lê a organização e nunca guarda o conteúdo dos arquivos nem valores brutos (usuário, senha e query de URL
 // são descartados antes de gravar).
 //
-//   dotnet run --project tools/CheckApps.Analyze -- --sigla ab1,cd2 [--source github|fake] [--dry-run] [--force]
+//   dotnet run --project tools/CheckApps.Analyze -- --sigla ab1,cd2 [--source github|fake] [--dry-run] [--force] [--fake-revision 0|1]
 //
 // Configuração (nada disso entra no Git): GitHub:Token via `dotnet user-secrets set ... --project tools/CheckApps.Analyze`
 // (o armazenamento é o mesmo do CheckApps.GitHubScan) ou variável GitHub__Token. Opcionais: Scan:SiglaPattern,
@@ -30,7 +30,7 @@ if (parsed.Error is not null || parsed.Help)
     }
 
     Console.WriteLine("""
-        Uso: CheckApps.Analyze --sigla <sigla[,sigla...]> [--source github|fake] [--dry-run] [--force]
+        Uso: CheckApps.Analyze --sigla <sigla[,sigla...]> [--source github|fake] [--dry-run] [--force] [--fake-revision <n>]
 
           --sigla     uma ou mais siglas (obrigatório). Analisa os repositórios JÁ CATALOGADOS dessas siglas.
           --source    github (padrão) lê o GitHub; fake usa dados de demonstração, sem rede.
@@ -39,6 +39,8 @@ if (parsed.Error is not null || parsed.Help)
           --force     reanalisa mesmo quando o commit já foi analisado (grava uma análise nova; a anterior fica no
                       histórico). Use depois de atualizar o scanner: sem isso, repositórios sem commit novo dão
                       "sem alteração".
+          --fake-revision  só com a fonte fake: 0 (padrão) ou 1, as duas versões do contrato de demonstração, para ver
+                      as mudanças de contrato de ponta a ponta.
 
         Repositórios só entram no catálogo pela triagem (menu Repositórios); rode antes o CheckApps.GitHubScan.
         """);
@@ -56,6 +58,12 @@ if (parsed.Source is not null)
 {
     configurationBuilder.AddInMemoryCollection(
         new Dictionary<string, string?> { [$"{ScanOptions.SectionName}:{nameof(ScanOptions.Source)}"] = parsed.Source });
+}
+
+if (parsed.FakeRevision is { } fakeRevision)
+{
+    configurationBuilder.AddInMemoryCollection(
+        new Dictionary<string, string?> { [$"{ScanOptions.SectionName}:{nameof(ScanOptions.FakeRevision)}"] = fakeRevision.ToString() });
 }
 
 var configuration = configurationBuilder.Build();
@@ -128,7 +136,9 @@ static void Print(AnalysisReport report, bool fake)
             _ => "pulado"
         };
 
-        var facts = item.Outcome == AnalysisOutcome.Analyzed ? $" · {item.FactCount} fatos · {item.IntegrationCount} integrações" : "";
+        var facts = item.Outcome == AnalysisOutcome.Analyzed
+            ? string.Concat((item.FactCounts ?? []).Select(c => $" · {c.Count} {c.Label}"))
+            : "";
         Console.WriteLine($"  [{outcome,-13}] {item.Catalog.Repository.Name}  (app {item.Catalog.AppName}){facts}");
         foreach (var warning in item.Warnings)
         {
@@ -154,19 +164,20 @@ static void Print(AnalysisReport report, bool fake)
     }
 }
 
-static (string[] Siglas, string? Source, bool DryRun, bool Force, bool Help, string? Error) ParseArguments(string[] args)
+static (string[] Siglas, string? Source, bool DryRun, bool Force, int? FakeRevision, bool Help, string? Error) ParseArguments(string[] args)
 {
     var siglas = new List<string>();
     string? source = null;
     var dryRun = false;
     var force = false;
+    int? fakeRevision = null;
 
     for (var i = 0; i < args.Length; i++)
     {
         switch (args[i])
         {
             case "--help" or "-h":
-                return ([], source, dryRun, force, true, null);
+                return ([], source, dryRun, force, fakeRevision, true, null);
             case "--dry-run":
                 dryRun = true;
                 break;
@@ -176,23 +187,36 @@ static (string[] Siglas, string? Source, bool DryRun, bool Force, bool Help, str
             case "--sigla":
                 if (i + 1 >= args.Length)
                 {
-                    return ([], source, dryRun, force, false, "--sigla precisa de um valor (ex.: --sigla ab1,cd2).");
+                    return ([], source, dryRun, force, fakeRevision, false, "--sigla precisa de um valor (ex.: --sigla ab1,cd2).");
                 }
 
                 siglas.AddRange(args[++i].Split(',', StringSplitOptions.TrimEntries));
                 break;
+            case "--fake-revision":
+                if (i + 1 >= args.Length || args[i + 1] is not ("0" or "1"))
+                {
+                    return ([], source, dryRun, force, fakeRevision, false, "--fake-revision deve ser 0 ou 1.");
+                }
+
+                fakeRevision = int.Parse(args[++i]);
+                break;
             case "--source":
                 if (i + 1 >= args.Length || args[i + 1] is not ("github" or "fake"))
                 {
-                    return ([], source, dryRun, force, false, "--source deve ser github ou fake.");
+                    return ([], source, dryRun, force, fakeRevision, false, "--source deve ser github ou fake.");
                 }
 
                 source = args[++i];
                 break;
             default:
-                return ([], source, dryRun, force, false, $"argumento desconhecido: {args[i]}");
+                return ([], source, dryRun, force, fakeRevision, false, $"argumento desconhecido: {args[i]}");
         }
     }
 
-    return (siglas.ToArray(), source, dryRun, force, false, null);
+    if (fakeRevision is not null && source != "fake")
+    {
+        return ([], source, dryRun, force, fakeRevision, false, "--fake-revision só vale com --source fake.");
+    }
+
+    return (siglas.ToArray(), source, dryRun, force, fakeRevision, false, null);
 }

@@ -5,7 +5,7 @@ namespace CheckApps.Domain.Analysis;
 /// (arquivo e chave de configuração). Pertence à mesma <see cref="RepositoryAnalysis"/> dos pacotes. Só guarda as partes
 /// normalizadas do endereço: nunca o valor bruto, e nunca usuário, senha ou query (a redação é do núcleo).
 /// </summary>
-public sealed record RepositoryIntegration
+public sealed record RepositoryIntegration : IAnalysisFact
 {
     public required string Id { get; init; }
     public required string AnalysisId { get; init; }

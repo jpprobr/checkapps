@@ -51,4 +51,23 @@ public class AnalysisOptions
 
     public string[] EffectiveEnvPlaceholderValues =>
         EnvPlaceholderValues is { Length: > 0 } values ? values : DefaultEnvPlaceholderValues;
+
+    /// <summary>
+    /// Quais arquivos podem ser contratos (spec 021): padrão de nome com <c>*</c>; terminado em <c>/</c>, nome de pasta em
+    /// qualquer nível. Quem confirma é o conteúdo. Nulo = <see cref="DefaultOpenApiFilePatterns"/> (mesmo motivo do binder).
+    /// </summary>
+    public string[]? OpenApiFilePatterns { get; set; }
+
+    /// <summary>
+    /// Sem <c>*api*</c>, de propósito: pegaria todo projeto <c>Nome.Api/</c>, e um repositório sem contrato contaria como
+    /// coberto por um scanner.
+    /// </summary>
+    public static readonly string[] DefaultOpenApiFilePatterns =
+    [
+        "openapi*", "swagger*", "api.*", "*api-doc*", "*contract*", "*contrato*", "*gateway*",
+        "openapi/", "swagger/", "contract/", "contracts/", "contrato/", "contratos/"
+    ];
+
+    public string[] EffectiveOpenApiFilePatterns =>
+        OpenApiFilePatterns is { Length: > 0 } patterns ? patterns : DefaultOpenApiFilePatterns;
 }

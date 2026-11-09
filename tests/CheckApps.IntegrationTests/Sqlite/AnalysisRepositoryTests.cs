@@ -18,7 +18,7 @@ public class AnalysisRepositoryTests(SqliteFixture fixture) : IClassFixture<Sqli
 
     private readonly SquadRepository _squads = new(fixture.ConnectionFactory);
     private readonly AppRepository _apps = new(fixture.ConnectionFactory);
-    private readonly AnalysisRepository _analyses = new(fixture.ConnectionFactory);
+    private readonly AnalysisRepository _analyses = new(fixture.ConnectionFactory, TestAnalysisWriters.All);
 
     private async Task<(string SquadId, string AppId, string RepoId)> SeedAsync(
         string repoStatus = "active", string? sigla = null, string? appStatus = null)
@@ -33,6 +33,20 @@ public class AnalysisRepositoryTests(SqliteFixture fixture) : IClassFixture<Sqli
             Id = repoId, AppId = appId, Name = $"repo {repoId[5..11]}", Status = repoStatus, Sigla = sigla
         });
         return (squadId, appId, repoId);
+    }
+
+    private sealed record UnknownFact(string AnalysisId) : IAnalysisFact;
+
+    [Fact]
+    public async Task Save_FactWithoutAWriter_ThrowsAndRollsTheWholeAnalysisBack()
+    {
+        var (_, _, repoId) = await SeedAsync();
+        var analysis = Analysis(repoId, T1);
+
+        await Assert.ThrowsAsync<InvalidOperationException>(() =>
+            _analyses.SaveAsync(analysis, [Fact(analysis, "Serilog"), new UnknownFact(analysis.Id)]));
+
+        Assert.Null(await _analyses.GetCurrentAsync(repoId));
     }
 
     private static RepositoryAnalysis Analysis(
@@ -320,7 +334,7 @@ public class AnalysisCoverageTests(SqliteFixture fixture) : IClassFixture<Sqlite
     {
         var squads = new SquadRepository(fixture.ConnectionFactory);
         var apps = new AppRepository(fixture.ConnectionFactory);
-        var analyses = new AnalysisRepository(fixture.ConnectionFactory);
+        var analyses = new AnalysisRepository(fixture.ConnectionFactory, TestAnalysisWriters.All);
 
         Assert.Equal(new AnalysisCoverage(0, null), await analyses.GetCoverageAsync());
 

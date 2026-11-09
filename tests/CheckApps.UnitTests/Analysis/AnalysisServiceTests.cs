@@ -31,7 +31,9 @@ public class AnalysisServiceTests
     private readonly List<IRepositoryScanner> _scanners = [new DotNetScanner()];
 
     private AnalysisService Sut() =>
-        new(_source, new ScannerRegistry(_scanners), _apps, _analyses, _options, new ScanOptions(), _clock);
+        new(_source, new ScannerRegistry(_scanners), Processors(), _apps, _analyses, _options, new ScanOptions(), _clock);
+
+    private IAnalysisFactProcessor[] Processors() => [new DependencyFactProcessor(), new IntegrationFactProcessor(_options)];
 
     private async Task<string> AddRepositoryAsync(string id, string sigla = "ab1", string provider = "fake")
     {
@@ -267,7 +269,7 @@ public class AnalysisServiceTests
         _clock.Advance(TimeSpan.FromHours(1));
         var failing = new FakeContentSource().Failing("r1", "limite de chamadas");
         var failed = await new AnalysisService(
-            failing, new ScannerRegistry(_scanners), _apps, _analyses, _options, new ScanOptions(), _clock)
+            failing, new ScannerRegistry(_scanners), Processors(), _apps, _analyses, _options, new ScanOptions(), _clock)
             .AnalyzeAsync(["ab1"], dryRun: false);
         Assert.Equal(1, failed.Count(AnalysisOutcome.Failed));
 

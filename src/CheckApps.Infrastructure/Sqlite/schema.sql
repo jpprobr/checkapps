@@ -272,3 +272,48 @@ CREATE TABLE IF NOT EXISTS host_externals (
     decided_at TEXT NOT NULL,
     note       TEXT NULL
 );
+
+-- Contratos (spec 021): endpoints e campos DECLARADOS num contrato, vistos numa análise. Cada commit analisado é uma foto; o
+-- que mudou entre duas é calculado na leitura, nunca gravado. Só a estrutura: nunca exemplos, valores padrão, descrições,
+-- servers nem extensões. Tabelas novas: banco antigo as recebe sem tocar nas existentes.
+CREATE TABLE IF NOT EXISTS repository_api_endpoints (
+    id               TEXT PRIMARY KEY,
+    analysis_id      TEXT NOT NULL REFERENCES repository_analyses(id) ON DELETE CASCADE,
+    mechanism        TEXT NOT NULL,
+    method           TEXT NOT NULL,
+    path             TEXT NOT NULL,
+    path_key         TEXT NOT NULL,
+    declared_id      TEXT NULL,
+    summary          TEXT NULL,
+    tags             TEXT NULL,
+    security         TEXT NULL,
+    deprecated       INTEGER NOT NULL,
+    api_title        TEXT NULL,
+    api_version      TEXT NULL,
+    source_file      TEXT NOT NULL,
+    origin           TEXT NOT NULL,
+    confidence       TEXT NOT NULL,
+    confidence_note  TEXT NULL,
+    scanner_id       TEXT NOT NULL,
+    scanner_version  TEXT NOT NULL
+);
+
+CREATE TABLE IF NOT EXISTS repository_api_fields (
+    id           TEXT PRIMARY KEY,
+    endpoint_id  TEXT NOT NULL REFERENCES repository_api_endpoints(id) ON DELETE CASCADE,
+    location     TEXT NOT NULL,
+    status_code  TEXT NULL,
+    media_type   TEXT NULL,
+    path         TEXT NOT NULL,
+    type         TEXT NULL,
+    format       TEXT NULL,
+    required     INTEGER NOT NULL,
+    enum_values  TEXT NULL,
+    note         TEXT NULL
+);
+
+CREATE INDEX IF NOT EXISTS ix_repository_api_endpoints_analysis
+    ON repository_api_endpoints (analysis_id);
+
+CREATE INDEX IF NOT EXISTS ix_repository_api_fields_endpoint
+    ON repository_api_fields (endpoint_id);

@@ -474,6 +474,92 @@ export interface AppIntegrations {
   repositories: RepositoryIntegrations[];
 }
 
+// Spec 021: contratos. Só a estrutura: nunca exemplos, valores padrão, descrições, servers nem extensões.
+export type ApiFieldLocation = 'path' | 'query' | 'header' | 'cookie' | 'pedido' | 'resposta';
+
+export interface ApiField {
+  location: ApiFieldLocation;
+  /** Status HTTP da resposta; nulo nos demais lugares. */
+  statusCode: string | null;
+  mediaType: string | null;
+  path: string;
+  type: string | null;
+  format: string | null;
+  required: boolean;
+  enumValues: string[];
+  note: string | null;
+}
+
+export interface ApiEndpoint {
+  id: string;
+  /** De onde veio: hoje só `openapi`, um contrato declarado, que pode estar desatualizado. */
+  mechanism: string;
+  method: string;
+  path: string;
+  declaredId: string | null;
+  summary: string | null;
+  tags: string[];
+  security: string[];
+  deprecated: boolean;
+  apiTitle: string | null;
+  apiVersion: string | null;
+  sourceFile: string;
+  origin: string;
+  confidence: Confidence;
+  confidenceNote: string | null;
+  scannerId: string;
+  scannerVersion: string;
+  fields: ApiField[];
+}
+
+export interface RepositoryContracts {
+  repositoryId: string;
+  repositoryName: string;
+  repositoryStatus: string | null;
+  role: string | null;
+  url: string | null;
+  declaredIn: string;
+  analysis: RepositoryAnalysis | null;
+  lastFailure: RepositoryAnalysis | null;
+  endpoints: ApiEndpoint[];
+}
+
+export interface AppContracts {
+  appId: string;
+  repositories: RepositoryContracts[];
+}
+
+export type ContractChangeSeverity = 'quebra' | 'atencao' | 'segura';
+
+export interface ContractChange {
+  severity: ContractChangeSeverity;
+  kind: string;
+  method: string;
+  path: string;
+  location: ApiFieldLocation | null;
+  statusCode: string | null;
+  mediaType: string | null;
+  /** Nulo quando a mudança é no endpoint inteiro. */
+  fieldPath: string | null;
+  description: string;
+}
+
+export interface RepositoryContractChanges {
+  repositoryId: string;
+  repositoryName: string;
+  state: 'comparado' | 'primeira-analise' | 'sem-contrato';
+  analysis: RepositoryAnalysis | null;
+  /** A análise anterior comparada; nula se não há base. */
+  baseline: RepositoryAnalysis | null;
+  changes: ContractChange[];
+  warnings: string[];
+}
+
+export interface AppContractChanges {
+  appId: string;
+  repositories: RepositoryContractChanges[];
+}
+
 export interface SquadRef {
   id: string;
   name: string;

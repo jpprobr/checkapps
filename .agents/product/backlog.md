@@ -135,6 +135,21 @@ Fase 3 é onde a IA tem papel real: descrever o que o app faz, inferir o tipo qu
 - **Muitas integrações são de apps de outras squads que talvez nunca sejam cadastrados**: o host fica "sem app" para sempre e a fila nunca esvazia (rejeitar diz "não é o app X", não "é de fora"). Por isso a parte 2 inclui **marcar o host como externo/ignorado** (nome opcional do serviço), que sai da fila e vira nó à parte no mapa. Exige tabela/estado novo, pois hoje o vínculo sempre aponta para um app.
 - **Mapa por ambiente**: o ambiente da aresta vem do `environmentKind` da **integração** (arquivo de origem), nunca do nome do host. Decidir antes do mapa: integração do arquivo base (sem ambiente) aparece em todos os ambientes ou num grupo "sem ambiente"; nome de ambiente desconhecido (ex.: `qa`) fica sem categoria.
 
+## Contratos, massas e testes integrados
+
+**Contratos: catálogo e mudanças implementados** (`specs/021-contratos-openapi/`). Direção decidida em 2026-11-05: o CheckApps guarda o que se **sabe** (contratos, massas, jornadas); executar chamadas fica num projeto à parte, que consome o CheckApps por API ou MCP e devolve os resultados.
+
+- **Ajustes visuais da seção Contratos** (pedido do usuário em 2026-11-08, a detalhar): ficaram em aberto a ordem (hoje as mudanças vêm antes dos endpoints) e a redação das descrições das mudanças. O repositório de demonstração `jplay-ab1-contrato-api-demo` serve para repetir o teste na tela.
+- **Catálogo de massas**: perfil, produto e operação, dono e última verificação, importado de planilha ou CSV.
+- **Ficha do endpoint**: contrato, massas que servem, payload de exemplo montado de forma determinística, marcador de autenticação (nunca o segredo) e exportação para curl, `.http` e coleções. Mapeamento massa → campo por endpoint, sugerido pelo nome e confirmado por uma pessoa; sem modelo canônico global.
+- **Produto, Operação e Jornada**: jornada com etapas ordenadas que apontam para endpoints; as chamadas internas vêm do grafo de integrações, não do cadastro. Dono por squad depende de autorização.
+- **Comparar stubs de teste com o contrato**: junto com a decisão da spec 015 (ler código), ou exportando os mappings durante a execução dos testes.
+- **Comparar o declarado com o implementado**: `mechanism = codigo` ou a API em execução. É o que acha o contrato desatualizado.
+- **Quem é afetado por uma quebra**: por app já dá para derivar do vínculo host→app (spec 017); por rota depende da spec 015.
+- **Alertas e tela de todas as quebras**: pedem gravar a comparação.
+- **Item de menu com busca global de endpoints**: ficou de fora da 021 por escolha de escopo.
+- **Limite conhecido**: repositório sem contrato cujo arquivo tenha nome de contrato conta como coberto por um scanner, com zero endpoints.
+
 ## Mapa de aplicações
 
 **Primeira versão (só leitura) em andamento: `specs/020-mapa-aplicacoes/`** (020a backend feita em 2026-11-05; tela na 020b). Continuam fora dela: Solução, ligações inferidas/IaC e a tabela de ligações.

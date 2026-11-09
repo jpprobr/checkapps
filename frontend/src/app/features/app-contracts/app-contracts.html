@@ -1,0 +1,180 @@
+<section class="card">
+  <details class="collapsible" [open]="open()" (toggle)="onToggle($event)">
+    <summary>
+      <h2>Contratos</h2>
+      <span class="summary-text">{{ summary() }}</span>
+    </summary>
+  <p class="subtitle small">
+    Endpoints que os contratos OpenAPI e Swagger <strong>declaram</strong>. O contrato pode estar desatualizado em relação à
+    aplicação: isto mostra o que está escrito nele, não o que está implementado.
+  </p>
+
+  @if (loading()) {
+    <p class="subtitle">Carregando…</p>
+  } @else if (failed()) {
+    <p class="error" role="alert">Não foi possível carregar os contratos deste app.</p>
+  } @else if (contracts(); as data) {
+    @if (data.repositories.length === 0) {
+      <p class="subtitle">Este app não tem repositórios cadastrados.</p>
+    }
+
+    @if (hasAnyEndpoint()) {
+      <label class="filter">
+        Filtrar por rota
+        <input type="search" [value]="filter()" (input)="onFilter($event)" placeholder="/simulacoes" />
+      </label>
+    }
+
+    @for (repo of data.repositories; track repo.repositoryId) {
+      <div class="repo-block">
+        <h3>
+          {{ repo.repositoryName }}
+          @if (repo.repositoryStatus) { <span class="tag">{{ repo.repositoryStatus }}</span> }
+          @if (repo.role) { <span class="tag">{{ repo.role }}</span> }
+        </h3>
+
+        @if (repo.lastFailure; as failure) {
+          <p class="error" role="alert">
+            A última tentativa de análise falhou em {{ failure.analyzedAt | date: 'dd/MM/yyyy HH:mm' }}:
+            {{ failure.warnings.join(' ') }}
+          </p>
+        }
+
+        @if (repo.analysis; as analysis) {
+          <p class="subtitle small">
+            Análise de {{ analysis.analyzedAt | date: 'dd/MM/yyyy HH:mm' }} · commit
+            <code>{{ shortSha(analysis.commitSha) }}</code> · situação: <strong>{{ statusLabels[analysis.status] }}</strong>
+            @if (repo.endpoints.length > 0) { · {{ declaredInLabels[repo.declaredIn] }} }
+          </p>
+
+          @if (analysis.warnings.length > 0) {
+            <ul class="warnings" role="status">
+              @for (warning of analysis.warnings; track warning) {
+                @if (isNote(warning)) {
+                  <li>ℹ {{ noteText(warning) }}</li>
+                } @else {
+                  <li>⚠ {{ warning }}</li>
+                }
+              }
+            </ul>
+          }
+
+          @if (changesOf(repo); as comparison) {
+            @if (comparison.state === 'comparado') {
+              <h4 class="block-title">
+                O que mudou desde {{ comparison.baseline?.analyzedAt | date: 'dd/MM/yyyy' }}
+                (<code>{{ shortSha(comparison.baseline?.commitSha ?? null) }}</code> →
+                <code>{{ shortSha(comparison.analysis?.commitSha ?? null) }}</code>)
+              </h4>
+
+              @for (warning of comparison.warnings; track warning) {
+                <p class="warning-line" role="status">⚠ {{ warning }}</p>
+              }
+
+              @if (comparison.changes.length === 0) {
+                <p class="subtitle">Nenhuma mudança nos endpoints e campos entre esses commits.</p>
+              } @else {
+                <p class="subtitle small">
+                  {{ countBySeverity(comparison, 'quebra') }} que quebram ·
+                  {{ countBySeverity(comparison, 'atencao') }} de atenção ·
+                  {{ countBySeverity(comparison, 'segura') }} seguras
+                </p>
+                @for (group of groupChanges(comparison.changes); track group.key) {
+                  <div class="change-group">
+                    <div class="endpoint-line">
+                      <span class="method">{{ group.method }}</span>&ngsp;
+                      <code>{{ group.path }}</code>
+                    </div>
+                    <ul class="changes">
+                      @for (change of group.changes; track $index) {
+                        <li>
+                          <span class="severity" [class.breaking]="change.severity === 'quebra'" [class.attention]="change.severity === 'atencao'">
+                            {{ severityLabels[change.severity] }}
+                          </span>&ngsp;
+                          @if (change.fieldPath) {
+                            <code>{{ change.fieldPath }}</code>&ngsp;
+                            <span class="note-inline">({{ fieldPlace({ location: change.location!, statusCode: change.statusCode }) }})</span>&ngsp;
+                          }
+                          {{ change.description }}
+                        </li>
+                      }
+                    </ul>
+                  </div>
+                }
+              }
+            } @else if (comparison.state === 'primeira-analise') {
+              <p class="subtitle">Primeira análise do contrato: ainda não há um commit anterior para comparar.</p>
+            }
+          }
+
+          @if (analysis.status === 'sem-scanner') {
+            <p class="subtitle">Nenhum scanner se aplica a este repositório.</p>
+          } @else if (repo.endpoints.length === 0) {
+            <p class="subtitle">Nenhum contrato OpenAPI ou Swagger foi encontrado nesta análise.</p>
+          } @else {
+            <h4 class="block-title">Endpoints ({{ repo.endpoints.length }})</h4>
+            @for (group of visibleGroups(repo); track group.tag) {
+              @if (group.tag) { <h5 class="tag-title">{{ group.tag }}</h5> } @else { <h5 class="tag-title">Sem tag</h5> }
+              @for (endpoint of group.endpoints; track endpoint.id) {
+                <details class="endpoint">
+                  <summary>
+                    <span class="method">{{ endpoint.method }}</span>&ngsp;
+                    <code>{{ endpoint.path }}</code>&ngsp;
+                    @if (endpoint.deprecated) { <span class="tag">deprecated</span> }
+                    @if (endpoint.summary) { <span class="endpoint-summary">{{ endpoint.summary }}</span> }
+                  </summary>
+                  <p class="subtitle small">
+                    {{ endpoint.sourceFile }}
+                    @if (endpoint.apiTitle) { · {{ endpoint.apiTitle }} @if (endpoint.apiVersion) { {{ endpoint.apiVersion }} } }
+                    @if (endpoint.declaredId) { · <code>{{ endpoint.declaredId }}</code> }
+                    · segurança: {{ endpoint.security.length > 0 ? endpoint.security.join(', ') : 'nenhuma declarada' }}
+                    · confiança: <span class="confidence" [class.low]="endpoint.confidence === 'baixa'">{{ confidenceLabels[endpoint.confidence] }}</span>
+                    @if (needsNote(endpoint)) { ({{ endpoint.confidenceNote }}) }
+                  </p>
+                  @if (endpoint.fields.length === 0) {
+                    <p class="subtitle">Nenhum campo declarado.</p>
+                  } @else {
+                    <div class="table-scroll">
+                      <table>
+                        <thead>
+                          <tr>
+                            <th>Lugar</th>
+                            <th>Campo</th>
+                            <th>Tipo</th>
+                            <th>Obrigatório</th>
+                            <th>Valores</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          @for (field of endpoint.fields; track field.location + field.statusCode + field.mediaType + field.path) {
+                            <tr>
+                              <td>{{ fieldPlace(field) }}</td>
+                              <td>
+                                <code>{{ field.path }}</code>
+                                @if (field.note) { <span class="note">{{ field.note }}</span> }
+                              </td>
+                              <td>{{ field.type ?? '—' }}@if (field.format) { ({{ field.format }}) }</td>
+                              <td>{{ field.required ? 'sim' : 'não' }}</td>
+                              <td>{{ field.enumValues.join(', ') }}</td>
+                            </tr>
+                          }
+                        </tbody>
+                      </table>
+                    </div>
+                  }
+                </details>
+              }
+            } @empty {
+              <p class="subtitle">Nenhuma rota contém "{{ filter() }}".</p>
+            }
+          }
+        } @else if (!repo.lastFailure) {
+          <p class="subtitle">
+            Ainda não analisado. Rode a análise no terminal; detalhes em <code>docs/leitor-github.md</code>.
+          </p>
+        }
+      </div>
+    }
+  }
+  </details>
+</section>

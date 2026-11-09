@@ -16,7 +16,7 @@ public class IntegrationServiceTests(SqliteFixture fixture) : IClassFixture<Sqli
 
     private readonly SquadRepository _squads = new(fixture.ConnectionFactory);
     private readonly AppRepository _apps = new(fixture.ConnectionFactory);
-    private readonly AnalysisRepository _analyses = new(fixture.ConnectionFactory);
+    private readonly AnalysisRepository _analyses = new(fixture.ConnectionFactory, TestAnalysisWriters.All);
 
     private IntegrationService Sut() => new(_apps, _analyses, new HostLinkRepository(fixture.ConnectionFactory), new HostExternalRepository(fixture.ConnectionFactory), new AnalysisOptions());
 

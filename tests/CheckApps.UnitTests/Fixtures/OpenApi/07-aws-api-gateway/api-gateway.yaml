@@ -1,0 +1,364 @@
+openapi: "3.0.1"
+info:
+  title: "Fundos de Investimento - API Gateway"
+  description: "Contrato fictício no formato exportado do AWS API Gateway."
+  version: "2026-11-08T10:00:00Z"
+servers:
+  - url: "https://api-demo.exemplo.com/{basePath}"
+    variables:
+      basePath:
+        default: "hom"
+paths:
+  /fundos:
+    get:
+      operationId: listarFundos
+      summary: "Consulta os fundos disponíveis para aplicação"
+      tags:
+        - fundos
+      parameters:
+        - name: "perfilRisco"
+          in: query
+          required: false
+          schema:
+            type: string
+            enum: ["conservador", "moderado", "arrojado"]
+        - name: "pagina"
+          in: query
+          required: false
+          schema:
+            type: integer
+            format: int32
+        - name: "x-correlation-id"
+          in: header
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: "200 response"
+          headers:
+            Access-Control-Allow-Origin:
+              schema:
+                type: string
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ListaFundos"
+        "401":
+          description: "401 response"
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Erro"
+      security:
+        - autorizador-token: []
+      x-amazon-apigateway-request-validator: "parametros"
+      x-amazon-apigateway-integration:
+        type: "http_proxy"
+        httpMethod: "GET"
+        uri: "http://${stageVariables.hostFundos}.exemplo.com/v1/fundos"
+        connectionType: "VPC_LINK"
+        connectionId: "${stageVariables.vpcLinkId}"
+        passthroughBehavior: "when_no_match"
+        timeoutInMillis: 29000
+        requestParameters:
+          integration.request.header.x-correlation-id: "method.request.header.x-correlation-id"
+          integration.request.querystring.perfilRisco: "method.request.querystring.perfilRisco"
+          integration.request.querystring.pagina: "method.request.querystring.pagina"
+        responses:
+          default:
+            statusCode: "200"
+    options:
+      summary: "CORS"
+      responses:
+        "200":
+          description: "200 response"
+          headers:
+            Access-Control-Allow-Origin:
+              schema:
+                type: string
+            Access-Control-Allow-Methods:
+              schema:
+                type: string
+            Access-Control-Allow-Headers:
+              schema:
+                type: string
+          content: {}
+      x-amazon-apigateway-integration:
+        type: "mock"
+        requestTemplates:
+          application/json: "{\"statusCode\": 200}"
+        passthroughBehavior: "when_no_match"
+        responses:
+          default:
+            statusCode: "200"
+            responseParameters:
+              method.response.header.Access-Control-Allow-Methods: "'GET,OPTIONS'"
+              method.response.header.Access-Control-Allow-Headers: "'Content-Type,Authorization,x-correlation-id'"
+              method.response.header.Access-Control-Allow-Origin: "'*'"
+  /fundos/{codigoFundo}:
+    get:
+      operationId: obterFundo
+      summary: "Detalha um fundo"
+      tags:
+        - fundos
+      parameters:
+        - name: "codigoFundo"
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: "x-correlation-id"
+          in: header
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: "200 response"
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Fundo"
+        "404":
+          description: "404 response"
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Erro"
+      security:
+        - autorizador-token: []
+      x-amazon-apigateway-request-validator: "parametros"
+      x-amazon-apigateway-integration:
+        type: "http_proxy"
+        httpMethod: "GET"
+        uri: "http://${stageVariables.hostFundos}.exemplo.com/v1/fundos/{codigoFundo}"
+        connectionType: "VPC_LINK"
+        connectionId: "${stageVariables.vpcLinkId}"
+        passthroughBehavior: "when_no_match"
+        requestParameters:
+          integration.request.path.codigoFundo: "method.request.path.codigoFundo"
+        responses:
+          default:
+            statusCode: "200"
+  /fundos/simulacoes:
+    post:
+      operationId: simularAplicacao
+      summary: "Simula a compra de um fundo"
+      tags:
+        - simulacao
+      parameters:
+        - name: "x-correlation-id"
+          in: header
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/PedidoSimulacao"
+      responses:
+        "200":
+          description: "200 response"
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ResultadoSimulacao"
+        "400":
+          description: "400 response"
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Erro"
+      security:
+        - autorizador-token: []
+      x-amazon-apigateway-request-validator: "corpo-e-parametros"
+      x-amazon-apigateway-integration:
+        type: "http_proxy"
+        httpMethod: "POST"
+        uri: "http://${stageVariables.hostFundos}.exemplo.com/v1/simulacoes"
+        connectionType: "VPC_LINK"
+        connectionId: "${stageVariables.vpcLinkId}"
+        passthroughBehavior: "when_no_match"
+        credentials: "arn:aws:iam::123456789012:role/SEGREDO-PAPEL-DO-GATEWAY"
+        responses:
+          default:
+            statusCode: "200"
+  /fundos/ordens:
+    post:
+      operationId: solicitarOrdem
+      summary: "Solicita a efetivação da compra"
+      tags:
+        - ordens
+      parameters:
+        - name: "x-correlation-id"
+          in: header
+          required: true
+          schema:
+            type: string
+        - name: "x-idempotency-key"
+          in: header
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/PedidoOrdem"
+      responses:
+        "202":
+          description: "202 response"
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ResultadoOrdem"
+        "409":
+          description: "409 response"
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Erro"
+      security:
+        - autorizador-token: []
+      x-amazon-apigateway-request-validator: "corpo-e-parametros"
+      x-amazon-apigateway-integration:
+        type: "http_proxy"
+        httpMethod: "POST"
+        uri: "http://${stageVariables.hostFundos}.exemplo.com/v1/ordens"
+        connectionType: "VPC_LINK"
+        connectionId: "${stageVariables.vpcLinkId}"
+        passthroughBehavior: "when_no_match"
+        responses:
+          default:
+            statusCode: "202"
+components:
+  schemas:
+    ListaFundos:
+      type: object
+      required: [itens]
+      properties:
+        itens:
+          type: array
+          items:
+            $ref: "#/components/schemas/Fundo"
+        proximaPagina:
+          type: integer
+          format: int32
+    Fundo:
+      type: object
+      required: [codigo, nome, perfilRisco]
+      properties:
+        codigo:
+          type: string
+        nome:
+          type: string
+        perfilRisco:
+          type: string
+          enum: ["conservador", "moderado", "arrojado"]
+        aplicacaoMinima:
+          type: number
+          format: double
+        taxaAdministracao:
+          type: number
+          format: double
+    PedidoSimulacao:
+      type: object
+      required: [codigoFundo, valor]
+      properties:
+        codigoFundo:
+          type: string
+        valor:
+          type: number
+          format: double
+        contaOrigem:
+          type: string
+        cliente:
+          $ref: "#/components/schemas/Cliente"
+    Cliente:
+      type: object
+      required: [documento]
+      properties:
+        documento:
+          type: string
+        contas:
+          type: array
+          items:
+            type: object
+            required: [numero]
+            properties:
+              numero:
+                type: string
+              tipo:
+                type: string
+                enum: ["corrente", "poupanca"]
+    ResultadoSimulacao:
+      type: object
+      properties:
+        idSimulacao:
+          type: string
+        valorLiquido:
+          type: number
+          format: double
+        valorImposto:
+          type: number
+          format: double
+        validaAte:
+          type: string
+          format: date-time
+    PedidoOrdem:
+      type: object
+      required: [idSimulacao]
+      properties:
+        idSimulacao:
+          type: string
+        confirmaTermos:
+          type: boolean
+    ResultadoOrdem:
+      type: object
+      properties:
+        idOrdem:
+          type: string
+        situacao:
+          type: string
+          enum: ["recebida", "em-processamento", "efetivada", "rejeitada"]
+    Erro:
+      type: object
+      required: [codigo, mensagem]
+      properties:
+        codigo:
+          type: string
+        mensagem:
+          type: string
+  securitySchemes:
+    autorizador-token:
+      type: "apiKey"
+      name: "Authorization"
+      in: "header"
+      x-amazon-apigateway-authtype: "custom"
+      x-amazon-apigateway-authorizer:
+        type: "token"
+        authorizerUri: "arn:aws:apigateway:us-east-1:lambda:path/2015-03-31/functions/arn:aws:lambda:us-east-1:123456789012:function:SEGREDO-AUTORIZADOR/invocations"
+        authorizerResultTtlInSeconds: 300
+        identityValidationExpression: "^Bearer [-0-9a-zA-Z._]*$"
+x-amazon-apigateway-gateway-responses:
+  DEFAULT_5XX:
+    responseParameters:
+      gatewayresponse.header.Access-Control-Allow-Origin: "'*'"
+  UNAUTHORIZED:
+    statusCode: 401
+    responseTemplates:
+      application/json: "{\"codigo\":\"NAO_AUTORIZADO\",\"mensagem\":$context.error.messageString}"
+x-amazon-apigateway-request-validators:
+  parametros:
+    validateRequestParameters: true
+    validateRequestBody: false
+  corpo-e-parametros:
+    validateRequestParameters: true
+    validateRequestBody: true
+x-amazon-apigateway-binary-media-types:
+  - "application/pdf"

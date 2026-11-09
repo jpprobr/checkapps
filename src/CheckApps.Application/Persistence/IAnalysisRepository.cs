@@ -9,10 +9,8 @@ namespace CheckApps.Application.Persistence;
 /// </summary>
 public interface IAnalysisRepository
 {
-    /// <summary>Grava a análise, os fatos e as integrações dela (spec 014) numa transação só.</summary>
-    Task AddAsync(
-        RepositoryAnalysis analysis, IReadOnlyList<RepositoryDependency> facts,
-        IReadOnlyList<RepositoryIntegration>? integrations = null, CancellationToken cancellationToken = default);
+    /// <summary>Grava a análise e os fatos dela, de qualquer tipo, numa transação só (spec 021).</summary>
+    Task SaveAsync(RepositoryAnalysis analysis, IReadOnlyList<IAnalysisFact> facts, CancellationToken cancellationToken = default);
 
     /// <summary>A análise corrente do repositório (a mais recente que não falhou), ou <c>null</c> se nunca foi analisado.</summary>
     Task<RepositoryAnalysis?> GetCurrentAsync(string repositoryId, CancellationToken cancellationToken = default);
@@ -23,6 +21,15 @@ public interface IAnalysisRepository
     /// <summary>Como <see cref="GetCurrentByAppAsync"/>, com as integrações da análise corrente em vez dos fatos.</summary>
     Task<IReadOnlyList<RepositoryIntegrationsView>> GetCurrentIntegrationsByAppAsync(
         string appId, CancellationToken cancellationToken = default);
+
+    /// <summary>Como <see cref="GetCurrentByAppAsync"/>, com os endpoints declarados e seus campos (spec 021).</summary>
+    Task<IReadOnlyList<RepositoryContractsView>> GetCurrentContractsByAppAsync(string appId, CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// A base da comparação de contratos: a análise não falhada mais recente do repositório, de commit diferente de
+    /// <paramref name="currentCommitSha"/>, que tenha endpoints, com eles. Nula se não há.
+    /// </summary>
+    Task<ContractSnapshot?> GetContractBaselineAsync(string repositoryId, string currentCommitSha, CancellationToken cancellationToken = default);
 
     /// <summary>
     /// Integrações **com host** das análises correntes, com o repositório, o app e a squad. <paramref name="hostContains"/>
@@ -64,6 +71,13 @@ public record RepositoryAnalysisView(
 /// <param name="Current">Nula se o repositório nunca teve uma análise que não falhou.</param>
 public record RepositoryIntegrationsView(
     Repository Repository, RepositoryAnalysis? Current, RepositoryAnalysis? LastFailure, IReadOnlyList<RepositoryIntegration> Integrations);
+
+/// <param name="Current">Nula se o repositório nunca teve uma análise que não falhou.</param>
+public record RepositoryContractsView(
+    Repository Repository, RepositoryAnalysis? Current, RepositoryAnalysis? LastFailure, IReadOnlyList<RepositoryApiEndpoint> Endpoints);
+
+/// <summary>Uma foto do contrato: uma análise e os endpoints dela.</summary>
+public record ContractSnapshot(RepositoryAnalysis Analysis, IReadOnlyList<RepositoryApiEndpoint> Endpoints);
 
 public record IntegrationUsageRow(
     RepositoryIntegration Integration, string RepositoryId, string RepositoryName, string? RepositoryStatus,

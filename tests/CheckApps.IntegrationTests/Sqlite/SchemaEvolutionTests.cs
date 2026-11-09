@@ -91,7 +91,7 @@ public class SchemaEvolutionTests : IDisposable
         await bootstrapper.EnsureSchemaAsync(); // idempotente
 
         using var check = _factory.Create();
-        foreach (var table in new[] { "repository_analyses", "repository_dependencies", "repository_integrations", "host_links", "host_externals" })
+        foreach (var table in new[] { "repository_analyses", "repository_dependencies", "repository_integrations", "host_links", "host_externals", "repository_api_endpoints", "repository_api_fields" })
         {
             Assert.Equal(1, check.ExecuteScalar<int>(
                 $"SELECT COUNT(*) FROM sqlite_master WHERE type = 'table' AND name = '{table}'"));
@@ -101,7 +101,7 @@ public class SchemaEvolutionTests : IDisposable
         {
             "ix_repository_analyses_repo_analyzed", "ix_repository_dependencies_analysis", "ix_repository_dependencies_name",
             "ix_repository_integrations_analysis", "ix_repository_integrations_host", "ix_repository_integrations_reference",
-            "ix_host_links_app"
+            "ix_host_links_app", "ix_repository_api_endpoints_analysis", "ix_repository_api_fields_endpoint"
         })
         {
             Assert.Equal(1, check.ExecuteScalar<int>(

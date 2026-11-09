@@ -1,0 +1,86 @@
+openapi: 3.0.3
+info:
+  title: Simulacoes
+  version: 1.10
+security:
+  - oauth: [read]
+paths:
+  /simulacoes/{id}:
+    parameters:
+      - name: id
+        in: path
+        required: true
+        schema: { type: string }
+    get:
+      operationId: obterSimulacao
+      summary: Obter uma simulacao
+      tags: [simulacao]
+      responses:
+        200:
+          description: ok
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Simulacao' }
+    delete:
+      operationId: cancelar
+      deprecated: true
+      security: []
+      responses:
+        '204': { description: sem corpo }
+  /simulacoes:
+    post:
+      operationId: criarSimulacao
+      tags: [simulacao]
+      parameters:
+        - name: canal
+          in: header
+          required: true
+          schema: { type: string, enum: [app, web] }
+        - name: pagina
+          in: query
+          schema: { type: integer, format: int32 }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/Pedido' }
+      responses:
+        '201':
+          description: criada
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Simulacao' }
+components:
+  securitySchemes:
+    oauth:
+      type: oauth2
+      flows:
+        clientCredentials:
+          tokenUrl: https://token.exemplo.com
+          scopes: { read: leitura }
+  schemas:
+    Pedido:
+      type: object
+      required: [codigoFundo, valor]
+      properties:
+        codigoFundo: { type: string }
+        valor: { type: number, format: double }
+        contaOrigem: { type: string }
+        cliente:
+          type: object
+          properties:
+            contas:
+              type: array
+              items:
+                type: object
+                required: [numero]
+                properties:
+                  numero: { type: string }
+            apelidos:
+              type: array
+              items: { type: string }
+    Simulacao:
+      type: object
+      properties:
+        idSimulacao: { type: string }
+        situacao: { type: string, enum: [aberta, fechada] }

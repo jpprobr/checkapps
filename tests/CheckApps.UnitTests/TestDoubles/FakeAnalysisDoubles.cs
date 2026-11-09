@@ -12,19 +12,19 @@ namespace CheckApps.UnitTests.TestDoubles;
 /// </summary>
 public class FakeAnalysisRepository : IAnalysisRepository
 {
-    private readonly List<(RepositoryAnalysis Analysis, IReadOnlyList<RepositoryDependency> Facts, IReadOnlyList<RepositoryIntegration> Integrations)> _stored = [];
+    private readonly List<(RepositoryAnalysis Analysis, IReadOnlyList<IAnalysisFact> Facts)> _stored = [];
 
     public IReadOnlyList<RepositoryAnalysis> Analyses => _stored.Select(s => s.Analysis).ToList();
 
-    public IReadOnlyList<RepositoryDependency> Facts => _stored.SelectMany(s => s.Facts).ToList();
+    public IReadOnlyList<IAnalysisFact> AllFacts => _stored.SelectMany(s => s.Facts).ToList();
 
-    public IReadOnlyList<RepositoryIntegration> Integrations => _stored.SelectMany(s => s.Integrations).ToList();
+    public IReadOnlyList<RepositoryDependency> Facts => _stored.SelectMany(s => s.Facts).OfType<RepositoryDependency>().ToList();
 
-    public Task AddAsync(
-        RepositoryAnalysis analysis, IReadOnlyList<RepositoryDependency> facts,
-        IReadOnlyList<RepositoryIntegration>? integrations = null, CancellationToken ct = default)
+    public IReadOnlyList<RepositoryIntegration> Integrations => _stored.SelectMany(s => s.Facts).OfType<RepositoryIntegration>().ToList();
+
+    public Task SaveAsync(RepositoryAnalysis analysis, IReadOnlyList<IAnalysisFact> facts, CancellationToken ct = default)
     {
-        _stored.Add((analysis, facts, integrations ?? []));
+        _stored.Add((analysis, facts));
         return Task.CompletedTask;
     }
 
@@ -39,6 +39,12 @@ public class FakeAnalysisRepository : IAnalysisRepository
         throw new NotSupportedException();
 
     public Task<IReadOnlyList<RepositoryIntegrationsView>> GetCurrentIntegrationsByAppAsync(string appId, CancellationToken ct = default) =>
+        throw new NotSupportedException();
+
+    public Task<IReadOnlyList<RepositoryContractsView>> GetCurrentContractsByAppAsync(string appId, CancellationToken ct = default) =>
+        throw new NotSupportedException();
+
+    public Task<ContractSnapshot?> GetContractBaselineAsync(string repositoryId, string currentCommitSha, CancellationToken ct = default) =>
         throw new NotSupportedException();
 
     public Task<IReadOnlyList<IntegrationUsageRow>> ListIntegrationRowsAsync(string? hostContains, string? squadId, CancellationToken ct = default) =>

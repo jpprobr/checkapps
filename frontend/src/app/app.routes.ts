@@ -2,7 +2,6 @@ import { inject } from '@angular/core';
 import { Routes } from '@angular/router';
 
 import { CurrentSquadService } from './core/current-squad.service';
-import { AppDetail } from './features/app-detail/app-detail';
 import { AppForm } from './features/app-form/app-form';
 import { AppList } from './features/app-list/app-list';
 import { CheckDetail } from './features/check-detail/check-detail';
@@ -34,7 +33,7 @@ export const routes: Routes = [
   // Lista geral de apps (spec 016); `apps/:appId` é outro caminho, sem conflito.
   { path: 'apps', component: AppList },
   { path: 'apps/:appId/edit', component: AppForm },
-  { path: 'apps/:appId', component: AppDetail },
+  { path: 'apps/:appId', loadComponent: () => import('./features/app-detail/app-detail').then((m) => m.AppDetail) },
   { path: 'repositories', component: Repositories },
   { path: 'packages', component: Dependencies },
   // Nome antigo da tela ("Dependências", antes de virar "Pacotes"): favoritos continuam funcionando.

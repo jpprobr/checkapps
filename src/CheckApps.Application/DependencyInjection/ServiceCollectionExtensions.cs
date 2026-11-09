@@ -22,6 +22,7 @@ public static class ServiceCollectionExtensions
         services.AddScoped<TriageService>();
         services.AddScoped<DependencyService>();
         services.AddScoped<IntegrationService>();
+        services.AddScoped<ContractService>();
         services.AddScoped<MapService>();
         services.AddScoped<HostLinkService>();
         services.TryAddSingleton(TimeProvider.System);

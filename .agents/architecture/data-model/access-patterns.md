@@ -101,6 +101,14 @@ Revistos para SQL em 2026-10-12. Os ⚠️ da versão DynamoDB (partição únic
 | 54 | Repositórios `sem-scanner` das análises correntes (com o app, opcionalmente de uma squad) | `repositories` ⨝ `apps` ⨝ análise corrente (subconsulta `CurrentIdFor`) com `status = 'sem-scanner'`, ordenado por app e repositório | ✅ | Alimenta a cobertura do mapa (spec 020); o grafo em si é derivado em memória das linhas do padrão de integrações com host mais os vínculos |
 | 47 | Quem chama o host X (detalhe) | o mesmo SQL do #45 filtrado por trecho; o serviço compara a chave exata (`host[:porta]`) | ✅ | Host inexistente → 404 |
 
+## Spec 021 — Contratos OpenAPI (implementada)
+
+| # | Padrão | Como | Fit | Observação |
+|---|---|---|---|---|
+| 55 | Endpoints e campos de um app (por repositório) | `repositories` do app + análise corrente (`CurrentIdFor`) + `repository_api_endpoints` por `analysis_id`; campos por join com o endpoint | ✅ | Pela análise, e não por lista de ids de endpoint, para não estourar o limite de parâmetros |
+| 56 | Base da comparação | Análise não falhada mais recente do repositório, de commit diferente, com `EXISTS` em `repository_api_endpoints` | ✅ | Análise sem endpoints não serve de base: é anterior à spec ou o repositório não tinha contrato |
+| 57 | O que mudou entre dois commits | Duas leituras do padrão 55 e comparação em memória (`ContractComparer`) | ✅ | Por repositório. Alerta ou tela de todas as quebras pediria gravar o resultado: fora de escopo |
+
 ## Fora de escopo hoje — agora por decisão de produto, não de banco
 
 Com SQLite, todos os itens abaixo são tecnicamente triviais. Seguem fora de escopo porque ninguém pediu ainda — o que muda é que incluí-los passou a ser decisão de produto, e não mais "o banco não deixa". O ❌ registra como era no DynamoDB.

@@ -1,0 +1,56 @@
+openapi: 3.0.3
+info: { title: Composicao, version: '1' }
+paths:
+  /composto:
+    post:
+      requestBody:
+        content:
+          application/json:
+            schema:
+              allOf:
+                - $ref: '#/components/schemas/Base'
+                - $ref: '#/components/schemas/Base'
+                - type: object
+                  required: [valor]
+                  properties:
+                    valor: { type: number }
+      responses:
+        '200':
+          description: variantes
+          content:
+            application/json:
+              schema:
+                oneOf:
+                  - type: object
+                    required: [a]
+                    properties: { a: { type: string }, comum: { type: string } }
+                  - type: object
+                    properties: { b: { type: integer }, comum: { type: integer } }
+  /recursivo:
+    get:
+      responses:
+        '200':
+          description: ciclo
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/No' }
+  /externo:
+    get:
+      responses:
+        '200':
+          description: outro arquivo
+          content:
+            application/json:
+              schema: { $ref: 'outro.yaml#/components/schemas/X' }
+components:
+  schemas:
+    Base:
+      type: object
+      required: [codigo]
+      properties:
+        codigo: { type: string }
+    No:
+      type: object
+      properties:
+        nome: { type: string }
+        pai: { $ref: '#/components/schemas/No' }

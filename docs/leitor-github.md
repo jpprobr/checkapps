@@ -163,6 +163,27 @@ O host `empresa.{env}.exemplo.com` é o app "Pagamentos"? Quem responde é uma p
 
 `GET /api/map` (opcional `?squadId=`) devolve o grafo "quem chama quem", **calculado na hora** a partir das análises correntes e das decisões da tela Integrações; só lê. `nodes` são apps (`kind: app`), serviços externos (`externo`, nome informado ou o host) e um nó único `sem-app`; `edges` agregam por origem, destino e ambiente (`environmentKind` da integração: `dev`, `hom`, `prod` ou nulo = arquivo base/ambiente desconhecido, que vale para todos), com `count`, `hosts` e `selfLoop` (app chamando o próprio host). `coverage` traz os repositórios não analisados e os `noScannerRepositories` (nenhum scanner se aplica; hoje só há o scanner .NET, então o ambiente vem de `appsettings.{Nome}.json`). Quanto menos hosts decididos, mais arestas para `sem-app`.
 
+## 6d. Contratos OpenAPI (spec 021)
+
+A análise também lê contratos OpenAPI 3.x e Swagger 2.0, em YAML ou JSON, nos repositórios **já catalogados**. O caminho normal é vincular o repositório de contrato ao app na triagem, com o papel `contrato`; contratos versionados no repositório da aplicação também são lidos.
+
+- **Quais arquivos**: candidatos pelo nome (`Analysis:OpenApiFilePatterns`; padrão `openapi*`, `swagger*`, `api.*`, `*api-doc*`, `*contract*`, `*contrato*`, `*gateway*` e as pastas `openapi/`, `swagger/`, `contract/`, `contracts/`, `contrato/`, `contratos/`), confirmados pelo conteúdo: a raiz precisa ter `openapi` ou `swagger`. O resto é ignorado e contado numa nota. Se os seus contratos têm outro nome, ajuste os padrões em configuração local: a lista substitui o padrão.
+- **O que é gravado**: método, rota, resumo, tags, nome e tipo dos esquemas de segurança e os campos achatados. **Nunca**: `example`, `default`, `description`, `servers`, valores de segurança e extensões `x-*`.
+- **Primeiro uso**: repositórios já analisados no mesmo commit dão "sem alteração". Rode uma vez com `--force`.
+- **O contrato é o que foi declarado**, e pode estar desatualizado em relação à aplicação. A tela diz isso.
+- **Limites**: `$ref` para outro arquivo não é buscado (aviso, análise parcial); arquivo acima de 512 KB não é lido (aviso, análise parcial); esquema acima de 12 níveis ou 2.000 campos por endpoint para de ser lido (aviso); esquema recursivo não é expandido (nota).
+
+**O que mudou**: `GET /api/apps/{id}/contracts/changes` compara a análise corrente com a última de **commit diferente** que tenha endpoints, e classifica cada mudança em `quebra`, `atencao` ou `segura`. Calculado na leitura; nada é gravado. Numa análise parcial, o que sumiu nunca é quebra. Renomear um campo aparece como remover e criar. Renomear um parâmetro de rota não é mudança.
+
+**Para ver uma mudança sem GitHub**: `--source fake --fake-revision 0` e depois `--fake-revision 1`, com o repositório `*-contrato-api-pagamentos` vinculado a um app:
+
+```bash
+dotnet run --project tools/CheckApps.GitHubScan -- --sigla ab1 --source fake
+# na tela Repositórios: crie um app e vincule o repositório de contrato a ele, com o papel "contrato"
+dotnet run --project tools/CheckApps.Analyze -- --sigla ab1 --source fake --fake-revision 0
+dotnet run --project tools/CheckApps.Analyze -- --sigla ab1 --source fake --fake-revision 1
+```
+
 ## 7. Problemas comuns
 
 | Sintoma | Causa provável |

@@ -16,7 +16,7 @@ public class MapTests(SqliteFixture fixture) : IClassFixture<SqliteFixture>
 
     private readonly SquadRepository _squads = new(fixture.ConnectionFactory);
     private readonly AppRepository _apps = new(fixture.ConnectionFactory);
-    private readonly AnalysisRepository _analyses = new(fixture.ConnectionFactory);
+    private readonly AnalysisRepository _analyses = new(fixture.ConnectionFactory, TestAnalysisWriters.All);
     private readonly HostLinkRepository _links = new(fixture.ConnectionFactory);
     private readonly HostExternalRepository _externals = new(fixture.ConnectionFactory);
     private readonly AnalysisOptions _options = new();

@@ -1,0 +1,2 @@
+# Parece contrato pelo nome, mas e configuracao de testes. Template de Helm nao e YAML valido, e isso nao e um problema.
+replicas: {{ .Values.replicas }}

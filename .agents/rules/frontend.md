@@ -46,3 +46,6 @@ Leia antes de editar código Angular. Só o que é específico deste projeto.
 - `npx ng build` para checar erros de compilação; `ng serve` recompila sozinho ao salvar.
 - **Playwright e a gaveta do celular**: com o menu recolhido fora da tela (`translateX(-100%)`), `isVisible()` continua `true`; meça `boundingBox().x` (negativo = fechada) e espere a transição de 0,2 s antes de medir aberta.
 - **Playwright: escope seletores de texto a `main`** (`main >> text=…`, `main select`). O seletor de squad do menu lateral tem um `<option>` com o nome de cada squad, e `text=Squad X` sem escopo casa com ele.
+
+- **O Angular remove o espaço entre elementos no template.** `<span>a</span>` seguido de `<code>b</code>` em outra linha vira `ab` para leitor de tela e para copiar e colar, mesmo que a largura mínima disfarce na tela. Use `&ngsp;` entre eles.
+- **Orçamento do pacote inicial (500 kB)**: página nova ou pesada entra com `loadComponent` na rota, como o mapa e o detalhe do app. Não aumente o orçamento para calar o aviso.

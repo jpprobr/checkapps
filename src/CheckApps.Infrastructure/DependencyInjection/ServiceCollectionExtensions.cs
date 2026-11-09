@@ -5,6 +5,7 @@ using CheckApps.Application.Sonar;
 using CheckApps.Domain.QualityAssessment;
 using CheckApps.Infrastructure.Analysis;
 using CheckApps.Infrastructure.Analysis.DotNet;
+using CheckApps.Infrastructure.Analysis.OpenApi;
 using CheckApps.Infrastructure.Discovery;
 using CheckApps.Infrastructure.Sonar;
 using CheckApps.Infrastructure.Sqlite;
@@ -30,6 +31,9 @@ public static class ServiceCollectionExtensions
         services.AddSingleton<IQualitySnapshotRepository, QualitySnapshotRepository>();
         services.AddSingleton<ICheckRepository, CheckRepository>();
         services.AddSingleton<IDiscoveredRepositoryRepository, DiscoveredRepositoryRepository>();
+        services.AddSingleton<IAnalysisFactWriter, DependencyFactWriter>();
+        services.AddSingleton<IAnalysisFactWriter, IntegrationFactWriter>();
+        services.AddSingleton<IAnalysisFactWriter, ApiContractFactWriter>();
         services.AddSingleton<IAnalysisRepository, AnalysisRepository>();
         services.AddSingleton<IHostLinkRepository, HostLinkRepository>();
         services.AddSingleton<IHostExternalRepository, HostExternalRepository>();
@@ -51,12 +55,17 @@ public static class ServiceCollectionExtensions
         var source = configuration.GetSection(ScanOptions.SectionName).Get<ScanOptions>()?.Source ?? "github";
 
         services.AddSingleton<IRepositoryScanner, DotNetScanner>();
+        services.AddSingleton<IRepositoryScanner, OpenApiScanner>();
         services.AddSingleton<ScannerRegistry>();
+        services.AddSingleton<IAnalysisFactProcessor, DependencyFactProcessor>();
+        services.AddSingleton<IAnalysisFactProcessor, IntegrationFactProcessor>();
+        services.AddSingleton<IAnalysisFactProcessor, ApiContractFactProcessor>();
         services.AddHttpClient<GitHubRepositoryContentSource>();
 
         if (string.Equals(source, "fake", StringComparison.OrdinalIgnoreCase))
         {
-            services.AddSingleton<IRepositoryContentSource, FakeRepositoryContentSource>(_ => new FakeRepositoryContentSource());
+            var revision = configuration.GetSection(ScanOptions.SectionName).Get<ScanOptions>()?.FakeRevision ?? 0;
+            services.AddSingleton<IRepositoryContentSource, FakeRepositoryContentSource>(_ => new FakeRepositoryContentSource(revision));
         }
         else
         {

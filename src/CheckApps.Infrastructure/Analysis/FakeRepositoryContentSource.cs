@@ -25,7 +25,7 @@ public class FakeRepositoryContentSource(int revision = 0) : IRepositoryContentS
 
     public Task<RepositoryTree> ListAsync(Repository repository, CancellationToken cancellationToken = default)
     {
-        var files = FilesFor(repository.Name);
+        var files = FilesOf(repository.Name);
         return Task.FromResult(new RepositoryTree(
             ShaOf(files),
             files.Select(f => new RepositoryFile(f.Key, Encoding.UTF8.GetByteCount(f.Value))).ToList()));
@@ -33,13 +33,19 @@ public class FakeRepositoryContentSource(int revision = 0) : IRepositoryContentS
 
     public Task<string?> ReadFileAsync(
         Repository repository, string commitSha, string path, CancellationToken cancellationToken = default) =>
-        Task.FromResult(FilesFor(repository.Name).GetValueOrDefault(path));
+        Task.FromResult(FilesOf(repository.Name).GetValueOrDefault(path));
 
     private string ShaOf(IReadOnlyDictionary<string, string> files)
     {
         var text = string.Join('\n', files.OrderBy(f => f.Key, StringComparer.Ordinal).Select(f => $"{f.Key}\n{f.Value}")) + $"\nrev:{revision}";
         return Convert.ToHexString(SHA256.HashData(Encoding.UTF8.GetBytes(text)))[..12].ToLowerInvariant();
     }
+
+    /// <summary>O contrato de demonstração (spec 021) muda com a revisão, para mostrar uma mudança de ponta a ponta.</summary>
+    private IReadOnlyDictionary<string, string> FilesOf(string repositoryName) =>
+        repositoryName.EndsWith("contrato-api-pagamentos", StringComparison.OrdinalIgnoreCase)
+            ? new Dictionary<string, string> { ["openapi.yaml"] = revision == 0 ? ContractRevision0 : ContractRevision1 }
+            : FilesFor(repositoryName);
 
     private static IReadOnlyDictionary<string, string> FilesFor(string repositoryName)
     {
@@ -53,6 +59,174 @@ public class FakeRepositoryContentSource(int revision = 0) : IRepositoryContentS
 
         return new Dictionary<string, string> { ["README.md"] = "# Repositório de demonstração sem projeto .NET." };
     }
+
+    private const string ContractRevision0 =
+        """
+        openapi: 3.0.3
+        info: { title: Pagamentos, version: '1.0' }
+        security:
+          - oauth: [pagamentos]
+        paths:
+          /pagamentos:
+            get:
+              operationId: listarPagamentos
+              summary: Lista os pagamentos
+              tags: [pagamentos]
+              parameters:
+                - { name: situacao, in: query, schema: { type: string, enum: [aberto, pago, cancelado] } }
+              responses:
+                '200':
+                  description: ok
+                  content:
+                    application/json:
+                      schema: { type: array, items: { $ref: '#/components/schemas/Pagamento' } }
+          /pagamentos/{id}:
+            parameters:
+              - { name: id, in: path, required: true, schema: { type: string } }
+            get:
+              operationId: obterPagamento
+              tags: [pagamentos]
+              responses:
+                '200':
+                  description: ok
+                  content:
+                    application/json:
+                      schema: { $ref: '#/components/schemas/Pagamento' }
+          /simulacoes:
+            post:
+              operationId: simular
+              summary: Simula um pagamento
+              tags: [simulacao]
+              requestBody:
+                required: true
+                content:
+                  application/json:
+                    schema:
+                      type: object
+                      required: [codigo, valor]
+                      properties:
+                        codigo: { type: string }
+                        valor: { type: number }
+                        contaOrigem: { type: string }
+              responses:
+                '200':
+                  description: ok
+                  content:
+                    application/json:
+                      schema:
+                        type: object
+                        properties:
+                          idSimulacao: { type: string }
+                          valorImposto: { type: number }
+          /relatorios:
+            get:
+              operationId: relatorio
+              tags: [relatorios]
+              responses:
+                '200': { description: ok }
+        components:
+          securitySchemes:
+            oauth:
+              type: oauth2
+              flows:
+                clientCredentials:
+                  tokenUrl: https://token.exemplo.com
+                  scopes: { pagamentos: pagamentos }
+          schemas:
+            Pagamento:
+              type: object
+              required: [id]
+              properties:
+                id: { type: string }
+                valor: { type: number }
+                situacao: { type: string, enum: [aberto, pago, cancelado] }
+        """;
+
+    private const string ContractRevision1 =
+        """
+        openapi: 3.0.3
+        info: { title: Pagamentos, version: '1.1' }
+        security:
+          - oauth: [pagamentos]
+        paths:
+          /pagamentos:
+            get:
+              operationId: listarPagamentos
+              summary: Lista os pagamentos
+              tags: [pagamentos]
+              parameters:
+                - { name: situacao, in: query, schema: { type: string, enum: [aberto, pago] } }
+                - { name: pagina, in: query, schema: { type: integer } }
+              responses:
+                '200':
+                  description: ok
+                  content:
+                    application/json:
+                      schema: { type: array, items: { $ref: '#/components/schemas/Pagamento' } }
+          /pagamentos/{pagamentoId}:
+            parameters:
+              - { name: pagamentoId, in: path, required: true, schema: { type: string } }
+            get:
+              operationId: obterPagamento
+              tags: [pagamentos]
+              deprecated: true
+              responses:
+                '200':
+                  description: ok
+                  content:
+                    application/json:
+                      schema: { $ref: '#/components/schemas/Pagamento' }
+          /simulacoes:
+            post:
+              operationId: simular
+              summary: Simula um pagamento
+              tags: [simulacao]
+              requestBody:
+                required: true
+                content:
+                  application/json:
+                    schema:
+                      type: object
+                      required: [codigo, valor, contaOrigem]
+                      properties:
+                        codigo: { type: string }
+                        valor: { type: string }
+                        contaOrigem: { type: string }
+                        perfil: { type: string }
+              responses:
+                '200':
+                  description: ok
+                  content:
+                    application/json:
+                      schema:
+                        type: object
+                        properties:
+                          idSimulacao: { type: string }
+          /simulacoes/{id}:
+            delete:
+              operationId: cancelarSimulacao
+              tags: [simulacao]
+              parameters:
+                - { name: id, in: path, required: true, schema: { type: string } }
+              responses:
+                '204': { description: ok }
+        components:
+          securitySchemes:
+            oauth:
+              type: oauth2
+              flows:
+                clientCredentials:
+                  tokenUrl: https://token.exemplo.com
+                  scopes: { pagamentos: pagamentos }
+          schemas:
+            Pagamento:
+              type: object
+              required: [id]
+              properties:
+                id: { type: string }
+                valor: { type: number }
+                situacao: { type: string, enum: [aberto, pago, estornado] }
+        """;
 
     private static readonly (string Suffix, IReadOnlyDictionary<string, string> Files)[] Catalog =
     [
