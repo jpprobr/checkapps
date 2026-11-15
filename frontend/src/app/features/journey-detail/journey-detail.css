@@ -1,0 +1,160 @@
+.title-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+}
+
+.title-row h1,
+.title-row h2 {
+  margin: 0;
+}
+
+.card {
+  margin-top: 1.25rem;
+}
+
+.tag.level {
+  margin-left: 0.5rem;
+}
+
+.summary-text {
+  margin-left: 0.5rem;
+  font-size: 0.85rem;
+  font-weight: normal;
+  color: var(--text-secondary);
+}
+
+.subtitle.small {
+  margin-top: 0;
+}
+
+/* Tabela larga rola dentro do cartão: não alarga a página no celular. */
+.table-scroll {
+  overflow-x: auto;
+}
+
+.warning-line {
+  margin: 0.25rem 0;
+  color: var(--text-secondary);
+}
+
+.note {
+  display: block;
+  font-size: 0.8rem;
+  color: var(--text-secondary);
+}
+
+.note-inline {
+  font-size: 0.8rem;
+  color: var(--text-secondary);
+}
+
+.method {
+  display: inline-block;
+  min-width: 3.5rem;
+  font-size: 0.8rem;
+  font-weight: 600;
+}
+
+.change-group {
+  margin: 0.5rem 0;
+}
+
+.endpoint-line {
+  overflow-wrap: anywhere;
+}
+
+.changes {
+  margin: 0.25rem 0 0;
+  padding-left: 1.25rem;
+}
+
+.changes li {
+  margin: 0.15rem 0;
+  overflow-wrap: anywhere;
+}
+
+/* A classificação está sempre em texto: a cor e o peso só reforçam. */
+.severity {
+  display: inline-block;
+  min-width: 3.5rem;
+  font-size: 0.8rem;
+  color: var(--text-secondary);
+}
+
+.severity.breaking {
+  color: var(--text-primary);
+  font-weight: 600;
+  border-bottom: 2px solid var(--quality-e, var(--quality-c));
+}
+
+.severity.attention {
+  color: var(--text-primary);
+  border-bottom: 2px solid var(--quality-c);
+}
+
+.resolution.warn {
+  font-weight: 600;
+  border-bottom: 2px solid var(--quality-c);
+}
+
+.apps-list {
+  margin: 0.25rem 0 0;
+  padding-left: 1.25rem;
+}
+
+/* Editor de passos */
+.step-edit {
+  margin: 0.75rem 0;
+  padding: 0.75rem;
+  border: 1px solid var(--gridline);
+  border-radius: 8px;
+}
+
+.step-edit legend {
+  padding: 0 0.4rem;
+  font-size: 0.85rem;
+  color: var(--text-secondary);
+}
+
+.step-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(12rem, 1fr));
+  gap: 0.75rem;
+  margin-bottom: 0.75rem;
+}
+
+.step-grid label {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+  font-size: 0.85rem;
+}
+
+.step-grid .wide {
+  grid-column: span 2;
+}
+
+.step-grid select,
+.step-grid input {
+  padding: 0.4rem 0.5rem;
+  border: 1px solid var(--baseline);
+  border-radius: 6px;
+  font-size: 0.9rem;
+  min-width: 0;
+}
+
+@media (max-width: 600px) {
+  .step-grid .wide {
+    grid-column: span 1;
+  }
+}
+
+code {
+  background: var(--gridline);
+  border-radius: 6px;
+  padding: 0.1rem 0.4rem;
+  font-size: 0.85rem;
+}

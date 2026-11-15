@@ -732,3 +732,124 @@ export interface AppMap {
   edges: MapEdge[];
   coverage: MapCoverage;
 }
+
+
+// Spec 022: jornadas. Nível é texto livre; resolução e comparação são códigos em texto. A resolução dos passos e o impacto são calculados
+// na leitura pela API, nunca gravados.
+export interface Journey {
+  id: string;
+  name: string;
+  description: string | null;
+  /** Texto livre (`plataforma`, `sistema`, `jornada`…). */
+  level: string | null;
+  squadId: string | null;
+  parentId: string | null;
+  tags: string[];
+  source: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface JourneySummary {
+  id: string;
+  name: string;
+  level: string | null;
+  squadId: string | null;
+  squadName: string | null;
+  parentId: string | null;
+  tags: string[];
+  stepCount: number;
+  childCount: number;
+}
+
+export type StepResolution = 'catalogado' | 'fora-do-contrato' | 'app-sem-contrato';
+
+export interface ResolvedEndpoint {
+  summary: string | null;
+  security: string[];
+  deprecated: boolean;
+  confidence: Confidence;
+  repositoryName: string;
+  sourceFile: string;
+}
+
+export interface JourneyStep {
+  id: string;
+  position: number;
+  appId: string;
+  appName: string;
+  method: string;
+  path: string;
+  label: string | null;
+  note: string | null;
+  resolution: StepResolution;
+  endpoint: ResolvedEndpoint | null;
+}
+
+export interface JourneyApp {
+  appId: string;
+  appName: string;
+  stepCount: number;
+}
+
+export interface JourneyPathItem {
+  id: string;
+  name: string;
+  level: string | null;
+}
+
+export interface JourneyDetail {
+  journey: Journey;
+  squadName: string | null;
+  /** Os ancestrais, da raiz até o pai. */
+  path: JourneyPathItem[];
+  children: JourneySummary[];
+  steps: JourneyStep[];
+  /** Derivados dos passos da subárvore; não são digitados. */
+  apps: JourneyApp[];
+}
+
+export interface JourneyRequest {
+  name: string;
+  description: string | null;
+  level: string | null;
+  squadId: string | null;
+  parentId: string | null;
+  tags: string[];
+}
+
+export interface JourneyStepRequest {
+  appId: string;
+  method: string;
+  path: string;
+  label: string | null;
+  note: string | null;
+}
+
+export type ImpactComparison = 'comparado' | 'primeira-analise' | 'sem-contrato';
+
+export interface JourneyImpactStep {
+  id: string;
+  journeyName: string;
+  position: number;
+  appId: string;
+  appName: string;
+  method: string;
+  path: string;
+  label: string | null;
+  comparison: ImpactComparison;
+  endpointRemoved: boolean;
+  changes: ContractChange[];
+}
+
+export interface JourneyImpact {
+  journeyId: string;
+  breaking: number;
+  attention: number;
+  safe: number;
+  breakingSteps: number;
+  /** Passos de apps sem análise anterior: o impacto deles é desconhecido, não "nenhum". */
+  stepsWithoutComparison: number;
+  steps: JourneyImpactStep[];
+  warnings: string[];
+}

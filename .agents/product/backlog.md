@@ -142,7 +142,16 @@ Fase 3 é onde a IA tem papel real: descrever o que o app faz, inferir o tipo qu
 - **Ajustes visuais da seção Contratos** (pedido do usuário em 2026-11-08, a detalhar): ficaram em aberto a ordem (hoje as mudanças vêm antes dos endpoints) e a redação das descrições das mudanças. O repositório de demonstração `jplay-ab1-contrato-api-demo` serve para repetir o teste na tela.
 - **Catálogo de massas**: perfil, produto e operação, dono e última verificação, importado de planilha ou CSV.
 - **Ficha do endpoint**: contrato, massas que servem, payload de exemplo montado de forma determinística, marcador de autenticação (nunca o segredo) e exportação para curl, `.http` e coleções. Mapeamento massa → campo por endpoint, sugerido pelo nome e confirmado por uma pessoa; sem modelo canônico global.
-- **Produto, Operação e Jornada**: jornada com etapas ordenadas que apontam para endpoints; as chamadas internas vêm do grafo de integrações, não do cadastro. Dono por squad depende de autorização.
+- **Jornadas: implementadas na spec 022 (2026-11-09)**, com estas decisões de 2026-11-08, **a validar com o uso**:
+  - **Uma entidade só, em árvore, com pai opcional.** Produto e Operação **não** são entidades: o vocabulário varia entre squads (num exemplo real, três níveis: plataforma, sistema e jornada; noutras, um ou dois).
+  - **Nível em texto livre** (`plataforma`, `sistema`, `jornada`, o que a squad usar), sem enum, como o papel do repositório. **Para revisar:** squads diferentes vão escolher nomes diferentes para a mesma coisa; se isso atrapalhar, vira uma lista de nomes sugeridos no glossário ou um enum.
+  - **Tipo de produto como classificação opcional (tag), nunca campo**: há jornadas que não dependem dele. Depende das tags chave-valor (item "Tags" do glossário, ainda em aberto).
+  - **Passos (endpoints) só nas jornadas-folha**; as chamadas internas de cada endpoint vêm do grafo de integrações, não do cadastro. Os apps de um sistema são **derivados** dos endpoints das jornadas dele, não digitados.
+  - **Solução** (glossário, em aberto) pode ser absorvida por esta estrutura; decidir quando a spec de Jornadas for escrita.
+  - **Cadastros de outros times (ex.: observabilidade) desconsiderados por ora**: nada de id externo nem vocabulário herdado na primeira versão.
+  - **Premissas a validar**: uma jornada tem **um** pai (se puder estar em dois sistemas, deixa de ser árvore e vira grafo); a plataforma é opcional no modelo e a tela não precisa cuidar dela na primeira versão.
+  - Dono por squad depende de autorização (pós-MVP).
+  - **Ainda não feito (candidatos a spec própria)**: seção "Jornadas" no detalhe do app e "quem é afetado" na seção Contratos (o índice por `app_id` já existe); reordenar jornadas irmãs (hoje por nome); jornadas na massa de demonstração do seed; jornada em dois pais (grafo); ajustes visuais da tela, a levantar com o uso.
 - **Comparar stubs de teste com o contrato**: junto com a decisão da spec 015 (ler código), ou exportando os mappings durante a execução dos testes.
 - **Comparar o declarado com o implementado**: `mechanism = codigo` ou a API em execução. É o que acha o contrato desatualizado.
 - **Quem é afetado por uma quebra**: por app já dá para derivar do vínculo host→app (spec 017); por rota depende da spec 015.

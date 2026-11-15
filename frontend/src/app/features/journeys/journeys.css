@@ -1,0 +1,42 @@
+.tree-actions {
+  display: flex;
+  gap: 0.5rem;
+}
+
+/* Tabela larga rola dentro da página: não alarga a tela no celular. */
+.table-scroll {
+  overflow-x: auto;
+}
+
+.tree-cell {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.25rem;
+}
+
+.toggle {
+  width: 1.5rem;
+  padding: 0.1rem 0;
+  background: transparent;
+  color: var(--text-primary);
+  border: 1px solid transparent;
+  font-size: 0.9rem;
+}
+
+.toggle:focus-visible {
+  outline: 2px solid var(--series-1);
+}
+
+.toggle-space {
+  display: inline-block;
+  width: 1.5rem;
+}
+
+.tag.level {
+  margin-left: 0;
+}
+
+.note {
+  font-size: 0.8rem;
+  color: var(--text-secondary);
+}

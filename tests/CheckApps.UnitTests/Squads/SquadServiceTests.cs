@@ -32,7 +32,7 @@ public class SquadServiceTests
         apps.Add(new App { Id = "app-new", SquadId = "sq-1", Name = "new" });
         snapshots.Add("app-new", Aug, QualityLevel.B);
 
-        var service = new SquadService(new FakeSquadRepository(), apps, snapshots);
+        var service = new SquadService(new FakeSquadRepository(), apps, snapshots, new FakeJourneyRepository());
 
         var evolution = await service.GetQualityEvolutionAsync("sq-1");
 
@@ -53,7 +53,7 @@ public class SquadServiceTests
         snapshots.Add("app-1", Jun, QualityLevel.A);
         snapshots.Add("app-2", Jun, QualityLevel.B);
 
-        var service = new SquadService(new FakeSquadRepository(), apps, snapshots);
+        var service = new SquadService(new FakeSquadRepository(), apps, snapshots, new FakeJourneyRepository());
 
         var evolution = await service.GetQualityEvolutionAsync("sq-1");
 
@@ -66,7 +66,7 @@ public class SquadServiceTests
     [Fact]
     public async Task CreateAsync_GeneratesSlugId_AndDefaultsStatusToActive()
     {
-        var service = new SquadService(new FakeSquadRepository(), new FakeAppRepository(), new FakeQualitySnapshotRepository());
+        var service = new SquadService(new FakeSquadRepository(), new FakeAppRepository(), new FakeQualitySnapshotRepository(), new FakeJourneyRepository());
 
         var squad = await service.CreateAsync("Squad Pagamentos", "descrição");
 
@@ -78,7 +78,7 @@ public class SquadServiceTests
     public async Task CreateAsync_OnSlugCollision_AppendsNumericSuffix()
     {
         var squads = new FakeSquadRepository();
-        var service = new SquadService(squads, new FakeAppRepository(), new FakeQualitySnapshotRepository());
+        var service = new SquadService(squads, new FakeAppRepository(), new FakeQualitySnapshotRepository(), new FakeJourneyRepository());
         await squads.TryCreateAsync(new Squad { Id = "squad-pagamentos", Name = "Existente" });
 
         var squad = await service.CreateAsync("Squad Pagamentos", null);
@@ -91,7 +91,7 @@ public class SquadServiceTests
     {
         var squads = new FakeSquadRepository();
         await squads.SaveAsync(new Squad { Id = "sq-1", Name = "Antigo", Status = "active" });
-        var service = new SquadService(squads, new FakeAppRepository(), new FakeQualitySnapshotRepository());
+        var service = new SquadService(squads, new FakeAppRepository(), new FakeQualitySnapshotRepository(), new FakeJourneyRepository());
 
         var updated = await service.UpdateAsync("sq-1", "Novo Nome", "nova descrição", "inactive");
 
@@ -107,7 +107,7 @@ public class SquadServiceTests
         await squads.SaveAsync(new Squad { Id = "sq-1", Name = "Squad" });
         var apps = new FakeAppRepository();
         apps.Add(new App { Id = "app-1", SquadId = "sq-1", Name = "app" });
-        var service = new SquadService(squads, apps, new FakeQualitySnapshotRepository());
+        var service = new SquadService(squads, apps, new FakeQualitySnapshotRepository(), new FakeJourneyRepository());
 
         await Assert.ThrowsAsync<DomainConflictException>(() => service.DeleteAsync("sq-1"));
         Assert.NotNull(await squads.GetAsync("sq-1"));
@@ -118,7 +118,7 @@ public class SquadServiceTests
     {
         var squads = new FakeSquadRepository();
         await squads.SaveAsync(new Squad { Id = "sq-1", Name = "Squad" });
-        var service = new SquadService(squads, new FakeAppRepository(), new FakeQualitySnapshotRepository());
+        var service = new SquadService(squads, new FakeAppRepository(), new FakeQualitySnapshotRepository(), new FakeJourneyRepository());
 
         await service.DeleteAsync("sq-1");
 

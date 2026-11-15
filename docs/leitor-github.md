@@ -184,6 +184,16 @@ dotnet run --project tools/CheckApps.Analyze -- --sigla ab1 --source fake --fake
 dotnet run --project tools/CheckApps.Analyze -- --sigla ab1 --source fake --fake-revision 1
 ```
 
+## 6e. Jornadas (spec 022)
+
+As jornadas são um cadastro **manual** (não vêm do GitHub), em árvore: plataforma, sistema, jornada… O **nível** é texto livre. Ligam o negócio aos contratos da seção 6d: cada jornada-folha tem **passos**, os endpoints que ela chama, em ordem, e o CheckApps mostra o **impacto** das mudanças de contrato nesses passos.
+
+- **Onde**: menu **Jornadas**. Crie a raiz da árvore e use "+ Jornada dentro" para os níveis seguintes. Só as jornadas-folha têm passos, e só as sem passos aceitam jornadas dentro.
+- **Passos**: escolha o app e um endpoint do contrato analisado dele, ou digite método e rota. A rota casa com o contrato mesmo que o nome do parâmetro mude (`{id}` e `{fundoId}` são a mesma rota). Cada passo mostra um estado em texto: **no contrato**, **fora do contrato** ou **app sem contrato analisado**.
+- **Impacto**: cruza os passos com o que mudou entre o commit atual e o anterior (seção 6d). Um app que só tem a primeira análise, ou nenhuma, aparece como **sem comparação ainda**, nunca como "sem impacto". Rode o `Analyze` depois de cada commit de contrato.
+- **Para ver sem GitHub**: `--source fake`, com `--fake-revision 0` e depois `1` (seção 6d), cadastre uma jornada com passos nos endpoints do contrato de demonstração.
+- **Remoção**: um app usado em passo e uma squad dona de jornada não podem ser removidos (409), e uma jornada com jornadas dentro também não.
+
 ## 7. Problemas comuns
 
 | Sintoma | Causa provável |

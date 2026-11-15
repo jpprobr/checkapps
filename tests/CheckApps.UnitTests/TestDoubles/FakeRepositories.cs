@@ -441,3 +441,52 @@ public class StubDiscoverySource : IRepositoryDiscoverySource
         return Task.FromResult<IReadOnlyList<DiscoveredRepositoryInfo>>(_bySigla.GetValueOrDefault(sigla) ?? []);
     }
 }
+
+/// <summary>Jornadas e passos em memória (spec 022). A tabela real recusa FK e o serviço decide as regras; aqui só se guarda.</summary>
+public class FakeJourneyRepository : IJourneyRepository
+{
+    private readonly Dictionary<string, Journey> _journeys = [];
+    private readonly Dictionary<string, List<JourneyStep>> _steps = [];
+
+    public IReadOnlyCollection<Journey> All => _journeys.Values;
+
+    public Task<IReadOnlyList<Journey>> ListAsync(CancellationToken ct = default) =>
+        Task.FromResult<IReadOnlyList<Journey>>(_journeys.Values.OrderBy(j => j.Id, StringComparer.Ordinal).ToList());
+
+    public Task<Journey?> GetAsync(string journeyId, CancellationToken ct = default) =>
+        Task.FromResult(_journeys.GetValueOrDefault(journeyId));
+
+    public Task<bool> TryCreateAsync(Journey journey, CancellationToken ct = default) =>
+        Task.FromResult(_journeys.TryAdd(journey.Id, journey));
+
+    public Task UpdateAsync(Journey journey, CancellationToken ct = default)
+    {
+        _journeys[journey.Id] = journey;
+        return Task.CompletedTask;
+    }
+
+    public Task DeleteAsync(string journeyId, CancellationToken ct = default)
+    {
+        _journeys.Remove(journeyId);
+        _steps.Remove(journeyId);
+        return Task.CompletedTask;
+    }
+
+    public Task<IReadOnlyList<JourneyStep>> GetStepsAsync(string journeyId, CancellationToken ct = default) =>
+        Task.FromResult<IReadOnlyList<JourneyStep>>((_steps.GetValueOrDefault(journeyId) ?? []).OrderBy(s => s.Position).ToList());
+
+    public Task<IReadOnlyList<JourneyStep>> ListAllStepsAsync(CancellationToken ct = default) =>
+        Task.FromResult<IReadOnlyList<JourneyStep>>(_steps.Values.SelectMany(s => s).OrderBy(s => s.JourneyId, StringComparer.Ordinal).ThenBy(s => s.Position).ToList());
+
+    public Task ReplaceStepsAsync(string journeyId, IReadOnlyList<JourneyStep> steps, CancellationToken ct = default)
+    {
+        _steps[journeyId] = steps.ToList();
+        return Task.CompletedTask;
+    }
+
+    public Task<int> CountOwnedBySquadAsync(string squadId, CancellationToken ct = default) =>
+        Task.FromResult(_journeys.Values.Count(j => j.SquadId == squadId));
+
+    public Task<bool> AnyStepUsesAppAsync(string appId, CancellationToken ct = default) =>
+        Task.FromResult(_steps.Values.SelectMany(s => s).Any(s => s.AppId == appId));
+}

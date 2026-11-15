@@ -37,6 +37,7 @@ public static class ServiceCollectionExtensions
         services.AddSingleton<IAnalysisRepository, AnalysisRepository>();
         services.AddSingleton<IHostLinkRepository, HostLinkRepository>();
         services.AddSingleton<IHostExternalRepository, HostExternalRepository>();
+        services.AddSingleton<IJourneyRepository, JourneyRepository>();
 
         services.AddSingleton<IQualityAssessmentEngine, QualityAssessmentEngineV1>();
         services.AddSingleton<ISonarProvider, MockSonarProvider>();

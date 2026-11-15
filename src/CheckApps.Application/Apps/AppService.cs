@@ -10,7 +10,8 @@ public record RepositoryInput(
     string? Name, string? Provider, string? Url, string? Status, string? Sigla, string? SiglaApp, string? Role);
 
 public class AppService(
-    IAppRepository apps, ISquadRepository squads, IQualitySnapshotRepository snapshots, ICheckRepository checks)
+    IAppRepository apps, ISquadRepository squads, IQualitySnapshotRepository snapshots, ICheckRepository checks,
+    IJourneyRepository journeys)
 {
     public Task<App?> GetAppAsync(string appId, CancellationToken cancellationToken = default) =>
         apps.GetAsync(appId, cancellationToken);
@@ -195,6 +196,13 @@ public class AppService(
         {
             throw new DomainConflictException(
                 $"App '{appId}' está em uma ou mais checagens e não pode ser removido. Inative o app em vez de removê-lo.");
+        }
+
+        // Passo de jornada (spec 022) aponta para o app: a FK recusaria, e aqui vira 409 com mensagem.
+        if (await journeys.AnyStepUsesAppAsync(appId, cancellationToken))
+        {
+            throw new DomainConflictException(
+                $"App '{appId}' é usado em passos de jornadas e não pode ser removido. Remova os passos que o usam primeiro.");
         }
 
         await apps.DeleteAllAsync(appId, cancellationToken);

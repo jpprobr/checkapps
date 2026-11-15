@@ -15,7 +15,7 @@ public class AppServiceRepositoryTests
     {
         _apps.Add(new App { Id = "app-1", SquadId = "sq-1", Name = "App 1" });
         _apps.Add(new App { Id = "app-2", SquadId = "sq-1", Name = "App 2" });
-        _service = new AppService(_apps, new FakeSquadRepository(), new FakeQualitySnapshotRepository(), new FakeCheckRepository());
+        _service = new AppService(_apps, new FakeSquadRepository(), new FakeQualitySnapshotRepository(), new FakeCheckRepository(), new FakeJourneyRepository());
     }
 
     private static RepositoryInput Input(string? name = "repo", string? siglaApp = null) =>

@@ -317,3 +317,54 @@ CREATE INDEX IF NOT EXISTS ix_repository_api_endpoints_analysis
 
 CREATE INDEX IF NOT EXISTS ix_repository_api_fields_endpoint
     ON repository_api_fields (endpoint_id);
+
+
+-- Jornadas (spec 022, ADR-012): uma entidade em árvore (pai opcional), com nível em texto livre. Só as jornadas-folha têm
+-- passos. Remover uma jornada leva as tags e os passos dela; remover o PAI com filhos é recusado (FK sem cascata; o serviço
+-- responde 409 antes). squad_id e journey_steps.app_id NÃO cascateiam de propósito: o serviço recusa remover uma squad dona de
+-- jornada e um app usado em passo (409), e a FK é a rede de segurança.
+CREATE TABLE IF NOT EXISTS journeys (
+    id          TEXT PRIMARY KEY,
+    name        TEXT NOT NULL,
+    description TEXT NULL,
+    level       TEXT NULL,
+    squad_id    TEXT NULL REFERENCES squads(id),
+    parent_id   TEXT NULL REFERENCES journeys(id),
+    source      TEXT NOT NULL,
+    created_at  TEXT NOT NULL,
+    updated_at  TEXT NOT NULL
+);
+
+CREATE TABLE IF NOT EXISTS journey_tags (
+    journey_id TEXT NOT NULL REFERENCES journeys(id) ON DELETE CASCADE,
+    tag        TEXT NOT NULL,
+    PRIMARY KEY (journey_id, tag)
+);
+
+-- O passo aponta para a IDENTIDADE estável do endpoint (app + método + path_key), nunca para o id de um endpoint de análise,
+-- que é uma foto e muda a cada reanálise. A resolução contra o contrato é calculada na leitura.
+CREATE TABLE IF NOT EXISTS journey_steps (
+    id         TEXT PRIMARY KEY,
+    journey_id TEXT NOT NULL REFERENCES journeys(id) ON DELETE CASCADE,
+    position   INTEGER NOT NULL,
+    app_id     TEXT NOT NULL REFERENCES apps(id),
+    method     TEXT NOT NULL,
+    path       TEXT NOT NULL,
+    path_key   TEXT NOT NULL,
+    label      TEXT NULL,
+    note       TEXT NULL,
+    UNIQUE (journey_id, position)
+);
+
+CREATE INDEX IF NOT EXISTS ix_journeys_parent
+    ON journeys (parent_id);
+
+CREATE INDEX IF NOT EXISTS ix_journeys_squad
+    ON journeys (squad_id);
+
+CREATE INDEX IF NOT EXISTS ix_journey_steps_journey
+    ON journey_steps (journey_id);
+
+-- "Em quais jornadas este app entra": guarda de remoção do app e a futura leitura por app.
+CREATE INDEX IF NOT EXISTS ix_journey_steps_app
+    ON journey_steps (app_id);

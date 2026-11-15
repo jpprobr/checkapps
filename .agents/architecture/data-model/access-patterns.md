@@ -109,6 +109,16 @@ Revistos para SQL em 2026-10-12. Os ⚠️ da versão DynamoDB (partição únic
 | 56 | Base da comparação | Análise não falhada mais recente do repositório, de commit diferente, com `EXISTS` em `repository_api_endpoints` | ✅ | Análise sem endpoints não serve de base: é anterior à spec ou o repositório não tinha contrato |
 | 57 | O que mudou entre dois commits | Duas leituras do padrão 55 e comparação em memória (`ContractComparer`) | ✅ | Por repositório. Alerta ou tela de todas as quebras pediria gravar o resultado: fora de escopo |
 
+## Spec 022 — Jornadas (implementada)
+
+| # | Padrão | Como | Fit | Observação |
+|---|---|---|---|---|
+| 58 | Árvore de jornadas com contagem de passos e filhos | `journeys` inteira + `journey_steps` inteira + `journey_tags`, três consultas e a árvore montada em memória | ✅ | Poucas jornadas; sem SQL recursivo por portabilidade (ADR-009). O filtro da tela é no cliente |
+| 59 | Detalhe: caminho, filhos, passos e apps derivados | O mesmo carregamento do padrão 58, caminhando a árvore em memória | ✅ | Os apps são derivados dos passos da subárvore, não armazenados |
+| 60 | Resolução dos passos | Por app distinto, `GetCurrentContractsByAppAsync` (padrão 55) e casamento por (método, `path_key`) | ✅ | Calculada na leitura; um app lido uma vez por requisição |
+| 61 | Impacto das mudanças de contrato numa jornada | Por app distinto, `GetChangesForAppAsync` (padrão 57) e cruzamento com os passos da subárvore | ✅ | Calculado na leitura, nunca gravado |
+| 62 | Guardas de remoção: squad dona de jornada e app usado em passo | `COUNT` em `journeys(squad_id)` e `journey_steps(app_id)` | ✅ | Índices `ix_journeys_squad` e `ix_journey_steps_app`; o segundo também serve à futura leitura "em quais jornadas este app entra" |
+
 ## Fora de escopo hoje — agora por decisão de produto, não de banco
 
 Com SQLite, todos os itens abaixo são tecnicamente triviais. Seguem fora de escopo porque ninguém pediu ainda — o que muda é que incluí-los passou a ser decisão de produto, e não mais "o banco não deixa". O ❌ registra como era no DynamoDB.

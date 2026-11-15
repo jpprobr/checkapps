@@ -1,0 +1,286 @@
+<main class="page">
+  @if (loading()) {
+    <p>Carregando…</p>
+  } @else if (error()) {
+    <p class="breadcrumb"><a routerLink="/journeys">Jornadas</a></p>
+    <p class="error" role="alert">{{ error() }}</p>
+  } @else if (detail(); as d) {
+    <p class="breadcrumb">
+      <a routerLink="/journeys">Jornadas</a>
+      @for (item of d.path; track item.id) {
+        / <a [routerLink]="['/journeys', item.id]">{{ item.name }}</a>
+      }
+    </p>
+
+    <div class="title-row">
+      <h1>
+        {{ d.journey.name }}
+        @if (d.journey.level) { <span class="tag level">{{ d.journey.level }}</span> }
+      </h1>
+      <div class="row-actions">
+        <a [routerLink]="['/journeys', d.journey.id, 'edit']" class="button-secondary">Editar</a>
+        @if (!hasSteps()) {
+          <a [routerLink]="['/journeys/new']" [queryParams]="{ parentId: d.journey.id }" class="button-secondary">+ Jornada dentro</a>
+        }
+        <button type="button" class="danger" (click)="remove()">Remover</button>
+      </div>
+    </div>
+
+    @if (actionError()) {
+      <p class="error" role="alert">{{ actionError() }}</p>
+    }
+
+    <p class="subtitle">
+      Squad: <strong>{{ d.squadName ?? 'sem squad' }}</strong>
+      @if (d.journey.tags.length > 0) {
+        · <span class="tags">@for (tag of d.journey.tags; track tag) { <span class="tag">{{ tag }}</span> }</span>
+      }
+    </p>
+    @if (d.journey.description) {
+      <p>{{ d.journey.description }}</p>
+    }
+
+    @if (d.children.length > 0) {
+      <section class="card">
+        <h2>Dentro desta jornada</h2>
+        <div class="table-scroll">
+          <table>
+            <thead>
+              <tr><th>Jornada</th><th>Nível</th><th>Squad</th><th>Passos</th></tr>
+            </thead>
+            <tbody>
+              @for (child of d.children; track child.id) {
+                <tr>
+                  <td><a [routerLink]="['/journeys', child.id]">{{ child.name }}</a></td>
+                  <td>@if (child.level) { <span class="tag level">{{ child.level }}</span> } @else { — }</td>
+                  <td>{{ child.squadName ?? 'sem squad' }}</td>
+                  <td>{{ child.stepCount > 0 ? child.stepCount : child.childCount > 0 ? child.childCount + ' dentro' : '—' }}</td>
+                </tr>
+              }
+            </tbody>
+          </table>
+        </div>
+      </section>
+    }
+
+    @if (impact(); as imp) {
+      <section class="card" aria-labelledby="impact-title">
+        <h2 id="impact-title">Impacto das mudanças de contrato <span class="summary-text">{{ impactLine() }}</span></h2>
+        <p class="subtitle small">
+          Cruza os passos {{ d.children.length > 0 ? 'das jornadas de dentro' : 'desta jornada' }} com o que mudou nos contratos desde o commit
+          analisado anteriormente. O contrato é o que foi declarado e pode estar desatualizado em relação à aplicação.
+        </p>
+
+        @for (warning of imp.warnings; track warning) {
+          <p class="warning-line" role="status">⚠ {{ warning }}</p>
+        }
+
+        @if (imp.steps.length === 0) {
+          <p class="subtitle">
+            {{ isLeaf() ? 'Esta jornada ainda não tem passos: cadastre os endpoints que ela chama para ver o impacto.' : 'Nenhuma jornada de dentro tem passos ainda.' }}
+          </p>
+        } @else {
+          @if (changedSteps().length > 0) {
+            <p class="subtitle small">
+              {{ imp.breaking }} que quebram · {{ imp.attention }} de atenção · {{ imp.safe }} seguras
+            </p>
+            @for (step of changedSteps(); track step.id) {
+              <div class="change-group">
+                <div class="endpoint-line">
+                  <span class="method">{{ step.method }}</span>&ngsp;
+                  <code>{{ step.path }}</code>&ngsp;
+                  <span class="note-inline">{{ step.label ?? '' }}{{ d.children.length > 0 ? ' · ' + step.journeyName : '' }} · {{ step.appName }}</span>
+                  @if (step.endpointRemoved) { <span class="tag">endpoint removido do contrato</span> }
+                </div>
+                <ul class="changes">
+                  @for (change of step.changes; track $index) {
+                    <li>
+                      <span class="severity" [class.breaking]="change.severity === 'quebra'" [class.attention]="change.severity === 'atencao'">
+                        {{ severityLabels[change.severity] }}
+                      </span>&ngsp;
+                      @if (change.fieldPath) {
+                        <code>{{ change.fieldPath }}</code>&ngsp;
+                        <span class="note-inline">({{ fieldPlace({ location: change.location!, statusCode: change.statusCode }) }})</span>&ngsp;
+                      }
+                      {{ change.description }}
+                    </li>
+                  }
+                </ul>
+              </div>
+            }
+          } @else if (unknownSteps().length < imp.steps.length) {
+            <p class="subtitle">Nenhuma mudança de contrato atinge os passos que puderam ser comparados.</p>
+          }
+
+          @if (unchangedCount() > 0 && changedSteps().length > 0) {
+            <p class="subtitle small">{{ unchangedCount() }} passo(s) sem mudança.</p>
+          }
+
+          @if (unknownSteps().length > 0) {
+            <p class="subtitle small">
+              <strong>Sem comparação ainda</strong>: o impacto destes passos é desconhecido, e não "nenhum". Eles dependem de o contrato do app
+              ter sido analisado em pelo menos dois commits.
+            </p>
+            <ul class="changes">
+              @for (step of unknownSteps(); track step.id) {
+                <li>
+                  <span class="method">{{ step.method }}</span>&ngsp;<code>{{ step.path }}</code>&ngsp;
+                  <span class="note-inline">{{ step.appName }} · {{ comparisonLabels[step.comparison] }}</span>
+                </li>
+              }
+            </ul>
+          }
+        }
+      </section>
+    }
+
+    @if (isLeaf()) {
+      <section class="card">
+        <div class="title-row">
+          <h2>Passos</h2>
+          @if (!editing()) {
+            <button type="button" class="secondary" (click)="startEditing()">{{ hasSteps() ? 'Editar passos' : '+ Cadastrar passos' }}</button>
+          }
+        </div>
+
+        @if (editing()) {
+          <form (ngSubmit)="saveSteps()">
+            <p class="subtitle small">
+              Em ordem. Escolha o app e, se ele tiver contrato analisado, um endpoint da lista; ou digite o método e a rota. A rota casa com o
+              contrato mesmo que o nome do parâmetro mude (<code>{{ '{id}' }}</code> e <code>{{ '{fundoId}' }}</code> são a mesma rota).
+            </p>
+
+            @if (editorError()) {
+              <p class="error" role="alert">{{ editorError() }}</p>
+            }
+
+            @if (drafts().length === 0) {
+              <p class="subtitle">Nenhum passo. Salvar assim remove todos.</p>
+            }
+
+            @for (draft of drafts(); track draft.key; let i = $index) {
+              <fieldset class="step-edit">
+                <legend>Passo {{ i + 1 }}</legend>
+                <div class="step-grid">
+                  <label>
+                    App
+                    <select [ngModel]="draft.appId" (ngModelChange)="changeApp(i, $event)" [ngModelOptions]="{ standalone: true }" required>
+                      <option value="" disabled>Selecione…</option>
+                      @for (app of apps(); track app.id) {
+                        <option [value]="app.id">{{ app.name }}</option>
+                      }
+                    </select>
+                  </label>
+                  <label>
+                    Endpoint do contrato
+                    <select [ngModel]="draft.picked" (ngModelChange)="pick(i, $event)" [ngModelOptions]="{ standalone: true }" [disabled]="!draft.appId">
+                      <option value="">{{ endpointsFor(draft.appId).length > 0 ? 'Digitar o método e a rota…' : 'Sem contrato: digite o método e a rota' }}</option>
+                      @for (option of endpointsFor(draft.appId); track option.key) {
+                        <option [value]="option.key">{{ option.method }} {{ option.path }}</option>
+                      }
+                    </select>
+                  </label>
+                  <label>
+                    Método
+                    <select [ngModel]="draft.method" (ngModelChange)="patch(i, { method: $event, picked: '' })" [ngModelOptions]="{ standalone: true }">
+                      @for (method of methods; track method) {
+                        <option [value]="method">{{ method }}</option>
+                      }
+                    </select>
+                  </label>
+                  <label class="wide">
+                    Rota
+                    <input
+                      type="text"
+                      required
+                      placeholder="/fundos/{codigoFundo}"
+                      [ngModel]="draft.path"
+                      (ngModelChange)="patch(i, { path: $event, picked: '' })"
+                      [ngModelOptions]="{ standalone: true }"
+                    />
+                  </label>
+                  <label class="wide">
+                    Etapa (como a jornada chama este passo)
+                    <input
+                      type="text"
+                      maxlength="120"
+                      placeholder="ex.: Simular a compra"
+                      [ngModel]="draft.label"
+                      (ngModelChange)="patch(i, { label: $event })"
+                      [ngModelOptions]="{ standalone: true }"
+                    />
+                  </label>
+                </div>
+                <div class="row-actions">
+                  <button type="button" class="secondary" (click)="move(i, -1)" [disabled]="i === 0" [attr.aria-label]="'Subir o passo ' + (i + 1)">↑ Subir</button>
+                  <button type="button" class="secondary" (click)="move(i, 1)" [disabled]="i === drafts().length - 1" [attr.aria-label]="'Descer o passo ' + (i + 1)">↓ Descer</button>
+                  <button type="button" class="danger" (click)="removeStep(i)" [attr.aria-label]="'Remover o passo ' + (i + 1)">Remover</button>
+                </div>
+              </fieldset>
+            }
+
+            <div class="form-actions">
+              <button type="button" class="secondary" (click)="addStep()">+ Adicionar passo</button>
+              <button type="submit" [disabled]="saving()">{{ saving() ? 'Salvando…' : 'Salvar passos' }}</button>
+              <button type="button" class="secondary" (click)="cancelEditing()">Cancelar</button>
+            </div>
+          </form>
+        } @else if (d.steps.length === 0) {
+          <p class="subtitle">
+            Esta jornada ainda não tem passos. Os passos são os endpoints que ela chama, na ordem, e é com eles que o impacto das mudanças de
+            contrato é calculado.
+          </p>
+        } @else {
+          <div class="table-scroll">
+            <table>
+              <thead>
+                <tr><th>#</th><th>Etapa</th><th>App</th><th>Endpoint</th><th>Estado</th><th>No contrato</th></tr>
+              </thead>
+              <tbody>
+                @for (step of d.steps; track step.id) {
+                  <tr>
+                    <td>{{ step.position + 1 }}</td>
+                    <td>{{ step.label ?? '—' }}</td>
+                    <td><a [routerLink]="['/apps', step.appId]">{{ step.appName }}</a></td>
+                    <td><span class="method">{{ step.method }}</span>&ngsp;<code>{{ step.path }}</code></td>
+                    <td>
+                      <span class="resolution" [class.warn]="step.resolution !== 'catalogado'">{{ resolutionLabels[step.resolution] }}</span>
+                      @if (step.endpoint?.deprecated) { <span class="tag">deprecated</span> }
+                    </td>
+                    <td>
+                      @if (step.endpoint; as endpoint) {
+                        {{ endpoint.summary ?? '—' }}
+                        <span class="note">
+                          segurança: {{ endpoint.security.length > 0 ? endpoint.security.join(', ') : 'nenhuma declarada' }}
+                          · confiança: {{ confidenceLabels[endpoint.confidence] }}
+                        </span>
+                      } @else {
+                        —
+                      }
+                    </td>
+                  </tr>
+                }
+              </tbody>
+            </table>
+          </div>
+        }
+      </section>
+    } @else if (d.steps.length === 0) {
+      <p class="subtitle small">
+        Esta jornada agrupa outras: os passos ficam nas jornadas de dentro, e o impacto acima soma o delas.
+      </p>
+    }
+
+    @if (d.apps.length > 0) {
+      <section class="card">
+        <h2>Apps que ela usa</h2>
+        <p class="subtitle small">Derivados dos passos {{ d.children.length > 0 ? 'das jornadas de dentro' : 'desta jornada' }}: não são digitados.</p>
+        <ul class="apps-list">
+          @for (app of d.apps; track app.appId) {
+            <li><a [routerLink]="['/apps', app.appId]">{{ app.appName }}</a> <span class="note-inline">{{ app.stepCount }} passo(s)</span></li>
+          }
+        </ul>
+      </section>
+    }
+  }
+</main>

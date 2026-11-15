@@ -1,0 +1,98 @@
+<main class="page">
+  <h1>Jornadas</h1>
+  <p class="subtitle">
+    Os fluxos de negócio em árvore (plataforma, sistema, jornada…) e os endpoints que cada jornada chama. O nível é texto livre. Daqui você vê
+    o impacto das mudanças de contrato em cada jornada.
+  </p>
+
+  @if (loading()) {
+    <p>Carregando…</p>
+  } @else if (error()) {
+    <p class="error" role="alert">Não foi possível carregar as jornadas.</p>
+  } @else {
+    <div class="toolbar">
+      <div class="tree-actions">
+        <button type="button" class="secondary" (click)="expandAll()" [disabled]="filtering()">Expandir tudo</button>
+        <button type="button" class="secondary" (click)="collapseAll()" [disabled]="filtering()">Recolher tudo</button>
+      </div>
+      <a routerLink="/journeys/new" class="button-secondary">+ Nova jornada</a>
+    </div>
+
+    @if (journeys().length === 0) {
+      <section class="card">
+        <h2>Nenhuma jornada cadastrada</h2>
+        <p class="subtitle">
+          Comece pelo nível mais alto que fizer sentido para a sua squad (por exemplo, um sistema) e cadastre as jornadas dentro dele. Cada
+          jornada pode ter passos: os endpoints que ela chama, na ordem.
+        </p>
+        <p><a routerLink="/journeys/new" class="button-secondary">Cadastrar a primeira jornada</a></p>
+      </section>
+    } @else {
+      <div class="filters">
+        <input type="search" aria-label="Buscar" placeholder="Buscar por nome, nível ou tag…" [ngModel]="search()" (ngModelChange)="search.set($event)" />
+        <select aria-label="Squad" [ngModel]="squadFilter()" (ngModelChange)="squadFilter.set($event)">
+          <option value="">Todas as squads</option>
+          @for (squad of currentSquad.squads(); track squad.id) {
+            <option [value]="squad.id">{{ squad.name }}</option>
+          }
+        </select>
+      </div>
+
+      @if (rows().length === 0) {
+        <p class="subtitle">Nenhuma jornada corresponde ao filtro.</p>
+      } @else {
+        <div class="table-scroll">
+          <table>
+            <thead>
+              <tr>
+                <th>Jornada</th>
+                <th>Nível</th>
+                <th>Squad</th>
+                <th>Tags</th>
+                <th>Passos</th>
+              </tr>
+            </thead>
+            <tbody>
+              @for (row of rows(); track row.journey.id) {
+                <tr>
+                  <td>
+                    <span class="tree-cell" [style.padding-left.rem]="row.depth * 1.5">
+                      @if (row.expandable && !filtering()) {
+                        <button
+                          type="button"
+                          class="toggle"
+                          [attr.aria-expanded]="row.expanded"
+                          [attr.aria-label]="(row.expanded ? 'Recolher ' : 'Expandir ') + row.journey.name"
+                          (click)="toggle(row.journey.id)"
+                        >{{ row.expanded ? '▾' : '▸' }}</button>
+                      } @else {
+                        <span class="toggle-space" aria-hidden="true"></span>
+                      }
+                      <a [routerLink]="['/journeys', row.journey.id]">{{ row.journey.name }}</a>
+                    </span>
+                  </td>
+                  <td>
+                    @if (row.journey.level) { <span class="tag level">{{ row.journey.level }}</span> } @else { — }
+                  </td>
+                  <td>{{ row.journey.squadName ?? 'sem squad' }}</td>
+                  <td class="tags">
+                    @for (tag of row.journey.tags; track tag) { <span class="tag">{{ tag }}</span> }
+                  </td>
+                  <td>
+                    @if (row.journey.stepCount > 0) {
+                      {{ row.journey.stepCount }}
+                    } @else if (row.journey.childCount > 0) {
+                      <span class="note">{{ row.journey.childCount }} dentro</span>
+                    } @else {
+                      —
+                    }
+                  </td>
+                </tr>
+              }
+            </tbody>
+          </table>
+        </div>
+      }
+    }
+  }
+</main>

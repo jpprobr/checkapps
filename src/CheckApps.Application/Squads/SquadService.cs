@@ -3,7 +3,8 @@ using CheckApps.Domain;
 
 namespace CheckApps.Application.Squads;
 
-public class SquadService(ISquadRepository squads, IAppRepository apps, IQualitySnapshotRepository snapshots)
+public class SquadService(
+    ISquadRepository squads, IAppRepository apps, IQualitySnapshotRepository snapshots, IJourneyRepository journeys)
 {
     public Task<IReadOnlyList<Squad>> ListSquadsAsync(CancellationToken cancellationToken = default) =>
         squads.ListAsync(cancellationToken);
@@ -54,6 +55,14 @@ public class SquadService(ISquadRepository squads, IAppRepository apps, IQuality
         {
             throw new DomainConflictException(
                 $"Squad '{squadId}' possui {linkedApps.Count} app(s) vinculado(s) e não pode ser removida. Mova ou remova os apps primeiro.");
+        }
+
+        // Squad dona de jornada (spec 022): a FK recusaria, e aqui vira 409 com mensagem.
+        var ownedJourneys = await journeys.CountOwnedBySquadAsync(squadId, cancellationToken);
+        if (ownedJourneys > 0)
+        {
+            throw new DomainConflictException(
+                $"Squad '{squadId}' é dona de {ownedJourneys} jornada(s) e não pode ser removida. Troque a squad dessas jornadas primeiro.");
         }
 
         await squads.DeleteAsync(squadId, cancellationToken);

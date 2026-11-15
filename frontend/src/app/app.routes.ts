@@ -39,6 +39,11 @@ export const routes: Routes = [
   // Nome antigo da tela ("Dependências", antes de virar "Pacotes"): favoritos continuam funcionando.
   { path: 'dependencies', redirectTo: 'packages', pathMatch: 'full' },
   { path: 'integrations', component: Integrations },
+  // Jornadas (spec 022), carregadas sob demanda. `journeys/new` precisa vir antes de `journeys/:journeyId`.
+  { path: 'journeys', loadComponent: () => import('./features/journeys/journeys').then((m) => m.JourneysPage) },
+  { path: 'journeys/new', loadComponent: () => import('./features/journey-form/journey-form').then((m) => m.JourneyForm) },
+  { path: 'journeys/:journeyId/edit', loadComponent: () => import('./features/journey-form/journey-form').then((m) => m.JourneyForm) },
+  { path: 'journeys/:journeyId', loadComponent: () => import('./features/journey-detail/journey-detail').then((m) => m.JourneyDetailPage) },
   // Carregado sob demanda: o layout do grafo (dagre) não pesa no bundle inicial.
   { path: 'map', loadComponent: () => import('./features/map/map').then((m) => m.AppMapPage) },
   // Nome antigo da tela ("Descobertos"): favoritos continuam funcionando.

@@ -49,3 +49,5 @@ Leia antes de editar código Angular. Só o que é específico deste projeto.
 
 - **O Angular remove o espaço entre elementos no template.** `<span>a</span>` seguido de `<code>b</code>` em outra linha vira `ab` para leitor de tela e para copiar e colar, mesmo que a largura mínima disfarce na tela. Use `&ngsp;` entre eles.
 - **Orçamento do pacote inicial (500 kB)**: página nova ou pesada entra com `loadComponent` na rota, como o mapa e o detalhe do app. Não aumente o orçamento para calar o aviso.
+- **Roteiro Playwright: leia a tela só depois de ela carregar e espere o redesenho depois de cada ação.** Ler logo após navegar pega o "Carregando…", e ler logo após um clique ou uma troca de filtro pega o estado antigo. Isso gerou falhas intermitentes que não eram bugs; a espera tem de ter limite (algo como 3 s), para um bug de verdade continuar falhando.
+- **Em `app.routes.ts`, a rota `x/new` vem antes de `x/:id`**; senão o Angular trata `new` como um id.

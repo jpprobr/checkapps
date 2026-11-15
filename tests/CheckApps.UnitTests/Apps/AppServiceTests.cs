@@ -13,7 +13,7 @@ public class AppServiceTests
     {
         var squads = new FakeSquadRepository();
         await squads.SaveAsync(new Squad { Id = "sq-1", Name = "Squad" });
-        var service = new AppService(new FakeAppRepository(), squads, new FakeQualitySnapshotRepository(), new FakeCheckRepository());
+        var service = new AppService(new FakeAppRepository(), squads, new FakeQualitySnapshotRepository(), new FakeCheckRepository(), new FakeJourneyRepository());
 
         var app = await service.CreateAsync("Checkout API", "sq-1", null, "high", ["demo"], null);
 
@@ -25,7 +25,7 @@ public class AppServiceTests
     [Fact]
     public async Task CreateAsync_ThrowsKeyNotFound_WhenSquadDoesNotExist()
     {
-        var service = new AppService(new FakeAppRepository(), new FakeSquadRepository(), new FakeQualitySnapshotRepository(), new FakeCheckRepository());
+        var service = new AppService(new FakeAppRepository(), new FakeSquadRepository(), new FakeQualitySnapshotRepository(), new FakeCheckRepository(), new FakeJourneyRepository());
 
         await Assert.ThrowsAsync<KeyNotFoundException>(() => service.CreateAsync("App", "sq-inexistente", null, null, null, null));
     }
@@ -53,7 +53,7 @@ public class AppServiceTests
             LastSnapshotAt = DateTimeOffset.UtcNow
         });
 
-        var service = new AppService(apps, squads, new FakeQualitySnapshotRepository(), new FakeCheckRepository());
+        var service = new AppService(apps, squads, new FakeQualitySnapshotRepository(), new FakeCheckRepository(), new FakeJourneyRepository());
 
         var updated = await service.UpdateAsync("app-1", "App Renomeado", "sq-2", null, null, null, "active", null);
 
@@ -70,7 +70,7 @@ public class AppServiceTests
         await squads.SaveAsync(new Squad { Id = "sq-1", Name = "Origem" });
         var apps = new FakeAppRepository();
         apps.Add(new App { Id = "app-1", SquadId = "sq-1", Name = "App" });
-        var service = new AppService(apps, squads, new FakeQualitySnapshotRepository(), new FakeCheckRepository());
+        var service = new AppService(apps, squads, new FakeQualitySnapshotRepository(), new FakeCheckRepository(), new FakeJourneyRepository());
 
         await Assert.ThrowsAsync<KeyNotFoundException>(
             () => service.UpdateAsync("app-1", "App", "sq-inexistente", null, null, null, "active", null));
@@ -83,7 +83,7 @@ public class AppServiceTests
         apps.Add(new App { Id = "app-1", SquadId = "sq-1", Name = "App" });
         var snapshots = new FakeQualitySnapshotRepository();
         snapshots.Add("app-1", DateTimeOffset.UtcNow, QualityLevel.A);
-        var service = new AppService(apps, new FakeSquadRepository(), snapshots, new FakeCheckRepository());
+        var service = new AppService(apps, new FakeSquadRepository(), snapshots, new FakeCheckRepository(), new FakeJourneyRepository());
 
         await Assert.ThrowsAsync<DomainConflictException>(() => service.DeleteAsync("app-1"));
         Assert.NotNull(await apps.GetAsync("app-1"));
@@ -98,7 +98,7 @@ public class AppServiceTests
         var checkService = new CheckService(checks, apps, TimeProvider.System);
         var check = await checkService.CreateAsync(new CheckFields("Atualizar .NET 10", null, null, null, null, null));
         await checkService.AddAppsAsync(check.Id, ["app-1"]);
-        var service = new AppService(apps, new FakeSquadRepository(), new FakeQualitySnapshotRepository(), checks);
+        var service = new AppService(apps, new FakeSquadRepository(), new FakeQualitySnapshotRepository(), checks, new FakeJourneyRepository());
 
         var conflict = await Assert.ThrowsAsync<DomainConflictException>(() => service.DeleteAsync("app-1"));
         Assert.Contains("checagens", conflict.Message);
@@ -110,7 +110,7 @@ public class AppServiceTests
     {
         var apps = new FakeAppRepository();
         apps.Add(new App { Id = "app-1", SquadId = "sq-1", Name = "App" });
-        var service = new AppService(apps, new FakeSquadRepository(), new FakeQualitySnapshotRepository(), new FakeCheckRepository());
+        var service = new AppService(apps, new FakeSquadRepository(), new FakeQualitySnapshotRepository(), new FakeCheckRepository(), new FakeJourneyRepository());
 
         await service.DeleteAsync("app-1");
 
@@ -122,7 +122,7 @@ public class AppServiceTests
     {
         var apps = new FakeAppRepository();
         apps.Add(new App { Id = "app-1", SquadId = "sq-1", Name = "App" });
-        var service = new AppService(apps, new FakeSquadRepository(), new FakeQualitySnapshotRepository(), new FakeCheckRepository());
+        var service = new AppService(apps, new FakeSquadRepository(), new FakeQualitySnapshotRepository(), new FakeCheckRepository(), new FakeJourneyRepository());
 
         var link = await service.AddLinkAsync("app-1", "Confluence", "https://wiki.example.com");
         Assert.Single(await service.ListLinksAsync("app-1"));
@@ -138,7 +138,7 @@ public class AppServiceTests
     [Fact]
     public async Task AddAndUpdateLink_ThrowKeyNotFound_WhenAppDoesNotExist()
     {
-        var service = new AppService(new FakeAppRepository(), new FakeSquadRepository(), new FakeQualitySnapshotRepository(), new FakeCheckRepository());
+        var service = new AppService(new FakeAppRepository(), new FakeSquadRepository(), new FakeQualitySnapshotRepository(), new FakeCheckRepository(), new FakeJourneyRepository());
 
         await Assert.ThrowsAsync<KeyNotFoundException>(() => service.AddLinkAsync("nope", "Wiki", "https://wiki.example.com"));
         await Assert.ThrowsAsync<KeyNotFoundException>(() => service.UpdateLinkAsync("nope", "l1", "Wiki", "https://wiki.example.com"));

@@ -2,6 +2,7 @@ using CheckApps.Application.Analysis;
 using CheckApps.Application.Apps;
 using CheckApps.Application.Checks;
 using CheckApps.Application.Discovery;
+using CheckApps.Application.Journeys;
 using CheckApps.Application.QualitySnapshots;
 using CheckApps.Application.Squads;
 using Microsoft.Extensions.DependencyInjection;
@@ -23,6 +24,8 @@ public static class ServiceCollectionExtensions
         services.AddScoped<DependencyService>();
         services.AddScoped<IntegrationService>();
         services.AddScoped<ContractService>();
+        services.AddScoped<IContractReader>(sp => sp.GetRequiredService<ContractService>());
+        services.AddScoped<JourneyService>();
         services.AddScoped<MapService>();
         services.AddScoped<HostLinkService>();
         services.TryAddSingleton(TimeProvider.System);

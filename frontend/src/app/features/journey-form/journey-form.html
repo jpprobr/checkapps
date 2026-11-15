@@ -1,0 +1,74 @@
+<main class="page">
+  <p class="breadcrumb"><a routerLink="/journeys">Jornadas</a></p>
+  <h1>{{ isEditMode ? 'Editar jornada' : 'Nova jornada' }}</h1>
+
+  @if (loading()) {
+    <p>Carregando…</p>
+  } @else {
+    <form class="card form" (ngSubmit)="submit()">
+      @if (error()) {
+        <p class="error" role="alert">{{ error() }}</p>
+      }
+
+      <label>
+        Nome *
+        <input type="text" required maxlength="120" [ngModel]="name()" (ngModelChange)="name.set($event)" name="name" />
+      </label>
+
+      <label>
+        Nível
+        <input
+          type="text"
+          list="level-suggestions"
+          maxlength="40"
+          placeholder="ex.: plataforma, sistema, jornada"
+          [ngModel]="level()"
+          (ngModelChange)="level.set($event)"
+          name="level"
+        />
+        <span class="hint">Texto livre: use o nome que a sua squad usa. As sugestões são só um atalho.</span>
+      </label>
+      <datalist id="level-suggestions">
+        @for (suggestion of levelSuggestions; track suggestion) {
+          <option [value]="suggestion"></option>
+        }
+      </datalist>
+
+      <label>
+        Dentro de
+        <select [ngModel]="parentId()" (ngModelChange)="parentId.set($event)" name="parentId">
+          <option value="">Nenhuma (raiz da árvore)</option>
+          @for (option of parentOptions(); track option.id) {
+            <option [value]="option.id" [disabled]="option.disabled">{{ option.label }}{{ option.disabled ? ' (tem passos)' : '' }}</option>
+          }
+        </select>
+      </label>
+
+      <label>
+        Squad
+        <select [ngModel]="squadId()" (ngModelChange)="squadId.set($event)" name="squadId">
+          <option value="">Sem squad</option>
+          @for (squad of currentSquad.squads(); track squad.id) {
+            <option [value]="squad.id">{{ squad.name }}</option>
+          }
+        </select>
+      </label>
+
+      <label>
+        Descrição
+        <textarea [ngModel]="description()" (ngModelChange)="description.set($event)" name="description"></textarea>
+      </label>
+
+      <label>
+        Tags (separadas por vírgula)
+        <input type="text" placeholder="ex.: tipo-produto:renda-fixa" [ngModel]="tagsInput()" (ngModelChange)="tagsInput.set($event)" name="tags" />
+        <span class="hint">Classificação opcional. A convenção <code>chave:valor</code> ajuda a filtrar depois.</span>
+      </label>
+
+      <div class="form-actions">
+        <button type="submit" [disabled]="saving()">{{ saving() ? 'Salvando…' : 'Salvar' }}</button>
+        <a [routerLink]="isEditMode ? ['/journeys', journeyId] : ['/journeys']" class="button-secondary">Cancelar</a>
+      </div>
+    </form>
+  }
+</main>

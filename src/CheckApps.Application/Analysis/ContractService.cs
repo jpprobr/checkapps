@@ -6,10 +6,23 @@ using Repository = CheckApps.Domain.Repository;
 namespace CheckApps.Application.Analysis;
 
 /// <summary>
+/// O que as jornadas (spec 022) precisam saber dos contratos: os endpoints correntes de um app e o que mudou neles. Interface para a
+/// regra de jornadas não depender dos detalhes da análise e poder ser testada sem banco.
+/// </summary>
+public interface IContractReader
+{
+    /// <exception cref="KeyNotFoundException">O app não existe.</exception>
+    Task<AppContracts> GetForAppAsync(string appId, CancellationToken cancellationToken = default);
+
+    /// <exception cref="KeyNotFoundException">O app não existe.</exception>
+    Task<AppContractChanges> GetChangesForAppAsync(string appId, CancellationToken cancellationToken = default);
+}
+
+/// <summary>
 /// Leitura dos contratos (spec 021): os endpoints declarados de um app e o que mudou desde o commit analisado anteriormente. Só
 /// lê: nunca dispara análise nem fala com o provedor. A comparação é calculada aqui, a cada leitura, e não é gravada.
 /// </summary>
-public class ContractService(IAppRepository apps, IAnalysisRepository analyses)
+public class ContractService(IAppRepository apps, IAnalysisRepository analyses) : IContractReader
 {
     /// <exception cref="KeyNotFoundException">O app não existe.</exception>
     public async Task<AppContracts> GetForAppAsync(string appId, CancellationToken cancellationToken = default)

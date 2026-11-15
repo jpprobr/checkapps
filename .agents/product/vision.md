@@ -13,9 +13,7 @@ Uma **camada contextual e AI-friendly** que ajuda times de engenharia a compreen
 - Squads / times
 - Aplicações
 - Repositórios
-- Produtos
-- Operações
-- Jornadas
+- Jornadas (em árvore, com nível em texto livre; produto e operação entram como classificação opcional, não como entidades)
 - Dependências
 - Integrações
 - Indicadores técnicos

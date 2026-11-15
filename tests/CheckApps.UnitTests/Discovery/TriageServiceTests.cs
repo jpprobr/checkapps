@@ -21,7 +21,7 @@ public class TriageServiceTests
     public TriageServiceTests()
     {
         _discovered = new FakeDiscoveredRepositoryRepository(_apps);
-        var appService = new AppService(_apps, _squads, new FakeQualitySnapshotRepository(), new FakeCheckRepository());
+        var appService = new AppService(_apps, _squads, new FakeQualitySnapshotRepository(), new FakeCheckRepository(), new FakeJourneyRepository());
         _sut = new TriageService(_discovered, _apps, _squads, appService, new ScanOptions { NameTemplate = "lab-{sigla}-" });
         _squads.SaveAsync(new Squad { Id = "sq-1", Name = "Squad" }).Wait();
     }
@@ -128,7 +128,7 @@ public class TriageServiceTests
     public async Task ListAsync_WithoutNameTemplate_StillWorks_WithoutRoleSuggestions()
     {
         await SeedAsync("1", "lab-ab1-app-pagamentos");
-        var appService = new AppService(_apps, _squads, new FakeQualitySnapshotRepository(), new FakeCheckRepository());
+        var appService = new AppService(_apps, _squads, new FakeQualitySnapshotRepository(), new FakeCheckRepository(), new FakeJourneyRepository());
         var sut = new TriageService(_discovered, _apps, _squads, appService, new ScanOptions());
 
         var item = Assert.Single(await sut.ListAsync(null, null));

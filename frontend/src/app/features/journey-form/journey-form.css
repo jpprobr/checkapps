@@ -1,0 +1,13 @@
+.hint {
+  display: block;
+  margin-top: 0.25rem;
+  font-size: 0.8rem;
+  color: var(--text-secondary);
+}
+
+code {
+  background: var(--gridline);
+  border-radius: 6px;
+  padding: 0.1rem 0.4rem;
+  font-size: 0.85rem;
+}
