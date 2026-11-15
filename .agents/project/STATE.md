@@ -60,7 +60,7 @@ Estágio do roadmap: **Inventário + Health + Evolution concluídos**, mais **Ch
 - **Exceção futura**: repositório compartilhado entre squads — não tratado.
 - Repositório que **some do GitHub** continua na caixa (só `last_seen_at` envelhece) — comportamento não decidido.
 - **CRUD de Repository**: sem pendências além do **CRUD de SonarProject**, que segue em backlog por decisão do usuário. Dados antigos com dois ativos no mesmo papel: nenhum dos dois pode ser salvo como ativo até um virar `legacy`.
-- `.github/copilot-instructions.md` ainda não existe; confirmar na máquina corporativa se Devin/Copilot varrem `.agents/skills/` (ADR-008).
+- `.github/copilot-instructions.md` existe desde 2026-11-15 (ponteiro para o `AGENTS.md`); falta confirmar na máquina corporativa se Devin e Copilot varrem `.agents/skills/` sozinhos (ADR-008).
 
 ## Gotchas para a próxima sessão
 
@@ -88,5 +88,5 @@ Os críticos estão em `AGENTS.md` e nas regras. Os que mais mordem hoje:
 6. Repetir os roteiros Playwright das specs 001–007 contra o novo shell; revisão do usuário no glossário (Solução, Tipo de app).
 7. Candidatos de baixo custo: checagens e repositórios na massa de demonstração do seed; decidir o que fazer com repositório que some do GitHub; estouro horizontal de ~134 px no celular da página do app (tabela de histórico de métricas, anterior à 013). (CRUD de SonarProject: em backlog, não fazer agora.)
 8. Depois: dependências transitivas (API de SBOM do GitHub, a verificar), tags chave-valor e a spec de Solução.
-9. Na migração para a máquina corporativa: `.github/copilot-instructions.md`, verificação do `.agents/skills/`; GitHub App no lugar do token pessoal (ADR-010).
+9. Na migração para a máquina corporativa: verificar se Copilot e Devin leem `.agents/skills/` e o `.github/copilot-instructions.md`; GitHub App no lugar do token pessoal (ADR-010).
 10. Antes de qualquer uso compartilhado: substituir ADR-007 por uma decisão de autenticação.
