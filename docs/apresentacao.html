@@ -1,0 +1,514 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>CheckApps · Apresentação</title>
+<!--
+  Apresentação do CheckApps para coordenação e tech leads. Arquivo único, sem dependências externas: abre sem internet.
+  Navegação: setas, Page Up/Down, espaço, Home e End. Para PDF, imprima (uma página por slide).
+-->
+<style>
+  :root {
+    --bg: #f7f7f5;
+    --surface: #ffffff;
+    --text: #1d2125;
+    --muted: #5b6470;
+    --line: #e2e4e8;
+    --accent: #2563a8;
+    --accent-soft: #e8f0f9;
+    --break: #b42318;
+    --break-soft: #fdecea;
+    --ok: #1f7a4d;
+    --ok-soft: #e6f4ec;
+    --warn: #9a6700;
+    --warn-soft: #fff4d6;
+    --radius: 12px;
+  }
+
+  * { box-sizing: border-box; }
+  html { scroll-snap-type: y mandatory; scroll-behavior: smooth; }
+  body {
+    margin: 0;
+    background: var(--bg);
+    color: var(--text);
+    font-family: "Segoe UI", system-ui, -apple-system, Roboto, "Helvetica Neue", Arial, sans-serif;
+    line-height: 1.45;
+  }
+
+  .slide {
+    min-height: 100vh;
+    scroll-snap-align: start;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    padding: 56px max(24px, 6vw) 72px;
+  }
+  .slide > .inner { width: 100%; max-width: 1120px; margin: 0 auto; }
+
+  .eyebrow {
+    margin: 0 0 8px;
+    font-size: 0.85rem;
+    font-weight: 600;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    color: var(--accent);
+  }
+  h1 { margin: 0 0 16px; font-size: clamp(2.4rem, 5vw, 3.6rem); line-height: 1.1; }
+  h2 { margin: 0 0 24px; font-size: clamp(1.7rem, 3.2vw, 2.4rem); line-height: 1.2; }
+  h3 { margin: 0 0 6px; font-size: 1.08rem; }
+  p { margin: 0 0 12px; }
+  .lead { font-size: clamp(1.1rem, 1.8vw, 1.35rem); color: var(--muted); max-width: 46rem; }
+  .muted { color: var(--muted); }
+  .small { font-size: 0.9rem; }
+  code { font-family: Consolas, "Cascadia Mono", monospace; font-size: 0.92em; background: var(--accent-soft); padding: 0.05em 0.35em; border-radius: 5px; }
+
+  .grid { display: grid; gap: 16px; }
+  .g2 { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .g3 { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+  .g4 { grid-template-columns: repeat(4, minmax(0, 1fr)); }
+
+  .card {
+    background: var(--surface);
+    border: 1px solid var(--line);
+    border-radius: var(--radius);
+    padding: 18px 20px;
+  }
+  .card p { margin: 0; color: var(--muted); font-size: 0.95rem; }
+  .card .q { font-size: 0.85rem; color: var(--accent); margin-top: 8px; }
+
+  ul.clean { margin: 0; padding-left: 1.1rem; }
+  ul.clean li { margin: 0 0 8px; }
+
+  /* Capa */
+  .cover h1 { font-size: clamp(3rem, 7vw, 5rem); }
+  .cover .tagline { font-size: clamp(1.25rem, 2.4vw, 1.8rem); margin-bottom: 28px; }
+  .cover .meta { color: var(--muted); border-top: 1px solid var(--line); padding-top: 16px; display: inline-block; }
+
+  /* Exemplo em fluxo */
+  .flow { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 32px; align-items: stretch; }
+  .flow .step { position: relative; }
+  /* A seta ocupa o espaço entre dois cartões. */
+  .flow .step:not(:last-child)::after {
+    content: "→";
+    position: absolute;
+    left: 100%;
+    width: 32px;
+    top: 50%;
+    transform: translateY(-50%);
+    text-align: center;
+    color: var(--muted);
+    font-size: 1.4rem;
+  }
+  .flow .n { display: inline-block; font-size: 0.8rem; font-weight: 600; color: var(--accent); margin-bottom: 6px; }
+  .step.alert { border-color: var(--break); background: var(--break-soft); }
+  .badge { display: inline-block; font-size: 0.78rem; font-weight: 700; padding: 2px 8px; border-radius: 999px; }
+  .badge.break { color: var(--break); background: #fff; border: 1px solid var(--break); }
+  .compare { margin-top: 24px; }
+  .compare .card { border-left: 4px solid var(--line); }
+  .compare .before { border-left-color: var(--warn); }
+  .compare .after { border-left-color: var(--ok); }
+
+  /* Números */
+  .stat { text-align: left; }
+  .stat .value { font-size: clamp(2rem, 4vw, 2.8rem); font-weight: 700; color: var(--accent); line-height: 1; }
+  .stat .label { margin-top: 6px; color: var(--muted); font-size: 0.92rem; }
+
+  /* Roadmap */
+  .col-title { display: flex; align-items: center; gap: 8px; margin-bottom: 10px; }
+  .dot { width: 10px; height: 10px; border-radius: 50%; display: inline-block; }
+  .now .dot { background: var(--ok); }
+  .next .dot { background: var(--accent); }
+  .later .dot { background: var(--muted); }
+
+  .principle { display: flex; gap: 10px; align-items: baseline; padding: 10px 0; border-bottom: 1px solid var(--line); }
+  .principle:last-child { border-bottom: 0; }
+  .principle strong { min-width: 9.5rem; }
+
+  .callout { background: var(--accent-soft); border-radius: var(--radius); padding: 16px 20px; margin-top: 20px; }
+
+  /* Navegação */
+  .nav {
+    position: fixed;
+    right: 18px;
+    bottom: 14px;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    background: rgba(255, 255, 255, 0.92);
+    border: 1px solid var(--line);
+    border-radius: 999px;
+    padding: 4px 6px 4px 12px;
+    font-size: 0.85rem;
+    color: var(--muted);
+  }
+  .nav button {
+    border: 0;
+    background: transparent;
+    color: var(--text);
+    font-size: 1rem;
+    width: 30px;
+    height: 30px;
+    border-radius: 50%;
+    cursor: pointer;
+  }
+  .nav button:hover, .nav button:focus-visible { background: var(--accent-soft); outline: none; }
+
+  @media (max-width: 860px) {
+    .g3, .g4, .flow { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+    .flow .step::after { display: none; }
+  }
+  @media (max-width: 560px) {
+    .g2, .g3, .g4, .flow { grid-template-columns: minmax(0, 1fr); }
+    .slide { padding: 40px 16px 64px; }
+    .principle { flex-direction: column; gap: 2px; }
+  }
+
+  @media print {
+    @page { size: A4 landscape; margin: 12mm; }
+    html { scroll-snap-type: none; }
+    body { background: #fff; }
+    .slide { min-height: auto; height: auto; padding: 8mm 4mm; page-break-after: always; break-after: page; }
+    .nav { display: none; }
+  }
+</style>
+</head>
+<body>
+
+<!-- 1. Capa -->
+<section class="slide cover" aria-label="Capa">
+  <div class="inner">
+    <p class="eyebrow">Visão, estado atual e próximos passos</p>
+    <h1>CheckApps</h1>
+    <p class="tagline">Contexto unificado das aplicações: do repositório ao impacto no negócio.</p>
+    <p class="meta">Novembro de 2026 · protótipo em uso local</p>
+  </div>
+</section>
+
+<!-- 2. O problema -->
+<section class="slide" aria-label="O problema">
+  <div class="inner">
+    <p class="eyebrow">O problema</p>
+    <h2>A informação existe, mas está espalhada e chega tarde</h2>
+    <div class="grid g2">
+      <div class="card">
+        <h3>Contexto fragmentado</h3>
+        <p>Repositórios, Sonar, configurações, contratos, planilhas e wiki. Ninguém tem a visão completa de um app ou de uma squad.</p>
+      </div>
+      <div class="card">
+        <h3>Validação manual e lenta</h3>
+        <p>Os testes integrados reais dependem de homologação, de massas de teste e de coleções que desatualizam.</p>
+      </div>
+      <div class="card">
+        <h3>Mudanças descobertas tarde</h3>
+        <p>Uma mudança de contrato de outro time costuma aparecer quando algo falha em homologação, às vezes depois.</p>
+      </div>
+      <div class="card">
+        <h3>IA acelera o código, não a validação</h3>
+        <p>Entregamos mais rápido, mas a confirmação de que nada quebrou continua no mesmo ritmo.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- 3. A proposta -->
+<section class="slide" aria-label="A proposta">
+  <div class="inner">
+    <p class="eyebrow">A proposta</p>
+    <h2>Uma camada de contexto, lida dos próprios repositórios</h2>
+    <p class="lead">O CheckApps reúne o que se sabe sobre cada aplicação e mostra o que muda, com a origem de cada informação.</p>
+    <div class="grid g3" style="margin-top: 24px;">
+      <div class="card">
+        <h3>Lido, não digitado</h3>
+        <p>Pacotes, versões, integrações e contratos vêm do código e dos arquivos versionados. O cadastro manual fica para o que só pessoas sabem, como as jornadas.</p>
+      </div>
+      <div class="card">
+        <h3>Rastreável</h3>
+        <p>Todo dado diz de onde veio (arquivo, commit, leitor) e com que confiança. O que não foi possível ler aparece como desconhecido, nunca como palpite.</p>
+      </div>
+      <div class="card">
+        <h3>Complementa, não substitui</h3>
+        <p>GitHub, Sonar e as ferramentas atuais continuam onde estão. O CheckApps conecta o que elas têm.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- 4. Disponível hoje -->
+<section class="slide" aria-label="Disponível hoje">
+  <div class="inner">
+    <p class="eyebrow">Disponível hoje</p>
+    <h2>Perguntas que o CheckApps já responde</h2>
+    <div class="grid g3">
+      <div class="card">
+        <h3>Catálogo</h3>
+        <p>Squads, apps e repositórios, com descoberta no GitHub por sigla e triagem.</p>
+        <p class="q">Quais apps a squad tem, e onde está o código?</p>
+      </div>
+      <div class="card">
+        <h3>Qualidade e evolução</h3>
+        <p>Indicadores e nível de qualidade ao longo do tempo (dados do Sonar ainda simulados).</p>
+        <p class="q">Estamos melhorando ou piorando?</p>
+      </div>
+      <div class="card">
+        <h3>Pacotes e versões</h3>
+        <p>Dependências e versão do .NET de cada repositório, por squad.</p>
+        <p class="q">Quem ainda está no .NET 8? Quem usa o pacote X?</p>
+      </div>
+      <div class="card">
+        <h3>Integrações e mapa</h3>
+        <p>Chamadas declaradas nas configurações e o mapa de quem chama quem.</p>
+        <p class="q">De quem este app depende?</p>
+      </div>
+      <div class="card">
+        <h3>Contratos</h3>
+        <p>Endpoints dos contratos OpenAPI e o que mudou entre commits: quebra, atenção ou segura.</p>
+        <p class="q">Esta mudança quebra alguém?</p>
+      </div>
+      <div class="card">
+        <h3>Jornadas</h3>
+        <p>Fluxos de negócio ligados aos endpoints que chamam, com o impacto das mudanças de contrato.</p>
+        <p class="q">Que jornada sente esta mudança?</p>
+      </div>
+    </div>
+    <p class="muted small" style="margin-top: 14px;">Também disponível: <strong>Checagens</strong>, para acompanhar, app a app, uma demanda que atinge vários apps (por exemplo, uma atualização de versão), no lugar da planilha.</p>
+  </div>
+</section>
+
+<!-- 5. Exemplo -->
+<section class="slide" aria-label="Exemplo">
+  <div class="inner">
+    <p class="eyebrow">Exemplo</p>
+    <h2>Uma mudança de contrato, do commit à jornada afetada</h2>
+    <div class="flow">
+      <div class="card step">
+        <span class="n">1 · Commit</span>
+        <h3>O contrato muda</h3>
+        <p>O campo <code>contaOrigem</code> passa a ser obrigatório na simulação.</p>
+      </div>
+      <div class="card step">
+        <span class="n">2 · Análise</span>
+        <h3>Comparação automática</h3>
+        <p>O contrato é comparado com o commit analisado anteriormente.</p>
+      </div>
+      <div class="card step alert">
+        <span class="n">3 · Classificação</span>
+        <h3><span class="badge break">QUEBRA</span></h3>
+        <p>Campo opcional que virou obrigatório: quem já chama o endpoint é afetado.</p>
+      </div>
+      <div class="card step alert">
+        <span class="n">4 · Impacto</span>
+        <h3>Jornada sinalizada</h3>
+        <p>"Compra de Fundos", no passo "Simular", com o campo e os commits comparados.</p>
+      </div>
+    </div>
+    <div class="grid g2 compare">
+      <div class="card before">
+        <h3>Antes</h3>
+        <p>A quebra aparece quando o teste em homologação falha, e alguém investiga a causa.</p>
+      </div>
+      <div class="card after">
+        <h3>Com o CheckApps</h3>
+        <p>A quebra aparece logo depois da análise do commit, já ligada à jornada e ao passo afetados.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- 6. Fundamentos -->
+<section class="slide" aria-label="Fundamentos">
+  <div class="inner">
+    <p class="eyebrow">Fundamentos</p>
+    <h2>Construído com IA, com método e com testes</h2>
+    <div class="grid g4">
+      <div class="card stat"><div class="value">21</div><div class="label">funcionalidades especificadas e entregues</div></div>
+      <div class="card stat"><div class="value">695</div><div class="label">testes automatizados</div></div>
+      <div class="card stat"><div class="value">0</div><div class="label">testes que dependem de rede ou serviço externo</div></div>
+      <div class="card stat"><div class="value">12</div><div class="label">decisões de arquitetura registradas</div></div>
+    </div>
+    <div class="grid g3" style="margin-top: 20px;">
+      <div class="card">
+        <h3>Desenvolvimento orientado a especificação</h3>
+        <p>Cada funcionalidade passa por spec, plano aprovado, testes e validação na tela antes de ser dada como pronta.</p>
+      </div>
+      <div class="card">
+        <h3>Preparado para agentes</h3>
+        <p>O repositório traz instruções, decisões e procedimentos que Claude, Copilot e Devin usam como contexto.</p>
+      </div>
+      <div class="card">
+        <h3>Stack do time</h3>
+        <p>.NET 10, Angular e SQLite, com SQL portável para PostgreSQL quando houver uso compartilhado.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- 7. Preparado para IA -->
+<section class="slide" aria-label="Preparado para IA">
+  <div class="inner">
+    <p class="eyebrow">Preparado para IA</p>
+    <h2>Dados que qualquer IA consegue usar sem inventar</h2>
+    <div class="grid g2">
+      <div class="card">
+        <h3>O que já está pronto</h3>
+        <div class="principle"><strong>Identidade estável</strong><span class="muted">cada app, jornada e endpoint tem um identificador que não muda.</span></div>
+        <div class="principle"><strong>Origem e confiança</strong><span class="muted">a IA pode citar a fonte e distinguir o confirmado do inferido.</span></div>
+        <div class="principle"><strong>Histórico</strong><span class="muted">análises por commit permitem perguntar "o que mudou".</span></div>
+        <div class="principle"><strong>Relações explícitas</strong><span class="muted">app → repositório → contrato → jornada.</span></div>
+        <div class="principle"><strong>Regra de segurança</strong><span class="muted">a IA nunca grava um fato: sugere, e uma pessoa confirma.</span></div>
+      </div>
+      <div class="card">
+        <h3>Próximos usos</h3>
+        <ul class="clean">
+          <li><strong>MCP somente leitura</strong>: os assistentes que o time já usa consultam o CheckApps diretamente. Por exemplo: "quais jornadas esta mudança de contrato quebra?". Alinhado ao uso crescente de MCPs para produtividade.</li>
+          <li><strong>Checagens automáticas e débito técnico</strong>: regras sobre os dados abrem e atualizam checagens; a IA ajuda a priorizar e explicar.</li>
+          <li><strong>Orquestração com agentes de código</strong>: um item aprovado vira PR por um agente, e o acompanhamento volta para a checagem.</li>
+        </ul>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- 8. Próximos passos -->
+<section class="slide" aria-label="Próximos passos">
+  <div class="inner">
+    <p class="eyebrow">Próximos passos</p>
+    <h2>Roteiro</h2>
+    <div class="grid g3">
+      <div class="card now">
+        <div class="col-title"><span class="dot" aria-hidden="true"></span><h3>Agora</h3></div>
+        <ul class="clean">
+          <li>Modo demonstração, que funciona sem conexão</li>
+          <li>Uso com dados reais de uma squad piloto</li>
+          <li>Ajustes de usabilidade a partir do uso</li>
+        </ul>
+      </div>
+      <div class="card next">
+        <div class="col-title"><span class="dot" aria-hidden="true"></span><h3>Próximo</h3></div>
+        <ul class="clean">
+          <li>Massas de teste e ficha do endpoint: contrato atualizado, massa válida e payload pronto</li>
+          <li>MCP somente leitura</li>
+          <li>Autenticação, antes de abrir para mais pessoas</li>
+        </ul>
+      </div>
+      <div class="card later">
+        <div class="col-title"><span class="dot" aria-hidden="true"></span><h3>Depois</h3></div>
+        <ul class="clean">
+          <li>Agente de testes à parte, que valida jornadas em homologação</li>
+          <li>Checagens automáticas e gestão de débito técnico</li>
+          <li>Comparar o contrato declarado com o implementado</li>
+        </ul>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- 9. Ganhos -->
+<section class="slide" aria-label="Ganhos esperados">
+  <div class="inner">
+    <p class="eyebrow">Ganhos esperados</p>
+    <h2>O que muda para o time e para a gestão</h2>
+    <div class="grid g2">
+      <div class="card">
+        <h3>Menos tempo procurando informação</h3>
+        <p>Contrato, massa e "quem chama quem" num lugar só, em vez de repositórios, wiki e coleções.</p>
+      </div>
+      <div class="card">
+        <h3>Quebras vistas mais cedo</h3>
+        <p>A mudança de contrato aparece após a análise do commit, e não durante o teste em homologação.</p>
+      </div>
+      <div class="card">
+        <h3>Decisão com dado</h3>
+        <p>Tech leads e coordenação veem impacto, versões e qualidade por squad, com a origem de cada número.</p>
+      </div>
+      <div class="card">
+        <h3>IA mais útil para o time</h3>
+        <p>Contexto confiável para análise de impacto, testes e onboarding, sem custo de modelo nesta etapa.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- 10. Limites e necessidades -->
+<section class="slide" aria-label="Limites e necessidades">
+  <div class="inner">
+    <p class="eyebrow">Para avançar</p>
+    <h2>Limites atuais e o que é necessário</h2>
+    <div class="grid g2">
+      <div class="card">
+        <h3>Limites atuais</h3>
+        <ul class="clean">
+          <li>Protótipo em uso local, ainda sem login.</li>
+          <li>Dados do Sonar simulados.</li>
+          <li>Exemplos de contrato e de configuração ainda fictícios.</li>
+          <li>O impacto reflete a última análise executada; a análise ainda não roda sozinha.</li>
+          <li>O contrato mostra o que foi declarado, que pode estar desatualizado em relação à aplicação.</li>
+        </ul>
+      </div>
+      <div class="card">
+        <h3>O que é necessário</h3>
+        <ul class="clean">
+          <li>Uma squad piloto e um ciclo curto de feedback.</li>
+          <li>Acesso de leitura aos repositórios e contratos, preferencialmente por um GitHub App.</li>
+          <li>Um contrato real e um exemplo de massa de teste, anonimizados, para calibrar.</li>
+          <li>As perguntas que vocês mais gostariam que ele respondesse.</li>
+        </ul>
+      </div>
+    </div>
+    <div class="callout">
+      <strong>Próximo passo proposto:</strong> validar com uma squad piloto em dados reais e medir o tempo economizado na validação em homologação.
+    </div>
+  </div>
+</section>
+
+<nav class="nav" aria-label="Navegação dos slides">
+  <span id="counter" aria-live="polite">1 / 10</span>
+  <button type="button" id="prev" aria-label="Slide anterior">‹</button>
+  <button type="button" id="next" aria-label="Próximo slide">›</button>
+</nav>
+
+<script>
+  (function () {
+    var slides = Array.prototype.slice.call(document.querySelectorAll('.slide'));
+    var counter = document.getElementById('counter');
+    var current = 0;
+    // Durante a rolagem animada, a posição ainda não é a do destino: o slide atual é o que a tecla pediu.
+    var navigating = null;
+
+    function show(index) {
+      current = Math.max(0, Math.min(slides.length - 1, index));
+      counter.textContent = (current + 1) + ' / ' + slides.length;
+      clearTimeout(navigating);
+      navigating = setTimeout(function () { navigating = null; }, 900);
+      slides[current].scrollIntoView({ behavior: 'smooth' });
+    }
+
+    function update() {
+      if (navigating) {
+        return;
+      }
+      var middle = window.innerHeight / 2;
+      for (var i = 0; i < slides.length; i++) {
+        var rect = slides[i].getBoundingClientRect();
+        if (rect.top <= middle && rect.bottom >= middle) {
+          current = i;
+          break;
+        }
+      }
+      counter.textContent = (current + 1) + ' / ' + slides.length;
+    }
+
+    document.getElementById('prev').addEventListener('click', function () { show(current - 1); });
+    document.getElementById('next').addEventListener('click', function () { show(current + 1); });
+    window.addEventListener('scroll', update, { passive: true });
+    window.addEventListener('keydown', function (event) {
+      if (['ArrowDown', 'ArrowRight', 'PageDown', ' '].indexOf(event.key) >= 0) { event.preventDefault(); show(current + 1); }
+      else if (['ArrowUp', 'ArrowLeft', 'PageUp'].indexOf(event.key) >= 0) { event.preventDefault(); show(current - 1); }
+      else if (event.key === 'Home') { event.preventDefault(); show(0); }
+      else if (event.key === 'End') { event.preventDefault(); show(slides.length - 1); }
+    });
+    update();
+  })();
+</script>
+</body>
+</html>

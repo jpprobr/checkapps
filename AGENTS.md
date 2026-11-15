@@ -29,7 +29,7 @@ A skill `run-local` (`.agents/skills/run-local/`) encapsula essa sequência com 
 | Antes de… | Leia |
 |---|---|
 | Começar qualquer sessão | `.agents/project/STATE.md` — estado atual, pendências, próximos passos |
-| Explicar o projeto para quem não o conhece (coordenadores, tech leads) | `docs/apresentacao.md` |
+| Apresentar o projeto para quem não o conhece (coordenadores, tech leads) | `docs/apresentacao.html` (slides num arquivo único, sem dependências externas; setas navegam, imprimir gera PDF) |
 | Propor ou escopar algo novo | `.agents/product/vision.md`, `roadmap.md`, `backlog.md` |
 | Usar ou introduzir um termo do domínio (squad, solução, checagem…) | `.agents/product/glossary.md` |
 | Tocar código em `src/**` | `.agents/rules/backend.md`, depois `.agents/architecture/project-structure.md` |
