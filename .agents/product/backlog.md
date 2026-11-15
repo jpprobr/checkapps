@@ -149,6 +149,11 @@ Ordem sugerida, a confirmar com o usuário a cada spec.
 3. **Massas e ficha do endpoint** (ver a seção abaixo): contrato atualizado, massas que servem, payload de exemplo e exportação. Usa os passos das jornadas.
 4. **Autenticação** (substitui o ADR-007): pré-requisito de qualquer uso compartilhado, do MCP compartilhado e do dono de jornada por squad.
 5. **IA dentro dos fluxos, sempre como sugestão** (ADR-011): sugerir casos de teste a partir de uma mudança de contrato, explicar uma quebra em linguagem simples, sugerir o vínculo host→app. Cada uma com `origem = AI` e confirmação de uma pessoa. Depende de decidir qual LLM aprovada usar.
+6. **Débito técnico e orquestração (visão, 2026-11-15)**: as **checagens** viram o veículo do débito técnico, em três degraus, cada um útil sozinho:
+   - **Detectar, sem IA**: uma regra sobre os fatos das análises (versão do .NET abaixo do mínimo, pacote desatualizado, qualidade abaixo de um nível, contrato com quebra não tratada) abre ou atualiza uma checagem e marca quem já está conforme. É a "Detecção automática de status" da seção Checagens.
+   - **Priorizar e explicar, com IA como sugestão**: ordenar por risco e esforço, resumir o porquê de cada item e rascunhar o plano, com `origem = AI` e confirmação de uma pessoa (ADR-011).
+   - **Orquestrar**: entregar um item aprovado a um agente de código (ex.: Devin, Copilot), que abre o PR, e acompanhar o status da checagem pelo PR e pela próxima análise. A pessoa aprova cada passo.
+   Depende da autenticação e de saber quais agentes e LLMs a organização aprova. O MCP (item 2) é o caminho de volta: os agentes consultam o contexto do CheckApps enquanto trabalham.
 
 ## Contratos, massas e testes integrados
 
@@ -166,6 +171,11 @@ Ordem sugerida, a confirmar com o usuário a cada spec.
   - **Cadastros de outros times (ex.: observabilidade) desconsiderados por ora**: nada de id externo nem vocabulário herdado na primeira versão.
   - **Premissas a validar**: uma jornada tem **um** pai (se puder estar em dois sistemas, deixa de ser árvore e vira grafo); a plataforma é opcional no modelo e a tela não precisa cuidar dela na primeira versão.
   - Dono por squad depende de autorização (pós-MVP).
+  - **Impacto das mudanças de contrato: o que a validação mostrou (2026-11-15)**. O impacto compara a **última análise com a análise anterior de commit diferente**, calculado na leitura: não é tempo real (reflete a última vez que o `Analyze` rodou) e a janela anda a cada commit analisado, então uma quebra some da tela no próximo commit mesmo que ninguém tenha ajustado o consumidor.
+    1. **Mostrar, no impacto da jornada, quais commits e datas foram comparados**, como a seção Contratos do app já faz. **Ajuste pequeno.**
+    2. **Escolher a base da comparação**: comparar com uma tag, uma release ou a versão em produção, e não só com o commit anterior. É a pergunta que importa para quem testa.
+    3. **Marcar uma quebra como "ciente" ou "tratada"** (decisão humana, com data), para ela não sumir sozinha nem virar ruído.
+    4. **Análise automática** (agendada ou disparada por commit), para a tela não depender de alguém rodar o `Analyze`. Depende de onde o CheckApps vai rodar.
   - **Ainda não feito (candidatos a spec própria)**: seção "Jornadas" no detalhe do app e "quem é afetado" na seção Contratos (o índice por `app_id` já existe); reordenar jornadas irmãs (hoje por nome); jornadas na massa de demonstração do seed; jornada em dois pais (grafo); ajustes visuais da tela, a levantar com o uso.
 - **Comparar stubs de teste com o contrato**: junto com a decisão da spec 015 (ler código), ou exportando os mappings durante a execução dos testes.
 - **Comparar o declarado com o implementado**: `mechanism = codigo` ou a API em execução. É o que acha o contrato desatualizado.

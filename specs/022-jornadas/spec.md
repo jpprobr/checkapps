@@ -1,6 +1,6 @@
 # Spec 022: Jornadas (cadastro em árvore, passos em endpoints e impacto de mudanças de contrato)
 
-**Status**: Implementada (2026-11-09); falta a confirmação do usuário na tela
+**Status**: Implementada (2026-11-09); confirmada pelo usuário na tela em 2026-11-15
 **Criada em**: 2026-11-09
 **Origem**: pedido do usuário (2026-11-02 a 2026-11-09). A spec 021 mostra **o que mudou** num contrato, mas não **o que isso afeta**: uma quebra aparece como "mudou o endpoint X", sem ligação com o fluxo de negócio que depende dele, e o impacto continua sendo descoberto em homologação. Jornadas são essa ligação e também o contexto de negócio de cada app (`vision.md`). Decisões de modelo registradas em `backlog.md` (2026-11-08), a validar com o uso.
 

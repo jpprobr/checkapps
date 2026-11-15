@@ -2,7 +2,7 @@
 
 Critério de "concluído". A spec só muda para `Implementada` quando tudo abaixo estiver marcado. Cada item deve ser verificável por alguém que não escreveu o código.
 
-**Status**: implementada em 2026-11-09 (022a backend e 022b tela). Resta a confirmação do usuário na tela.
+**Status**: implementada em 2026-11-09 (022a backend e 022b tela) e confirmada pelo usuário na tela em 2026-11-15.
 
 ## Qualidade da spec (antes de codar)
 
@@ -34,11 +34,11 @@ Critério de "concluído". A spec só muda para `Implementada` quando tudo abaix
 - [x] Impacto de ponta a ponta com o contrato de demonstração (`--fake-revision 0` e depois `1`)
 - [x] Fluxo completo navegado no browser em banco isolado, sem erros no console
 - [x] `README.md` e `AGENTS.md` atualizados se algo mudou em como rodar/testar
-- [ ] Confirmação do usuário na tela
+- [x] Confirmação do usuário na tela (2026-11-15: árvore de três níveis, squad nova, passos, regras de erro e impacto; os pontos de melhoria do impacto foram para o backlog)
 
 ## Encerramento
 
-- [ ] `Status` desta spec atualizado para `Implementada`
+- [x] `Status` desta spec atualizado para `Implementada`
 - [x] `docs/leitor-github.md` com a seção das jornadas
 - [x] `.agents/project/STATE.md` reescrito
 - [x] `.agents/product/backlog.md` atualizado
