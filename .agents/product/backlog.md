@@ -135,6 +135,21 @@ Fase 3 é onde a IA tem papel real: descrever o que o app faz, inferir o tipo qu
 - **Muitas integrações são de apps de outras squads que talvez nunca sejam cadastrados**: o host fica "sem app" para sempre e a fila nunca esvazia (rejeitar diz "não é o app X", não "é de fora"). Por isso a parte 2 inclui **marcar o host como externo/ignorado** (nome opcional do serviço), que sai da fila e vira nó à parte no mapa. Exige tabela/estado novo, pois hoje o vínculo sempre aponta para um app.
 - **Mapa por ambiente**: o ambiente da aresta vem do `environmentKind` da **integração** (arquivo de origem), nunca do nome do host. Decidir antes do mapa: integração do arquivo base (sem ambiente) aparece em todos os ambientes ou num grupo "sem ambiente"; nome de ambiente desconhecido (ex.: `qa`) fica sem categoria.
 
+## Próximas specs candidatas (organizadas em 2026-11-15)
+
+Ordem sugerida, a confirmar com o usuário a cada spec.
+
+1. **Modo demonstração (spec 023, antes de usar dados reais)**. Precisa existir uma base de demonstração que funciona **sem conexão** com GitHub nenhum, ao lado da base com dados reais, para mostrar o produto a qualquer momento. Desenho proposto:
+   - **Perfil escolhido na subida, não chave em tempo de execução.** Uma configuração (`CheckApps:Mode = demo`, ou um `appsettings.Demo.json`) define de uma vez o banco (`demo.db`), a fonte de descoberta e de análise (`fake`) e o scan pela tela. Trocar de modo é reiniciar a API com outro perfil. Trocar de banco com o processo rodando misturaria dados e acrescentaria estado a um sistema que hoje não tem nenhum.
+   - **Base de demonstração reproduzível**: um comando monta tudo do zero e sem rede (seed, scan `fake`, triagem automática, análise das revisões 0 e 1 do contrato de demonstração e uma jornada de exemplo com passos). Hoje a demonstração exige triagem manual.
+   - **Aviso visível na tela** ("Demonstração"), a partir de um `GET /api/info` com o modo, para ninguém confundir dado de exemplo com dado real.
+   - A skill `run-local` ganha os dois perfis.
+   - Paliativo até a spec existir: `Sqlite__DatabasePath=demo.db` e `Scan__Source=fake` na subida.
+2. **MCP somente leitura (candidata)**: expor consultas determinísticas da API (apps de uma squad, quem usa o pacote X, o que uma mudança de contrato afeta, impacto de uma jornada) para os assistentes de IA que o time já usa. Começar **local** (um processo por pessoa, falando com a própria API), que não exige autenticação; um MCP compartilhado exige antes a decisão de autenticação (ADR-007). Pede ADR (tecnologia do servidor, quais ferramentas expor, formato das respostas com origem e confiança).
+3. **Massas e ficha do endpoint** (ver a seção abaixo): contrato atualizado, massas que servem, payload de exemplo e exportação. Usa os passos das jornadas.
+4. **Autenticação** (substitui o ADR-007): pré-requisito de qualquer uso compartilhado, do MCP compartilhado e do dono de jornada por squad.
+5. **IA dentro dos fluxos, sempre como sugestão** (ADR-011): sugerir casos de teste a partir de uma mudança de contrato, explicar uma quebra em linguagem simples, sugerir o vínculo host→app. Cada uma com `origem = AI` e confirmação de uma pessoa. Depende de decidir qual LLM aprovada usar.
+
 ## Contratos, massas e testes integrados
 
 **Contratos: catálogo e mudanças implementados** (`specs/021-contratos-openapi/`). Direção decidida em 2026-11-05: o CheckApps guarda o que se **sabe** (contratos, massas, jornadas); executar chamadas fica num projeto à parte, que consome o CheckApps por API ou MCP e devolve os resultados.
