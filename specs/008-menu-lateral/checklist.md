@@ -21,7 +21,7 @@ Status: **implementada** em 2026-10-17. Confirmada pelo usuário na tela em 2026
 
 - [x] `ng build` sem erros
 - [x] Navegador: desktop, recolhido + recarregar, celular, sem erros de console
-- [ ] Roteiros anteriores (specs 001–007) repetidos no navegador — não rodados; só foram exercitados o menu e o CRUD
+- [x] Roteiros anteriores (specs 001–007) repetidos no navegador (2026-11-15, banco isolado, fontes fake): 71 de 72 checagens passaram. A que falhou é o estouro horizontal de 216 px da tela Repositórios em 390 px de largura, que já existia (tabela sem contêiner com rolagem) e foi para o `backlog.md`
 
 ## Encerramento
 

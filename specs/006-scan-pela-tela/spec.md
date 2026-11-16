@@ -1,6 +1,6 @@
 # Spec 006: Scan pela tela
 
-**Status**: Implementada (2026-10-12) — falta apenas o scan pela tela contra o GitHub real, a cargo do usuário
+**Status**: Implementada (2026-10-12); scan pela tela contra o GitHub real confirmado pelo usuário em 2026-11-15
 **Criada em**: 2026-10-12
 **Origem**: decisão do usuário após a spec 005. A leitura real do GitHub foi validada pela ferramenta de linha de comando; disparar o scan pela tela "Descobertos" tira a dependência de terminal do Tech Lead. O CLI **continua**.
 

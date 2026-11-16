@@ -124,6 +124,7 @@ Fase 3 é onde a IA tem papel real: descrever o que o app faz, inferir o tipo qu
 
 ## Tela de vínculos host→app: melhorias de UX (apontadas pelo usuário ao confirmar a spec 018, 2026-11-03)
 
+- **Celular, tela Repositórios (2026-11-15)**: em 390 px a página estoura ~216 px na horizontal, porque a tabela da caixa de entrada (`table.inbox`) e a do resultado do scan (`table.scan-items`) não estão dentro de um contêiner com rolagem, como a lista de apps (`.table-scroll`). Achado ao repetir os roteiros das specs 001–007.
 - **Celular**: a tela Integrações com o painel de vínculo não está boa em 390 px (a página não estoura, mas a leitura e o formulário ficam ruins). Rever o layout do painel e das tabelas no celular.
 - **Aparência geral (2026-11-04, ao validar a 019b1)**: a interface funciona, mas tem cara de sistema corporativo legado. Fazer uma spec própria de redesign visual para deixá-la mais agradável e fluída (hierarquia, espaçamento, barra de lote, feedback de ações), cobrindo também celular e densidade.
 - **Densidade no desktop**: os valores das colunas ficam espremidos (sobretudo a tabela de usos do detalhe, com o endereço quebrando em várias linhas). Reduzir um pouco a fonte e/ou rever larguras e colunas.

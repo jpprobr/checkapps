@@ -1,6 +1,6 @@
 # Checklist — Spec 006: Scan pela tela
 
-Status: **implementada** em 2026-10-12. Resta um item, que só o usuário pode fazer: o scan pela tela contra o GitHub real.
+Status: **implementada** em 2026-10-12. Scan pela tela contra o GitHub real confirmado pelo usuário em 2026-11-15.
 
 ## Qualidade da spec (antes de codar)
 
@@ -29,7 +29,7 @@ Status: **implementada** em 2026-10-12. Resta um item, que só o usuário pode f
 - [x] Endpoints exercitados via `curl`, incluindo 400, 409 e 502, e dois scans simultâneos (um 200 e um 409), com servidor local no lugar do GitHub; o token não aparece em resposta nem em log
 - [x] Fluxo completo no browser sem erros de console; roteiros das specs 001–005 repetidos
 - [x] Varredura de segredo antes de qualquer commit
-- [ ] **Scan pela tela contra o GitHub real** (a cargo do usuário, com os segredos da API configurados)
+- [x] **Scan pela tela contra o GitHub real** (usado e testado pelo usuário com o GitHub real; confirmado em 2026-11-15)
 - [x] `README.md`, `AGENTS.md` e `docs/leitor-github.md` atualizados
 
 ## Encerramento

@@ -1,6 +1,6 @@
 # Checklist — Spec 007: Menu "Repositórios"
 
-Status: **implementada** em 2026-10-13. Resta um item, que só o usuário pode fazer: a confirmação na tela.
+Status: **implementada** em 2026-10-13. Fluxo da tela verificado no navegador em 2026-11-15, a pedido do usuário.
 
 ## Qualidade da spec (antes de codar)
 
@@ -27,7 +27,7 @@ Status: **implementada** em 2026-10-13. Resta um item, que só o usuário pode f
 - [x] Fluxo completo no browser sem erros de console; roteiros das specs 001–006 repetidos (seletores de menu e URL ajustados)
 - [x] Varredura de segredo antes de qualquer commit
 - [x] `README.md`, `AGENTS.md` e `docs/leitor-github.md` atualizados
-- [ ] Confirmação do usuário na tela com o repositório que já virou app
+- [x] Confirmação na tela com o repositório que já virou app (2026-11-15: verificada por roteiro no navegador, a pedido do usuário: criar app a partir do repositório, filtros "Novos", "No catálogo" e "Todos", link para o app, `/discovered` → `/repositories`, menu e texto da tela)
 
 ## Encerramento
 

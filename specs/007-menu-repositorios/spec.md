@@ -1,6 +1,6 @@
 # Spec 007: Menu "Repositórios" com todos os status
 
-**Status**: Implementada (2026-10-13) — falta apenas a confirmação do usuário na tela
+**Status**: Implementada (2026-10-13); fluxo verificado no navegador em 2026-11-15
 **Criada em**: 2026-10-13
 **Origem**: primeiro uso real do scan. O menu "Descobertos" nomeava um *estado* (o que ainda não foi decidido) e o repositório que virava app **desaparecia** da tela: a tabela ficava vazia e a tela parecia "não ter mudado". A regra de negócio estava certa; a tela não a comunicava. Decisão do usuário, depois de avaliar o nome e a estrutura.
 
