@@ -34,7 +34,7 @@ A skill `run-local` (`.agents/skills/run-local/`) encapsula essa sequência com 
 | Usar ou introduzir um termo do domínio (squad, solução, checagem…) | `.agents/product/glossary.md` |
 | Tocar código em `src/**` | `.agents/rules/backend.md`, depois `.agents/architecture/project-structure.md` |
 | Tocar código em `frontend/**` | `.agents/rules/frontend.md` |
-| Tocar persistência (`Infrastructure/Sqlite/**`) | `.agents/architecture/data-model/sqlite-schema.md` e o próprio `schema.sql` |
+| Tocar persistência (`Infrastructure/Sqlite/**`) | `.agents/architecture/data-model/sqlite-schema.md`, o próprio `schema.sql` e o `diagrama.md` (atualize o diagrama da área se mudar tabela, chave ou relação) |
 | Propor um access pattern, GSI ou desnormalização nova | `.agents/architecture/data-model/access-patterns.md` (registro vivo com o fit de cada padrão) e os gatilhos do ADR-002 |
 | Mudar algo estrutural (stack, modelo, padrões) | `.agents/architecture/decisions/` — ADRs numerados; se a decisão já existe, respeite-a ou proponha um novo ADR |
 | Entender por que uma decisão passada foi revista | `.agents/architecture/retrospectives/` — avaliações de experimentos concluídos (histórico, não vivo) |

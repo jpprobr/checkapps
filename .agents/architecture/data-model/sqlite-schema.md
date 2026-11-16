@@ -2,6 +2,8 @@
 
 > **Fonte da verdade**: `src/CheckApps.Infrastructure/Sqlite/schema.sql`. Este documento explica as decisões; o arquivo é o que cria o banco. Se divergirem, o `schema.sql` está certo.
 >
+> **Diagrama entidade-relacionamento**, por área: `diagrama.md`. Ele mostra as relações (inclusive as lógicas, sem FK, de propósito); este arquivo explica o porquê.
+>
 > O desenho anterior (DynamoDB single-table) está em `dynamodb-single-table.md`, mantido como histórico — ver ADR-009 e a retrospectiva do experimento.
 
 Banco em arquivo único. Caminho: `Sqlite:DatabasePath` — absoluto é usado como está (produção); relativo resolve contra `%LOCALAPPDATA%/CheckApps`, **não** contra o diretório de trabalho (o ASP.NET Core troca o CWD no startup e o console do seed não; depender disso faria API e seed abrirem bancos diferentes).
