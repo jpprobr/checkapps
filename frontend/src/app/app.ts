@@ -2,6 +2,7 @@ import { Component, HostListener, inject } from '@angular/core';
 import { NavigationEnd, Router, RouterLink, RouterLinkActive, RouterOutlet } from '@angular/router';
 import { filter } from 'rxjs';
 
+import { AppInfoService } from './core/app-info.service';
 import { CurrentSquadService } from './core/current-squad.service';
 import { SidebarService } from './core/sidebar.service';
 
@@ -20,6 +21,8 @@ export class App {
   private readonly router = inject(Router);
   protected readonly currentSquad = inject(CurrentSquadService);
   protected readonly sidebar = inject(SidebarService);
+  /** Modo da API (spec 023): no modo demonstração, a faixa no topo deixa claro que os dados são de exemplo. */
+  protected readonly appInfo = inject(AppInfoService);
 
   constructor() {
     this.router.events.pipe(filter((e) => e instanceof NavigationEnd)).subscribe(() => this.sidebar.closeDrawer());

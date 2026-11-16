@@ -139,12 +139,7 @@ Fase 3 é onde a IA tem papel real: descrever o que o app faz, inferir o tipo qu
 
 Ordem sugerida, a confirmar com o usuário a cada spec.
 
-1. **Modo demonstração (spec 023, antes de usar dados reais)**. Precisa existir uma base de demonstração que funciona **sem conexão** com GitHub nenhum, ao lado da base com dados reais, para mostrar o produto a qualquer momento. Desenho proposto:
-   - **Perfil escolhido na subida, não chave em tempo de execução.** Uma configuração (`CheckApps:Mode = demo`, ou um `appsettings.Demo.json`) define de uma vez o banco (`demo.db`), a fonte de descoberta e de análise (`fake`) e o scan pela tela. Trocar de modo é reiniciar a API com outro perfil. Trocar de banco com o processo rodando misturaria dados e acrescentaria estado a um sistema que hoje não tem nenhum.
-   - **Base de demonstração reproduzível**: um comando monta tudo do zero e sem rede (seed, scan `fake`, triagem automática, análise das revisões 0 e 1 do contrato de demonstração e uma jornada de exemplo com passos). Hoje a demonstração exige triagem manual.
-   - **Aviso visível na tela** ("Demonstração"), a partir de um `GET /api/info` com o modo, para ninguém confundir dado de exemplo com dado real.
-   - A skill `run-local` ganha os dois perfis.
-   - Paliativo até a spec existir: `Sqlite__DatabasePath=demo.db` e `Scan__Source=fake` na subida.
+1. **Modo demonstração: implementado na spec 023 (2026-11-15)**: `CheckApps:Mode=demo`, banco `demo.db`, fontes de demonstração e `Seed --demo` (ADR-013). Melhorias possíveis: mais de uma base de demonstração; dados de exemplo para o mapa (vínculos host→app confirmados) e para as integrações externas.
 2. **MCP somente leitura (candidata)**: expor consultas determinísticas da API (apps de uma squad, quem usa o pacote X, o que uma mudança de contrato afeta, impacto de uma jornada) para os assistentes de IA que o time já usa. Começar **local** (um processo por pessoa, falando com a própria API), que não exige autenticação; um MCP compartilhado exige antes a decisão de autenticação (ADR-007). Pede ADR (tecnologia do servidor, quais ferramentas expor, formato das respostas com origem e confiança).
 3. **Massas e ficha do endpoint** (ver a seção abaixo): contrato atualizado, massas que servem, payload de exemplo e exportação. Usa os passos das jornadas.
 4. **Autenticação** (substitui o ADR-007): pré-requisito de qualquer uso compartilhado, do MCP compartilhado e do dono de jornada por squad.

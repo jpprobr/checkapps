@@ -90,6 +90,11 @@
   </aside>
 
   <div class="content">
+    @if (appInfo.isDemo()) {
+      <div class="demo-banner" role="status">
+        <strong>Modo demonstração</strong>: dados de exemplo, sem conexão com repositórios reais.
+      </div>
+    }
     <router-outlet />
   </div>
 </div>

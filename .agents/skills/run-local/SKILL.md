@@ -47,6 +47,19 @@ timeout 120 bash -c 'until curl -sf http://localhost:4200 >/dev/null; do sleep 3
 
 Abrir `http://localhost:4200`. Num navegador sem histórico, `/` vai para `/squads`, que lista as duas squads; depois de visitar uma squad, `/` abre direto nela. Checagens ficam em `/checks` (menu lateral).
 
+## Modo demonstração (spec 023)
+
+Para demonstrar sem rede, com banco separado (`demo.db`) e fontes de demonstração, mesmo com token configurado:
+
+```bash
+dotnet run --project tools/CheckApps.Seed -- --demo      # recria a base de demonstração completa; nunca toca o checkapps.db
+export CheckApps__Mode=demo                                # vale para a API e para as ferramentas neste terminal
+dotnet run --project src/CheckApps.Api --no-build --urls http://localhost:5232 &
+curl -s http://localhost:5232/api/info                     # deve dizer {"mode":"demo","database":"demo.db"}
+```
+
+Checagem: a tela mostra a faixa "Modo demonstração". Para voltar ao real: `unset CheckApps__Mode` e reinicie a API.
+
 ## Reset dos dados (apagar tudo e voltar ao estado de demo)
 
 Apps com histórico não podem ser removidos pela API (por design). Para limpar dados de teste, apague o arquivo e rode o seed:

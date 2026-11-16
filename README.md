@@ -85,6 +85,25 @@ dotnet run --project tools/CheckApps.Analyze -- --sigla ab1,cd2 --source fake --
 
 O resultado aparece na seção **Pacotes** do app e na tela **Pacotes** do menu; os endereços que o repositório declara chamar (`appsettings*.json`) aparecem na seção **Integrações** do app e na tela **Integrações**. Detalhes e configuração em [`docs/leitor-github.md`](docs/leitor-github.md).
 
+## Modo demonstração
+
+Para apresentar o CheckApps sem depender de rede nem de repositórios reais. O modo demonstração usa um banco separado (`demo.db`) e as fontes de demonstração, mesmo que a máquina tenha token e banco real configurados. O banco real (`checkapps.db`) nunca é tocado.
+
+```bash
+# 1. Monta a base de demonstração completa, do zero e sem rede (squads, apps, histórico, repositórios descobertos,
+#    contrato analisado em dois commits, jornadas com impacto e uma checagem)
+dotnet run --project tools/CheckApps.Seed -- --demo
+
+# 2. Sobe a API em modo demonstração (no PowerShell: $env:CheckApps__Mode = "demo")
+export CheckApps__Mode=demo
+dotnet run --project src/CheckApps.Api --urls http://localhost:5232
+
+# 3. Frontend como sempre (não precisa da variável)
+cd frontend && npm start
+```
+
+A tela mostra a faixa **"Modo demonstração"**. Para voltar ao real, suba a API sem `CheckApps__Mode` (ou com `real`). O `--demo` recria o banco de demonstração a cada execução: o que for cadastrado durante uma demonstração se perde na próxima, de propósito. As ferramentas de scan e de análise também respeitam o modo e dizem, na primeira linha, em que modo e banco estão gravando. Decisão em `.agents/architecture/decisions/adr-013-modo-demonstracao.md`.
+
 ## Testes
 
 ```bash

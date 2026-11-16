@@ -17,7 +17,7 @@ dotnet run --project tools/CheckApps.Analyze -- --sigla ab1,cd2 --source fake   
 dotnet run --project src/CheckApps.Api --urls http://localhost:5232
 cd frontend && npm install && npm start               # Angular em :4200
 
-dotnet test                                           # 695 testes; nenhum exige Docker, serviço externo ou rede
+dotnet test                                           # 712 testes; nenhum exige Docker, serviço externo ou rede
 ```
 
 Persistência é SQLite em arquivo (`%LOCALAPPDATA%\CheckApps\checkapps.db`). Não há banco para subir.
@@ -46,6 +46,7 @@ A skill `run-local` (`.agents/skills/run-local/`) encapsula essa sequência com 
 | Mexer no leitor de GitHub (scan, caixa de entrada, triagem, scan pela tela) | `specs/005-leitor-github-fase-1/`, `specs/006-scan-pela-tela/`, `specs/007-menu-repositorios/`, `specs/009-crud-repository/`, `specs/010-catalogo-na-tela-repositorios/`, `specs/012-repository-url-ativo-siglas/`, ADR-010 e `docs/leitor-github.md` — **token e nome da organização nunca entram no Git** |
 | Implementar uma feature | A spec correspondente em `specs/NNN-*/spec.md` e seu `checklist.md` |
 | Criar uma feature nova | Copie `specs/_template/` para `specs/NNN-nome/` e preencha antes de codar |
+| Mexer no modo demonstração (`CheckApps:Mode`, banco `demo.db`, `Seed --demo`, faixa na tela) | `specs/023-modo-demonstracao/`, ADR-013 e a seção "Modo demonstração" do `README.md` |
 | Subir o ambiente local | Skill `run-local` em `.agents/skills/run-local/SKILL.md` |
 | Dar uma mudança por pronta (build, testes, curl, navegador em banco isolado) | Skill `verify-change` em `.agents/skills/verify-change/SKILL.md` |
 | Abrir uma spec nova ou encerrar spec/sessão (Status, checklist, STATE, backlog) | Skill `close-spec` em `.agents/skills/close-spec/SKILL.md` |

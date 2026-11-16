@@ -1,9 +1,13 @@
 using System.Text.Json.Serialization;
 using CheckApps.Application.DependencyInjection;
+using CheckApps.Infrastructure.Configuration;
 using CheckApps.Infrastructure.DependencyInjection;
 using CheckApps.Infrastructure.Sqlite;
 
 var builder = WebApplication.CreateBuilder(args);
+
+// Modo demonstração (spec 023, ADR-013): no modo demo, banco e fontes de demonstração vencem qualquer outra configuração.
+builder.Configuration.ApplyCheckAppsMode();
 
 const string AngularDevCorsPolicy = "AngularDev";
 

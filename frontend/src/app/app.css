@@ -13,6 +13,20 @@
   min-width: 0;
 }
 
+/* Modo demonstração (spec 023): fixa no topo do conteúdo, para ninguém confundir dado de exemplo com dado real. O texto diz
+   o modo; a cor só reforça. Fundo e texto fixos, iguais nos temas claro e escuro: com o texto do tema (branco no escuro) sobre
+   o fundo claro, a frase ficava ilegível. */
+.demo-banner {
+  position: sticky;
+  top: 0;
+  z-index: 5;
+  padding: 0.5rem 1.25rem;
+  background: #fff4d6;
+  border-bottom: 2px solid var(--quality-c);
+  color: #2b2100;
+  font-size: 0.9rem;
+}
+
 .sidebar {
   position: sticky;
   top: 0;

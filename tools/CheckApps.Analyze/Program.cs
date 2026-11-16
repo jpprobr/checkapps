@@ -2,6 +2,7 @@ using CheckApps.Application.Analysis;
 using CheckApps.Application.Discovery;
 using CheckApps.Domain.Analysis;
 using CheckApps.Domain.Discovery;
+using CheckApps.Infrastructure.Configuration;
 using CheckApps.Infrastructure.DependencyInjection;
 using CheckApps.Infrastructure.Sqlite;
 using Microsoft.Extensions.Configuration;
@@ -66,7 +67,9 @@ if (parsed.FakeRevision is { } fakeRevision)
         new Dictionary<string, string?> { [$"{ScanOptions.SectionName}:{nameof(ScanOptions.FakeRevision)}"] = fakeRevision.ToString() });
 }
 
-var configuration = configurationBuilder.Build();
+// Modo demonstração (spec 023): no modo demo, banco e fontes de demonstração vencem até o --source.
+var configuration = configurationBuilder.BuildWithMode();
+Console.WriteLine(CheckAppsMode.Describe(configuration));
 
 // O escopo é validado antes de montar qualquer coisa: sigla vazia ou fora do formato é recusada sem pedir token
 // nem consultar nada (o AnalysisService valida de novo — a regra é dele, isto é só ordem).
